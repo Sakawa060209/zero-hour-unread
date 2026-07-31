@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1114">
+  <meta name="description" content="《零点未读》——暴雨孤馆中的文字推理解谜游戏。调查现场、拆穿证词、复原密室，在零点前写下你的结论。">
+  <title>零点未读｜文字推理解谜游戏</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="rain" aria-hidden="true"></div>
+  <div class="sea-haze" aria-hidden="true"></div>
+
+  <header class="topbar" id="topbar" hidden>
+    <button class="wordmark" id="homeBtn" aria-label="返回案件首页">
+      <span class="wordmark-mark">零</span>
+      <span><b>零点未读</b><small>CASE 00:17</small></span>
+    </button>
+    <div class="case-clock" aria-label="当前调查阶段">
+      <span class="pulse-dot"></span>
+      <span id="chapterLabel">序章</span>
+    </div>
+    <nav class="tools" aria-label="调查工具">
+      <button class="tool-button" id="clueBtn"><span>线索簿</span><b id="clueCount">0</b></button>
+      <button class="tool-button icon-only" id="soundBtn" aria-label="开启环境音" title="环境音">♩</button>
+      <button class="tool-button icon-only" id="saveBtn" aria-label="保存进度" title="保存进度">◇</button>
+    </nav>
+  </header>
+
+  <main id="app" tabindex="-1"></main>
+
+  <dialog class="notebook" id="notebook">
+    <div class="notebook-head">
+      <div>
+        <p class="eyebrow dark">INVESTIGATION FILE</p>
+        <h2>调查记录</h2>
+      </div>
+      <button class="close-button" id="closeNotebook" aria-label="关闭线索簿">×</button>
+    </div>
+    <div class="notebook-tabs" role="tablist">
+      <button class="active" data-notebook-tab="clues">物证</button>
+      <button data-notebook-tab="people">人物</button>
+      <button data-notebook-tab="timeline">时间轴</button>
+    </div>
+    <div class="notebook-body" id="notebookBody"></div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <noscript>本游戏需要启用 JavaScript。</noscript>
+  <script src="game.js"></script>
+</body>
+</html>
