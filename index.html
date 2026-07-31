@@ -23,7 +23,7 @@
       <span id="chapterLabel">序章</span>
     </div>
     <nav class="tools" aria-label="调查工具">
-      <button class="tool-button" id="clueBtn"><span>线索簿</span><b id="clueCount">0</b></button>
+      <button class="tool-button" id="clueBtn"><span class="desktop-tool-label">线索簿</span><span class="mobile-tool-label">案</span><b id="clueCount">0</b></button>
       <button class="tool-button icon-only" id="soundBtn" aria-label="开启环境音" title="环境音">♩</button>
       <button class="tool-button icon-only" id="saveBtn" aria-label="保存进度" title="保存进度">◇</button>
     </nav>
@@ -45,6 +45,21 @@
       <button data-notebook-tab="timeline">时间轴</button>
     </div>
     <div class="notebook-body" id="notebookBody"></div>
+  </dialog>
+
+  <dialog class="pause-menu" id="pauseMenu">
+    <div class="pause-panel">
+      <p class="eyebrow">INVESTIGATION PAUSED</p>
+      <h2>暂停调查</h2>
+      <p id="pauseChapter" class="muted"></p>
+      <div class="pause-actions">
+        <button class="btn" id="resumeBtn">继续调查</button>
+        <button class="btn secondary" id="pauseClueBtn">打开线索簿</button>
+        <button class="btn secondary" id="pauseSaveBtn">保存进度</button>
+        <button class="btn secondary" id="titleBtn">返回标题</button>
+        <button class="btn danger" id="restartBtn">重新开始</button>
+      </div>
+    </div>
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
