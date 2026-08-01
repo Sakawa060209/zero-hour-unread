@@ -1,6 +1,7 @@
 "use strict";
 
-const STORAGE_KEY = "siren-seventh-act-save-v2";
+const STORAGE_KEY = "siren-seventh-act-save-v3";
+const LEGACY_STORAGE_KEY = "siren-seventh-act-save-v2";
 
 const CLUES = {
   dryCorridor:{t:"干燥走廊",d:"门外走廊毫无积水，水不可能由走廊灌入。",chain:"死因",stage:2},
@@ -27,8 +28,14 @@ const CLUES = {
   backupRope:{t:"备用威亚绳",d:"韩九章发现破坏后临时加装，坠落被限制在一米半。",chain:"加害",stage:4},
   liveBullet:{t:"外圈检修道弹头",d:"真弹击穿镜墙后卡在外圈，没有进入人体。",chain:"加害",stage:4},
   mirrorWound:{t:"镜片伤口方向",d:"腹部创缘含玻璃粉，不是枪创。",chain:"加害",stage:4},
+  gunRegistry:{t:"枪柜弹药编号",d:"舞台枪少了一发空包弹，却多出一枚与祁越领取记录相邻的实弹编号。",chain:"加害",stage:4},
+  mirrorImpact:{t:"镜墙撞击点",d:"弹孔与反射裂纹指向外圈检修道，射线没有穿过死者站位。",chain:"加害",stage:4},
+  glassPowder:{t:"伤口玻璃粉",d:"创缘内只有镜面镀银玻璃粉，没有弹头金属或火药灼伤。",chain:"加害",stage:4},
   brakeDamage:{t:"主制动人为磨削",d:"所谓金属疲劳下藏着新鲜的锉削纹。",chain:"加害",stage:3},
   secondBrake:{t:"第二制动新弹簧",d:"韩九章先破坏主制动，后来又恢复副制动。",chain:"加害",stage:4},
+  springMissing:{t:"零件箱缺失弹簧",d:"韩九章的封签零件箱少了一枚与副制动规格相同的新弹簧。",chain:"加害",stage:4},
+  maintenanceLog:{t:"副制动维修记录",d:"演出前二十分钟，副制动测试从失效改为通过，签名栏却被撕去。",chain:"加害",stage:4},
+  freshBrakeOil:{t:"第二制动表面新油",d:"副制动轴套上是尚未氧化的装配油，证明它刚被拆装恢复。",chain:"加害",stage:4},
   channels:{t:"独立监听声道",d:"舱内通话没有损坏，只被切换到梁音的耳机。",chain:"存活",stage:4},
   cueTape:{t:"双声道提示磁带",d:"右声道藏有低八度的内部通话备份。",chain:"存活",stage:2},
   recoveredVoice:{t:"求救录音",d:"“梁音……停止旋转……我还在里面……”",chain:"存活",stage:5},
@@ -39,6 +46,7 @@ const CLUES = {
   trackMisalign:{t:"应急轨道错位",d:"旋转让配重轨道横移，舱体从可救变为无法拉回。",chain:"指令",stage:5},
   penHabit:{t:"确认指令前的钢笔声",d:"三段彩排均显示梁音按笔后才确认不可撤销指令。",chain:"指令",stage:3},
   knowledgeLeak:{t:"梁音的知识泄漏",d:"她纠正了从未公开的完整求救用词。",chain:"指令",stage:5},
+  propagationTrace:{t:"错误时间传播追踪",d:"两版错误时间被隔离投放，梁音复述了只交给白砚的版本。",chain:"存活",stage:4},
   identity:{t:"双胞胎身份文件",d:"祁越与梁音是阮明珠和祁重楼的双胞胎。",chain:"旧案",stage:4},
   threatFilm:{t:"受胁迫排练录像",d:"祁重楼以1978年事故威胁苏晚配合暧昧宣传。",chain:"旧案",stage:4},
   reverseFilm:{t:"镜像删除录像",d:"扣子、反字与左手持剑证明画面方向被反转。",chain:"加害",stage:4},
@@ -62,7 +70,7 @@ const PEOPLE = {
 const LOCATIONS = [
   {id:"scene",title:"第七化妆室",teaser:"潮湿的密室，干燥的走廊，以及少了一盏的灯。",icon:"水",actions:[
     {id:"seal",title:"封存现场",sub:"在水迹蒸发前记录尸体与房间",m:5,clues:["scenePhotos","dryCorridor","waterTrace"],text:"闪光灯照亮两组递升血手印。初步试纸显示残水几乎不含盐；你封存水线、门锁、灯具与尸体姿态。"},
-    {id:"body",title:"检查尸体与通话器",sub:"口鼻、伤口、手指与断线",m:10,clues:["foam","cable","talkButton"],text:"祁重楼咬断了电线；通话按钮上有他仍在流血时留下的指纹。"},
+    {id:"body",title:"检查尸体与通话器",sub:"口鼻、伤口、手指与断线",m:10,clues:["foam","cable","talkButton","glassPowder"],text:"祁重楼咬断了电线；通话按钮上有他仍在流血时留下的指纹。腹部创缘只有镜墙玻璃粉，没有弹头金属。"},
     {id:"room",title:"比对房间陈设",sub:"灯、窗、地毯与衣柜",m:10,clues:["sixBulbs","fakePort","thresholdGrease"],text:"窗不是窗。六枚灯也不是维修疏漏：这里像化妆室，却更像精心复制的布景。"},
     {id:"water",title:"精查水线",sub:"需要先提出“淡水来源”假说",m:10,requiresHyp:"freshwater",clues:["waterTrace","handprints"],text:"三条水线记录了上升、倾斜与排水。第二组手印比第一组更高。"},
     {id:"floor",title:"拆查地板固定结构",sub:"需要先提出“房间移动”假说",m:10,requiresHyp:"moving",clues:["brassScrews"],text:"地毯下的黄铜螺钉把桌椅钉在地板上——固定房间没有这种必要。"},
@@ -72,6 +80,7 @@ const LOCATIONS = [
     {id:"mask",title:"拆开银色面具",sub:"检查重缝的内衬",m:10,clues:["aconite"],text:"香料掩盖了乌头气味。残留量能使人迟缓，却不能解释淡水与肺部泡沫。"},
     {id:"wire",title:"放大检查威亚",sub:"区分磨损与新切口",m:10,clues:["cutRope","backupRope"],text:"主绳被割断；旁边却有韩九章临时加上的备用绳。一次谋杀又被另一个秘密抵消。"},
     {id:"bullet",title:"旋转舞台寻找弹头",sub:"进入外圈检修道并重建弹道",m:20,risk:4,experiment:true,clues:["liveBullet","mirrorWound"],text:"弹头没有进入人体。祁重楼的血来自飞散镜片，而非枪伤。"},
+    {id:"ammo",title:"核对枪柜与镜墙撞击点",sub:"用领取编号和几何射线替代弹道复原",m:15,clues:["gunRegistry","mirrorImpact"],text:"弹药编号证明祁越换入实弹；镜墙撞击点却让射线绕开死者站位。结合伤口玻璃粉，可以在不拆舞台的情况下排除枪伤。"},
     {id:"habit",title:"观看下午彩排",sub:"观察控制员的确认习惯",m:10,clues:["penHabit"],text:"每次不可撤销指令前，梁音都会按一下钢笔。三段彩排，无一例外。"}
   ]},
   {id:"control",title:"舞台控制室",teaser:"三个声道、一个烧蚀开关与被覆盖的时间。",icon:"控",actions:[
@@ -82,6 +91,7 @@ const LOCATIONS = [
   ]},
   {id:"machine",title:"下层机械区",teaser:"布景井、暴雨水槽、配重轨道与失灵排水泵。",icon:"轨",actions:[
     {id:"brake",title:"拆下两套制动片",sub:"区分破坏与中止",m:15,risk:3,experiment:true,clues:["brakeDamage","secondBrake"],text:"主制动被人为磨坏，但第二制动换上了韩九章零件箱里的新弹簧。"},
+    {id:"maintenance",title:"核对零件箱与维修记录",sub:"以库存、签字页和装配油追查副制动",m:15,clues:["springMissing","maintenanceLog","freshBrakeOil"],text:"零件箱少了一枚副制动弹簧，维修记录在演出前改为通过，轴套上还有新油。三处独立记录证明副制动曾被恢复。"},
     {id:"rail",title:"比对轨道油脂",sub:"取样并追踪门槛残留",m:10,clues:["railSample"],text:"门槛油脂混着同样的铜屑。那扇门曾沿这套轨道移动。"},
     {id:"track",title:"复原应急配重",sub:"需要“房间移动”假说",m:20,risk:4,requiresHyp:"moving",clues:["trackMisalign"],text:"不旋转时配重可以拉回舱体；旋转后轨道横移十七厘米，救援路径被彻底切断。"},
     {id:"tank",title:"采集暴雨水槽",sub:"比对水样与底沙",m:10,clues:["tankSample","sandMatch"],text:"水槽使用淡水。槽底细沙与衣柜中残留一致。"},
@@ -104,7 +114,7 @@ const LOCATIONS = [
   {id:"deck",title:"上层甲板与厨房",teaser:"取样、隔离嫌疑人，或先救下正在倾斜的船。",icon:"风",actions:[
     {id:"samples",title:"完成三组水样比对",sub:"现场、海水、蒸馏水与暴雨水",m:20,experiment:true,requiresAll:["waterTrace","tankSample"],clues:["freshWaterProof"],text:"试纸与蒸发结晶给出一致结果：现场是人工暴雨系统的淡水。"},
     {id:"isolate",title:"分开六名嫌疑人",sub:"阻止证词继续互相污染",m:10,flag:"isolated",text:"你把六人分别安排在上下层不同房间，之后记录的口供可以保持独立。"},
-    {id:"seed",title:"散布两版错误旋转时间",sub:"隔离后追踪信息传递路线",m:10,requiresFlag:"isolated",flag:"misinformationTrace",text:"梁素琴听到00:35，白砚听到00:38。若版本出现在梁音口中，你将知道信息从哪里传来。"},
+    {id:"seed",title:"散布两版错误旋转时间",sub:"隔离后追踪信息传递路线",m:10,requiresFlag:"isolated",flag:"misinformationTrace",clues:["propagationTrace"],text:"梁素琴听到00:35，白砚听到00:38。梁音随后复述了只交给白砚的版本，信息传播路线被固定。"},
     {id:"stabilize",title:"固定救生艇与舱门",sub:"降低风暴造成的持续损耗",m:15,repair:12,flag:"deckSecured",text:"松脱物被绑牢，水密门关闭。安全不是结局，却决定有多少真相能抵达陆地。"}
   ]}
 ];
@@ -113,25 +123,38 @@ const HYPOTHESES = [
   {id:"freshwater",title:"水并非从海里来",need:["dryCorridor","waterTrace"],result:"开放现场水线精查与水样来源验证。"},
   {id:"moving",title:"房间本身移动过",need:["sixBulbs","fakePort","thresholdGrease"],result:"开放地板固定结构与应急轨道复原。"},
   {id:"alive",title:"进水时死者仍清醒",need:["cable","handprints","talkButton"],result:"可以把伤害行为与直接死因分离。"},
-  {id:"attempts",title:"多次加害彼此独立",needAny:["aconite","drugWine","cutRope","liveBullet","brakeDamage"],count:3,result:"五次真实加害不是同一条谋杀链。"},
+  {id:"attempts",title:"多次加害彼此独立",needAny:["aconite","drugWine","cutRope","liveBullet","gunRegistry","brakeDamage","maintenanceLog"],count:3,result:"五次真实加害不是同一条谋杀链。"},
   {id:"override",title:"自动程序被人工覆盖",need:["overrideBurn","motorLog","loadTape"],result:"可以追问警报后的主动旋转。"},
   {id:"oldcase",title:"1978年死于延迟救援",need:["delayTape","oldCaseParts"],result:"旧案的最终决定者不是制造坠落的人。"}
 ];
 
 const CONNECTIONS = [
-  {id:"waterSource",title:"水来自舞台系统",max:3,solutions:[["waterTrace","tankSample"],["scenePhotos","tankSample"]],result:"无盐水迹与暴雨水槽成分相合，海水来源被排除。"},
-  {id:"movingRoom",title:"现场是移动布景舱",max:3,solutions:[["fakePort","brassScrews","railSample"],["lockManual","sandMatch","sixBulbs"]],result:"陈设差异、固定结构和机械残留共同证明房间移动。"},
-  {id:"victimAlive",title:"旋转发生时死者仍活着",max:3,solutions:[["recoveredVoice","talkButton"],["cable","handprints","talkButton"]],result:"实时通话与活体挣扎排除了死后进水。"},
-  {id:"rescueBlocked",title:"人工旋转主动阻断救援",max:4,solutions:[["overrideBurn","loadTape","trackMisalign","knowledgeLeak"]],result:"警报后人工覆盖、轨道错位与知识泄漏闭合最终责任链。"}
+  {id:"waterSource",question:"现场水迹来自哪里？",title:"水来自舞台系统",max:4,threshold:4,paths:[
+    {required:["waterTrace","tankSample"],optional:["freshWaterProof","scenePhotos"]},
+    {required:["scenePhotos","tankSample"],optional:["waterTrace","freshWaterProof"]}
+  ],conflicting:[],result:"无盐水迹与暴雨水槽成分相合，海水来源被排除。"},
+  {id:"movingRoom",question:"发现尸体的房间是否固定？",title:"现场是移动布景舱",max:5,threshold:6,paths:[
+    {required:["fakePort","brassScrews","railSample"],optional:["lockManual","sandMatch","sixBulbs","thresholdGrease"]},
+    {required:["lockManual","sandMatch","sixBulbs"],optional:["fakePort","brassScrews","railSample","thresholdGrease"]}
+  ],conflicting:[],result:"陈设差异、固定结构和机械残留共同证明房间移动。"},
+  {id:"victimAlive",question:"布景舱进水时，死者状态如何？",title:"旋转发生时死者仍活着",max:5,threshold:5,paths:[
+    {required:["recoveredVoice","talkButton"],optional:["cable","handprints","channels","knowledgeLeak","propagationTrace"]},
+    {required:["cable","handprints","talkButton"],optional:["recoveredVoice","channels","knowledgeLeak","propagationTrace"]},
+    {required:["channels","talkButton","knowledgeLeak"],optional:["propagationTrace","recoveredVoice","cable","handprints"]}
+  ],conflicting:[],result:"实时通话、活体挣扎或知识泄漏证明旋转发生时死者仍在求救。"},
+  {id:"rescueBlocked",question:"警报出现后，救援为何失效？",title:"人工旋转主动阻断救援",max:6,threshold:8,paths:[
+    {required:["overrideBurn","loadTape","trackMisalign","knowledgeLeak"],optional:["recoveredVoice","motorLog","channels","propagationTrace","talkButton"]},
+    {required:["overrideBurn","trackMisalign","channels","talkButton","knowledgeLeak"],optional:["propagationTrace","recoveredVoice","motorLog","loadTape"]}
+  ],conflicting:[],result:"警报后人工覆盖、轨道错位与知情证据闭合最终责任链。"}
 ];
 
 const INTERVIEWS = {
   liangsuqin:{claim:"“面具是我准备的。乌头会让心脏停下——不必再查别人。”",correct:"transfer",requires:["aconite","identity"],result:"她承认涂药，也承认苏晚擦掉过一部分。她的认罪在替梁音截断调查。",evidence:"梁素琴的加害已确认。",options:{open:"开放询问",contradict:"剂量质证",transfer:"转移对象：梁音"}},
-  qiyue:{claim:"“我把真弹装进去，也亲眼看见他的血。我杀了他。”",correct:"contradict",requires:["liveBullet","mirrorWound","talkButton"],result:"弹头与通话按钮解除他的错误罪恶感。他交代曾看见苏晚处理威亚。",evidence:"祁越的加害已确认。",options:{open:"开放询问",contradict:"弹道与伤口质证",silence:"沉默施压"}},
+  qiyue:{claim:"“我把真弹装进去，也亲眼看见他的血。我杀了他。”",correct:"contradict",requires:["liveBullet","mirrorWound","talkButton"],alternatives:[["gunRegistry","mirrorImpact","glassPowder","talkButton"]],result:"弹头或枪柜编号证明他确实换弹；弹道与玻璃粉却排除枪伤。他交代曾看见苏晚处理威亚。",evidence:"祁越的加害已确认。",options:{open:"开放询问",contradict:"弹道与伤口质证",silence:"沉默施压"}},
   suwan:{claim:"“那根绳只是老化。我和祁重楼的关系，也轮不到侦探审判。”",correct:"transfer",requires:["cutRope","threatFilm"],result:"你证明她受胁迫而非主动炒作。她承认割绳，并要求不要把罪推给韩九章。",evidence:"苏晚的加害已确认。",options:{limited:"限定追问",contradict:"直接指控名誉",transfer:"转移对象：韩九章"}},
-  han:{claim:"“主制动、第二制动、配重轨道是一套故障。外行不要拆开讲。”",correct:"technical",requires:["secondBrake","trackMisalign"],result:"他终于承认：若舞台没有继续旋转，他能把布景舱拉回。",evidence:"韩九章的破坏与中止已确认。",options:{open:"开放询问",technical:"区分四套机械",pressure:"以旧案施压"}},
+  han:{claim:"“主制动、第二制动、配重轨道是一套故障。外行不要拆开讲。”",correct:"technical",requires:["secondBrake","trackMisalign"],alternatives:[["springMissing","maintenanceLog","freshBrakeOil","trackMisalign"]],result:"拆检或维修记录都证明他恢复了副制动。他终于承认：若舞台没有继续旋转，他能把布景舱拉回。",evidence:"韩九章的破坏与中止已确认。",options:{open:"开放询问",technical:"区分四套机械",pressure:"以旧案施压"}},
   baiyan:{claim:"“六只手共同写完了一场谋杀。寻找最后一只手，只是俗套。”",correct:"contradict",requires:["drugWine","reverseFilm"],result:"你拒绝他的集体叙事。他交出删除索引，并承认下药只是想嫁祸梁素琴。",evidence:"白砚的下药与删片已确认。",options:{open:"让他完整叙事",contradict:"换瓶与镜像质证",pressure:"公开盗稿秘密"}},
-  liangyin:{claim:"“下降程序早已写入。停止键当时没有亮。通话器中一直有音乐。”",correct:"false",requires:["recoveredVoice","overrideBurn","channels"],result:"你故意把求救说成“停下升降”。她脱口纠正：“他说的是停止旋转。”",evidence:"梁音听见求救并了解具体内容。",options:{open:"逐字询问",false:"错误前提诱导",pressure:"以身世施压"}}
+  liangyin:{claim:"“下降程序早已写入。停止键当时没有亮。通话器中一直有音乐。”",correct:"false",requires:["recoveredVoice","overrideBurn","channels"],alternatives:[["channels","talkButton","propagationTrace","overrideBurn"]],result:"完整录音或传播追踪都封死了退路。你故意把求救说成“停下升降”，她脱口纠正：“他说的是停止旋转。”",evidence:"梁音听见求救并了解具体内容。",options:{open:"逐字询问",false:"错误前提诱导",pressure:"以身世施压"}}
 };
 
 const PUZZLES = [
@@ -139,7 +162,7 @@ const PUZZLES = [
   {id:"tape",title:"提示磁带",desc:"修复速度、分离声道并还原求救。",requires:["cueTape","channels"],experiment:true},
   {id:"keys",title:"三个七号房",desc:"辨认三把“7”号钥匙的真正用途。",requires:["threeKeys"]},
   {id:"water",title:"水位时间",desc:"排列水线形成的三个阶段。",requires:["handprints","tankSample"]},
-  {id:"timeline",title:"第七幕时间线",desc:"只使用已经发现的事件碎片重建第七幕。",requires:[],requiresAny:["drugWine","aconite","cutRope","liveBullet","brakeDamage"],minimum:4,requiresHyp:"attempts"},
+  {id:"timeline",title:"第七幕时间线",desc:"只使用已经发现的事件碎片重建第七幕。",requires:[],requiresAny:["drugWine","aconite","cutRope","liveBullet","gunRegistry","brakeDamage","maintenanceLog"],minimum:4,requiresHyp:"attempts"},
   {id:"oldcase",title:"1978年的九十秒",desc:"区分制造危险与决定死亡。",requires:["delayTape","oldCaseParts"]}
 ];
 
@@ -149,7 +172,7 @@ const TIMELINE = [
 
 const DEFAULT_STATE = {
   screen:"cover",resumeScreen:"prologue",investigator:"",difficulty:"normal",prologue:0,
-  elapsed:0,safety:78,clues:[],visited:[],actions:[],hypotheses:[],interviews:{},puzzles:[],connections:[],experimentUses:0,flags:{degraded:{}},errors:0,hints:0,
+  elapsed:0,safety:78,clues:[],visited:[],actions:[],hypotheses:[],interviews:{},puzzles:[],connections:[],connectionEvidence:{},experimentUses:0,flags:{degraded:{}},errors:0,hints:0,
   report:{culprit:"",cause:"",room:"",responsibility:"",oldcase:"",harms:{}},attachments:[],disclosure:[],ending:null,firstEnding:null,endingGallery:[],replayMode:false,startedAt:Date.now()
 };
 
@@ -170,14 +193,17 @@ const notebookBody=document.querySelector("#notebookBody");
 function freshState(){return JSON.parse(JSON.stringify(DEFAULT_STATE));}
 function loadState(){
   try{
-    const x=JSON.parse(localStorage.getItem(STORAGE_KEY));if(!x)return freshState();
+    const current=localStorage.getItem(STORAGE_KEY),legacy=!current&&localStorage.getItem(LEGACY_STORAGE_KEY);
+    const x=JSON.parse(current||legacy);if(!x)return freshState();
     const base=freshState(),merged=Object.assign(base,x);
-    merged.report=Object.assign(base.report,x.report||{});merged.report.harms=Object.assign({},x.report?.harms||{});
+    merged.report=Object.assign(base.report,x.report||{});merged.report.harms=Object.assign({},x.report?.harms||{});merged.connectionEvidence=Object.assign({},x.connectionEvidence||{});
     merged.flags=Object.assign({degraded:{}},x.flags||{});merged.flags.degraded=Object.assign({},x.flags?.degraded||{});
+    if(legacy){merged.connections=[];merged.connectionEvidence={};merged.attachments=[];merged.flags.migratedProofSystem=true;localStorage.setItem(STORAGE_KEY,JSON.stringify(merged));}
     return merged;
   }catch{return freshState();}
 }
 function saveState(message="进度已保存"){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));if(message)toast(message);}
+function clearSavedState(){localStorage.removeItem(STORAGE_KEY);localStorage.removeItem(LEGACY_STORAGE_KEY);}
 function escapeHTML(v){return String(v).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));}
 function has(id){return state.clues.includes(id);}
 function hasAll(ids=[]){return ids.every(has);}
@@ -188,6 +214,11 @@ function safetyBand(){return state.safety>=70?"稳定":state.safety>=40?"受损"
 function difficultyFactor(){return {normal:.7,hard:1,extreme:1.35}[state.difficulty]||1;}
 function difficultyRules(){return {normal:{degradeAt:120,maxInterviews:99,showNeeds:true,showMeters:true},hard:{degradeAt:75,maxInterviews:3,showNeeds:true,showMeters:true},extreme:{degradeAt:45,maxInterviews:3,showNeeds:false,showMeters:false}}[state.difficulty];}
 function experimentLimit(){return 3;}
+const EXPERIMENT_EVIDENCE=new Set(["freshWaterProof","liveBullet","mirrorWound","brakeDamage","secondBrake","recoveredVoice"]);
+function testimonyScore(id){const rec=state.interviews[id];if(!rec?.broken)return 0;return rec.independent===false ? 0.5 : 2;}
+function clueScore(id){if(id==="knowledgeLeak")return testimonyScore("liangyin");if(EXPERIMENT_EVIDENCE.has(id))return 3;return state.flags.degraded[id]?1:2;}
+function evidenceScore(ids=[]){return ids.reduce((sum,id)=>sum+(has(id)?clueScore(id):0),0);}
+function scoreLabel(id){const score=clueScore(id);return `${score}分${state.flags.degraded[id]?'·降级':EXPERIMENT_EVIDENCE.has(id)?'·检验':id==="knowledgeLeak"?'·证言':''}`;}
 function advance(minutes,risk=0){
   const before=state.safety;
   state.elapsed+=minutes;
@@ -210,7 +241,7 @@ function chapterName(){
   if(!state.puzzles.includes("blueprint"))return "第三章 · 三个七号房";
   if(Object.values(state.interviews).filter(x=>x.originalRecorded).length<3)return "第四章 · 每个人都在保护凶手";
   if(!state.puzzles.includes("oldcase"))return "第五章 · 二十二年前的九十秒";
-  if(!state.puzzles.includes("tape")||!state.interviews.liangyin?.broken)return "第六章 · 第七幕";
+  if(!state.interviews.liangyin?.broken)return "第六章 · 第七幕";
   return "终章 · 案件报告";
 }
 function setScreen(screen){state.screen=screen;saveState("");render();window.scrollTo(0,0);}
@@ -265,7 +296,7 @@ function degradationLimit(){const base=difficultyRules().degradeAt;return state.
 function actionDegraded(key){return ["scene:seal","theater:mask","control:logs","machine:rail","quarters:wine"].includes(key)&&state.elapsed>=degradationLimit();}
 function renderLocation(){
   const loc=LOCATIONS.find(x=>x.id===state.flags.activeLocation)||LOCATIONS[0];
-  app.innerHTML=`<section class="screen"><button class="btn secondary small" id="backHub">← 返回调查甲板</button><div class="chapter-head local-head"><div><p class="eyebrow">FIELD INVESTIGATION · ${clock()}</p><h2>${loc.title}</h2><p class="chapter-summary">${loc.teaser}</p></div><div class="chapter-no">${loc.icon}</div></div><div class="case-layout"><div><div id="actionReveal"></div><div class="action-list">${loc.actions.map(a=>{const key=`${loc.id}:${a.id}`,done=state.actions.includes(key),ok=actionAvailable(a),degraded=actionDegraded(key);const cost=a.repair?`+${a.repair} 安全`:`${a.m} 分钟${a.risk?` · 风险 −${a.risk}`:""}${a.experiment?` · 检验 1/${experimentLimit()}`:""}`;return `<button class="action-card ${done?'done':''} ${degraded?'degraded':''}" data-action="${a.id}" ${done||!ok?'disabled':''}><span class="action-time">${cost}</span><div><b>${a.title}</b><small>${done?'已完成':!ok&&a.experiment&&state.experimentUses>=experimentLimit()?'大型检验次数已用尽':!ok?`尚未满足：${a.sub}`:degraded?'证据已降级，将启用更困难的替代路径':a.sub}</small></div><span>${done?'✓':'→'}</span></button>`;}).join("")}</div></div>${sideFile()}</div></section>`;
+  app.innerHTML=`<section class="screen"><button class="btn secondary small" id="backHub">← 返回调查甲板</button><div class="chapter-head local-head"><div><p class="eyebrow">FIELD INVESTIGATION · ${clock()}</p><h2>${loc.title}</h2><p class="chapter-summary">${loc.teaser}</p></div><div class="chapter-no">${loc.icon}</div></div><div class="case-layout"><div><div id="actionReveal"></div><div class="action-list">${loc.actions.map(a=>{const key=`${loc.id}:${a.id}`,done=state.actions.includes(key),ok=actionAvailable(a),degraded=actionDegraded(key);const cost=a.repair?`+${a.repair} 安全`:`${a.m} 分钟${a.risk?` · 风险 −${a.risk}`:""}${a.experiment?` · 检验 1/${experimentLimit()}`:""}`;return `<button class="action-card ${done?'done':''} ${degraded?'degraded':''}" data-action="${a.id}" ${done||!ok?'disabled':''}><span class="action-time">${cost}</span><div><b>${a.title}</b><small>${done?'已完成':!ok&&a.experiment&&state.experimentUses>=experimentLimit()?'检验次数已用尽，可改走现场物证路线':!ok?`尚未满足：${a.sub}`:degraded?'证据已降级，必须用另一独立来源补强':a.sub}</small></div><span>${done?'✓':'→'}</span></button>`;}).join("")}</div></div>${sideFile()}</div></section>`;
   document.querySelector("#backHub").addEventListener("click",()=>setScreen("hub"));
   document.querySelectorAll("[data-action]").forEach(el=>el.addEventListener("click",()=>performAction(loc,el.dataset.action)));
 }
@@ -286,24 +317,37 @@ function renderHypotheses(){
   document.querySelectorAll("[data-hypothesis]").forEach(el=>el.addEventListener("click",()=>{state.hypotheses.push(el.dataset.hypothesis);advance(5);saveState("");render();toast("假说已记录，新的精查方式可能已开放");}));
 }
 
-function connectionSolvedWith(connection,selected){return connection.solutions.some(solution=>solution.length===selected.length&&solution.every(id=>selected.includes(id)));}
+function connectionEvaluation(connection,selected=[]){
+  const conflict=selected.some(id=>(connection.conflicting||[]).includes(id));
+  const path=connection.paths.find(candidate=>{
+    const allowed=new Set([...candidate.required,...(candidate.optional||[])]);
+    return candidate.required.every(id=>selected.includes(id))&&selected.every(id=>allowed.has(id));
+  });
+  const score=evidenceScore(selected);
+  return {solved:!!path&&!conflict&&score>=connection.threshold,path,score,conflict,shortfall:Math.max(0,connection.threshold-score)};
+}
+function connectionSolvedWith(connection,selected){return connectionEvaluation(connection,selected).solved;}
 function renderConnections(){
   const active=state.flags.activeConnection;
   if(active){
     const connection=CONNECTIONS.find(x=>x.id===active),selected=state.flags.connectionDraft||[];
     const pool=state.clues.filter(id=>CLUES[id].stage>=2);
-    app.innerHTML=`<section class="screen narrow"><button class="btn secondary small" id="backConnections">← 返回证据连接</button><div class="puzzle-board" style="margin-top:24px"><p class="eyebrow">EVIDENCE CONNECTION</p><h2>${connection.title}</h2><p class="puzzle-instruction">选择最多 ${connection.max} 条能够共同证明同一结论的线索。错误组合不会显示正确答案。</p><div class="attachment-grid">${pool.map(id=>`<button class="option-pill ${selected.includes(id)?'active':''}" data-link-clue="${id}">${CLUES[id].t}${state.flags.degraded[id]?' · 降级':''}</button>`).join("")}</div><div class="puzzle-actions"><button class="btn" id="checkConnection" ${selected.length<2?'disabled':''}>检验证据关系</button></div></div></section>`;
+    const evaluation=connectionEvaluation(connection,selected);
+    app.innerHTML=`<section class="screen narrow"><button class="btn secondary small" id="backConnections">← 返回证据连接</button><div class="puzzle-board" style="margin-top:24px"><p class="eyebrow">EVIDENCE CONNECTION</p><h2>${connection.question}</h2><p class="puzzle-instruction">选择最多 ${connection.max} 条证据。核心证据必须齐全；相关证据可以补强，降级物证只有 1 分。当前 ${evaluation.score}/${connection.threshold} 分。</p><div class="attachment-grid">${pool.map(id=>`<button class="option-pill ${selected.includes(id)?'active':''}" data-link-clue="${id}">${CLUES[id].t} · ${scoreLabel(id)}</button>`).join("")}</div><div class="puzzle-actions"><button class="btn" id="checkConnection" ${selected.length<2?'disabled':''}>检验证据关系</button></div></div></section>`;
     document.querySelector("#backConnections").addEventListener("click",()=>{delete state.flags.activeConnection;delete state.flags.connectionDraft;renderConnections();});
     document.querySelectorAll("[data-link-clue]").forEach(el=>el.addEventListener("click",()=>{const id=el.dataset.linkClue;if(selected.includes(id))state.flags.connectionDraft=selected.filter(x=>x!==id);else if(selected.length<connection.max)selected.push(id);saveState("");renderConnections();}));
-    document.querySelector("#checkConnection").addEventListener("click",()=>{if(connectionSolvedWith(connection,selected)){if(!state.connections.includes(connection.id))state.connections.push(connection.id);delete state.flags.activeConnection;delete state.flags.connectionDraft;advance(5);saveState("");renderConnections();toast("证据关系成立，结论已进入报告依据");}else{state.errors++;saveState("");toast("这些线索尚不能共同证明同一结论");}});
+    document.querySelector("#checkConnection").addEventListener("click",()=>{const check=connectionEvaluation(connection,selected);if(check.solved){if(!state.connections.includes(connection.id))state.connections.push(connection.id);state.connectionEvidence[connection.id]=[...selected];delete state.flags.activeConnection;delete state.flags.connectionDraft;advance(5);saveState("");renderConnections();toast(`证据关系成立 · ${check.score}/${connection.threshold} 分`);}else{state.errors++;saveState("");toast(check.conflict?"组合中存在矛盾证据":check.path&&check.shortfall?`核心关系成立，但还缺 ${check.shortfall} 分证明力`:"组合包含无关证据，或核心证据尚未齐全");}});
     return;
   }
-  app.innerHTML=`<section class="screen narrow"><button class="btn secondary small" id="backHub">← 返回调查甲板</button><div class="chapter-head local-head"><div><p class="eyebrow">EVIDENCE CHAINS</p><h2>亲自连接证据</h2><p class="chapter-summary">收集数量不等于证明。只有把不同来源的线索连接成结论，它们才会参与最高结局判定。</p></div><div class="chapter-no">${state.connections.length}/4</div></div><div class="deduction-list">${CONNECTIONS.map((c,i)=>{const done=state.connections.includes(c.id);return `<div class="deduction ${done?'done':''}"><h3><span>CHAIN 0${i+1}</span>${c.title}</h3>${done?`<p>${c.result}</p>`:`<p class="muted">从案卷中选择能够互相补强的物证。</p><button class="btn small" data-connection="${c.id}">开始连接</button>`}</div>`;}).join("")}</div></section>`;
+  app.innerHTML=`<section class="screen narrow"><button class="btn secondary small" id="backHub">← 返回调查甲板</button><div class="chapter-head local-head"><div><p class="eyebrow">EVIDENCE CHAINS</p><h2>亲自连接证据</h2><p class="chapter-summary">核心证据是已选证据的必要子集；相关物证可以提高证明分，降级证据必须用独立来源补强。</p></div><div class="chapter-no">${state.connections.length}/4</div></div><div class="deduction-list">${CONNECTIONS.map((c,i)=>{const done=state.connections.includes(c.id);const score=evidenceScore(state.connectionEvidence[c.id]||[]);return `<div class="deduction ${done?'done':''}"><h3><span>CHAIN 0${i+1}</span>${done?c.title:c.question}</h3>${done?`<p>${c.result}</p><p class="muted">已封存 ${score}/${c.threshold} 分证据。</p>`:`<p class="muted">从案卷中选择核心证据和合法补强证据，达到 ${c.threshold} 分。</p><button class="btn small" data-connection="${c.id}">开始连接</button>`}</div>`;}).join("")}</div></section>`;
   document.querySelector("#backHub").addEventListener("click",()=>setScreen("hub"));
   document.querySelectorAll("[data-connection]").forEach(el=>el.addEventListener("click",()=>{state.flags.activeConnection=el.dataset.connection;state.flags.connectionDraft=[];saveState("");renderConnections();}));
 }
 
 function interviewPollution(id){return state.interviews[id]?.independent===false;}
+function interviewRoutes(cfg){return [cfg.requires,...(cfg.alternatives||[])];}
+function interviewPrerequisites(id,cfg){return interviewRoutes(cfg).some(hasAll)&&(id!=="liangyin"||state.interviews.han?.broken);}
+function interviewNeeds(cfg){return interviewRoutes(cfg).map((route,i)=>`路线 ${String.fromCharCode(65+i)}：${route.map(x=>`${has(x)?'●':'○'} ${CLUES[x].t}`).join("　")}`).join("<br>");}
 function renderInterviews(){
   const recorded=Object.values(state.interviews).filter(x=>x.originalRecorded).length;
   app.innerHTML=`<section class="screen"><button class="btn secondary small" id="backHub">← 返回调查甲板</button><div class="chapter-head local-head"><div><p class="eyebrow">TESTIMONY ROOM · ${clock()}</p><h2>每个人都在保护凶手</h2><p class="chapter-summary">第一轮先保存未经污染的版本；第二、三轮才用物证突破。高警觉会封闭话题，高压力会制造虚假认罪。</p></div><div class="chapter-no">${recorded}/6</div></div>${state.flags.contaminated?`<div class="ship-warning testimony-warning"><b>信息已经传播</b><span>此后才记录的口供不能作为独立证言。隔离可阻止继续传播，但不能洗净已经交换的信息。</span></div>`:""}<div class="suspect-grid">${Object.entries(PEOPLE).map(([id,p])=>{const rec=state.interviews[id];const status=rec?.broken?"证词已突破":rec?.closed?"话题已封闭":rec?.falseConfession?"出现虚假认罪":rec?.originalRecorded?(rec.independent?"原始证词已封存":"传播后证词"):"尚未记录";return `<button class="suspect-card ${rec?.broken?'done':''} ${rec?.closed?'closed':''}" data-person="${id}"><span class="card-index">${p.age}岁 · ${p.role}</span><h3>${p.name}</h3><p>${rec?.broken?INTERVIEWS[id].result:p.desc}</p><div class="suspect-meta"><span>保护：${p.protect}</span><span>${status}</span></div></button>`;}).join("")}</div></section>`;
@@ -313,7 +357,7 @@ function renderInterviews(){
 
 function renderInterview(){
   const id=state.flags.activePerson,p=PEOPLE[id],cfg=INTERVIEWS[id],rec=state.interviews[id]||{attempts:0,alert:0,pressure:0,trust:0,broken:false,closed:false,originalRecorded:false};state.interviews[id]=rec;
-  const req=cfg.requires.map(x=>`${has(x)?'●':'○'} ${CLUES[x].t}`).join("　");
+  const req=interviewNeeds(cfg);
   const claim=rec.broken?cfg.result:rec.falseConfession?`“不用再问了。我承认是我做的，其他人什么都不知道。”——这份口供能解释部分物证，却出现了与现场不符的细节。`:cfg.claim;
   const status=rec.broken?'被证据修正后的证词':rec.closed?'话题封闭':rec.falseConfession?'高压虚假认罪':rec.originalRecorded?(rec.independent?'原始证词':'传播后证词'):'尚未正式记录';
   const controls=!rec.originalRecorded?`<div class="puzzle-board"><p class="puzzle-instruction">第一轮只记录自由叙述，不出示时间与证据。${state.flags.contaminated&&!state.flags.isolated?'众人尚未隔离，这份记录将失去独立性。':''}</p><button class="btn" id="recordOriginal">记录原始证词 · 10分钟</button></div>`:rec.broken?`<div class="reveal"><p class="eyebrow">TESTIMONY BROKEN</p><h3>${cfg.evidence}</h3><p>${cfg.result}</p></div>`:rec.closed?`<div class="ship-warning"><b>话题已封闭</b><span>警觉或正式审讯次数达到上限，本周目不能再用此人口供完成证明。</span></div>`:`<div class="puzzle-board"><p class="puzzle-instruction">第二/三轮：选择审讯方式。${difficultyRules().showNeeds?`证据条件：${req}`:'极难模式不显示缺失物证。'}${id==='liangyin'&&!state.interviews.han?.broken?' 梁音的最终追问还需要韩九章关于应急回收的证词。':''}</p><div class="approach-grid">${Object.entries(cfg.options).map(([key,label])=>`<button class="approach" data-technique="${key}"><b>${label}</b><small>${techniqueHelp(key)}</small></button>`).join("")}</div>${difficultyRules().showMeters?`<div class="interview-meters"><span>警觉 ${rec.alert}/3</span><span>压力 ${rec.pressure}/3</span><span>信任 ${rec.trust}/2</span><span>正式审讯 ${rec.attempts}/${difficultyRules().maxInterviews===99?'∞':difficultyRules().maxInterviews}</span></div>`:""}</div>`;
@@ -326,7 +370,7 @@ function techniqueHelp(k){return {open:"不给时间与证据，让对方自由�
 function resolveInterview(id,tech){
   const cfg=INTERVIEWS[id],rec=state.interviews[id];if(rec.closed||rec.broken)return;
   rec.attempts++;advance(15);if(tech==="pressure")rec.pressure++;else if(tech==="open"||tech==="silence")rec.trust=Math.min(2,rec.trust+1);else rec.alert++;
-  const prerequisites=hasAll(cfg.requires)&&(id!=="liangyin"||state.interviews.han?.broken);
+  const prerequisites=interviewPrerequisites(id,cfg);
   const leakValid=id!=="liangyin"||rec.independent||state.flags.misinformationTrace;
   if(tech===cfg.correct&&prerequisites&&leakValid){rec.broken=true;rec.status="corrected";rec.falseConfession=false;if(id==="liangyin")addClues(["knowledgeLeak"]);state.flags[`harm_${id}`]=true;saveState("");render();toast("证词已由物证修正");return;}
   state.errors++;
@@ -341,7 +385,7 @@ function resolveInterview(id,tech){
 
 function puzzleReady(p){if(!hasAll(p.requires))return false;if(p.requiresAny&&p.requiresAny.filter(has).length<(p.minimum||1))return false;if(p.requiresHyp&&!state.hypotheses.includes(p.requiresHyp))return false;if(p.experiment&&state.experimentUses>=experimentLimit())return false;return true;}
 function renderPuzzles(){
-  app.innerHTML=`<section class="screen"><button class="btn secondary small" id="backHub">← 返回调查甲板</button><div class="chapter-head local-head"><div><p class="eyebrow">RECONSTRUCTION TABLE</p><h2>实验、复原与交叉比对</h2><p class="chapter-summary">大型专业检验只有 ${experimentLimit()} 次。未选择的结论必须用现场、记录或证词的替代路径补足。</p></div><div class="chapter-no">${state.experimentUses}/${experimentLimit()}</div></div><div class="location-grid">${PUZZLES.map((p,i)=>{const done=state.puzzles.includes(p.id),ready=puzzleReady(p);const missing=p.requires.filter(x=>!has(x)).map(x=>CLUES[x].t);return `<button class="location-card ${done?'done':''}" data-puzzle="${p.id}" ${!ready?'disabled':''}><span class="card-index">${p.experiment?'LARGE TEST':'RECONSTRUCTION'} · 0${i+1}</span><h3>${p.title}</h3><p>${done?'复原完成，可作为独立证据。':ready?p.desc:state.difficulty==='extreme'?'前置条件未满足':p.experiment&&state.experimentUses>=experimentLimit()?'大型检验次数已用尽':missing.length?`缺少：${missing.join("、")}`:'需要先确认至少四种独立加害并提出对应假说'}</p><span class="card-icon">${i+1}</span></button>`;}).join("")}</div></section>`;
+  app.innerHTML=`<section class="screen"><button class="btn secondary small" id="backHub">← 返回调查甲板</button><div class="chapter-head local-head"><div><p class="eyebrow">RECONSTRUCTION TABLE</p><h2>实验、复原与交叉比对</h2><p class="chapter-summary">四项大型专业检验中可任选 ${experimentLimit()} 项；未选项目均能以现场物证、记录和证词形成等价路线。</p></div><div class="chapter-no">${state.experimentUses}/${experimentLimit()}</div></div><div class="location-grid">${PUZZLES.map((p,i)=>{const done=state.puzzles.includes(p.id),ready=puzzleReady(p);const missing=p.requires.filter(x=>!has(x)).map(x=>CLUES[x].t);return `<button class="location-card ${done?'done':''}" data-puzzle="${p.id}" ${!ready?'disabled':''}><span class="card-index">${p.experiment?'LARGE TEST':'RECONSTRUCTION'} · 0${i+1}</span><h3>${p.title}</h3><p>${done?'复原完成，可作为独立证据。':ready?p.desc:state.difficulty==='extreme'?'前置条件未满足':p.experiment&&state.experimentUses>=experimentLimit()?'次数已用尽：现场物证替代路线仍可完成最高结局':missing.length?`缺少：${missing.join("、")}`:'需要先确认至少四种独立加害并提出对应假说'}</p><span class="card-icon">${i+1}</span></button>`;}).join("")}</div></section>`;
   document.querySelector("#backHub").addEventListener("click",()=>setScreen("hub"));
   document.querySelectorAll("[data-puzzle]").forEach(el=>el.addEventListener("click",()=>{state.flags.activePuzzle=el.dataset.puzzle;setScreen("puzzle");}));
 }
@@ -376,7 +420,7 @@ function renderSequence(head,title,instruction,events,correct,onDone){
   document.querySelector("#hintPuzzle").addEventListener("click",()=>{state.hints++;saveState("");toast(idHint(state.flags.activePuzzle));});
   document.querySelector("#checkPuzzle").addEventListener("click",()=>{if(correct.every((x,i)=>selected[i]===x))onDone();else puzzleMistake("顺序仍有断裂：区分演出前准备、受伤、进水、求救和回升");});
 }
-function timelineDiscovered(id){return {drug:has("drugWine"),poison:has("aconite"),wire:has("cutRope"),brake:has("brakeDamage"),restore:has("secondBrake"),bullet:has("liveBullet"),fall:has("backupRope"),shot:has("mirrorWound"),lower:has("brakeDamage")&&has("tankSample"),call:has("recoveredVoice")||has("talkButton"),rotate:has("overrideBurn")&&has("motorLog"),track:has("trackMisalign"),drown:state.connections.includes("waterSource")&&state.connections.includes("victimAlive"),return:has("lockManual")}[id];}
+function timelineDiscovered(id){return {drug:has("drugWine"),poison:has("aconite"),wire:has("cutRope"),brake:has("brakeDamage")||has("maintenanceLog"),restore:has("secondBrake")||hasAll(["springMissing","maintenanceLog","freshBrakeOil"]),bullet:has("liveBullet")||has("gunRegistry"),fall:has("backupRope"),shot:has("mirrorWound")||hasAll(["mirrorImpact","glassPowder"]),lower:(has("brakeDamage")||has("maintenanceLog"))&&has("tankSample"),call:has("recoveredVoice")||has("talkButton"),rotate:has("overrideBurn")&&has("motorLog"),track:has("trackMisalign"),drown:state.connections.includes("waterSource")&&state.connections.includes("victimAlive"),return:has("lockManual")}[id];}
 function timelineLabel(id){
   const named=state.difficulty==="normal"||({drug:"baiyan",poison:"liangsuqin",wire:"suwan",brake:"han",restore:"han",bullet:"qiyue",rotate:"liangyin"}[id]&&state.interviews[{drug:"baiyan",poison:"liangsuqin",wire:"suwan",brake:"han",restore:"han",bullet:"qiyue",rotate:"liangyin"}[id]]?.broken);
   const labels={drug:named?"白砚在红酒中加入镇静药":"有人处理过祁重楼的红酒",poison:named?"梁素琴在面具内涂乌头":"银色面具被重新缝入药膏",wire:named?"苏晚切断主威亚":"主威亚发生人为断裂",brake:named?"韩九章破坏主制动":"主制动遭人为磨削",restore:named?"韩九章恢复第二制动":"第二制动在演出前被恢复",bullet:named?"祁越更换真子弹":"一发实弹被装入舞台枪",fall:"高台坠落，但备用绳限制高度",shot:"实弹击碎镜墙，玻璃造成伤口",lower:"布景舱异常下降进入暴雨水槽",call:"舱内通话按钮被持续按住并发出求救",rotate:named?"梁音在警报后确认继续旋转":"进水警报后出现人工覆盖与旋转负载",track:"旋转导致应急配重轨道错位",drown:"活体挣扎与淡水来源共同确认溺亡",return:"自动程序将锁死的布景舱送回中层"};return labels[id];
@@ -392,13 +436,18 @@ function renderTimelinePuzzle(head){
 function idHint(id){return id==="water"?"倾斜水线只能出现在水平上升之后，排水停顿一定最后发生":id==="oldcase"?"前三项制造灾难，最后一项才决定不救":"镇静药最早；求救发生在进水后、旋转前；溺亡早于房间回升";}
 function bindPuzzleBack(){document.querySelector("#backPuzzles").addEventListener("click",()=>{delete state.flags.puzzleAnswers;setScreen("puzzles");});}
 
-function removeClues(ids){state.clues=state.clues.filter(id=>!ids.includes(id));state.attachments=state.attachments.filter(id=>!ids.includes(id));}
+function revalidateConnections(){
+  state.connections=state.connections.filter(id=>{const connection=CONNECTIONS.find(c=>c.id===id),selected=state.connectionEvidence[id]||[];return connection&&selected.every(has)&&connectionSolvedWith(connection,selected);});
+  Object.keys(state.connectionEvidence).forEach(id=>{if(!state.connections.includes(id))delete state.connectionEvidence[id];});
+  refreshAutoAttachments();
+}
+function removeClues(ids){state.clues=state.clues.filter(id=>!ids.includes(id));state.attachments=state.attachments.filter(id=>!ids.includes(id));revalidateConnections();}
 function resolveCrisis(choice){
   const crisis=state.flags.pendingCrisis;
   if(crisis==="pump"){
     state.flags.crisisPump=true;
     if(choice==="repair"){state.flags.pendingCrisis=null;advance(20);state.safety=Math.min(100,state.safety+18);}
-    else{state.flags.pendingCrisis=null;["waterTrace","scenePhotos"].forEach(id=>state.flags.degraded[id]=true);}
+    else{state.flags.pendingCrisis=null;["waterTrace","scenePhotos"].forEach(id=>state.flags.degraded[id]=true);revalidateConnections();}
   }else if(crisis==="archive"){
     state.flags.crisisArchive=true;state.flags.pendingCrisis=null;
     if(choice==="loseLoad")removeClues(["loadTape"]);
@@ -436,15 +485,36 @@ const REPORT_OPTIONS={
 };
 const HARM_LABELS={liangsuqin:"面具乌头",qiyue:"更换真弹",suwan:"割断威亚",han:"破坏主制动后恢复副制动",baiyan:"镇静药并删除录像",liangyin:"紧急覆盖与旋转"};
 const SECRET_CONFIG={identity:{label:"双胞胎身份",unlocked:()=>has("identity")},relationship:{label:"梁素琴与白砚关系",unlocked:()=>has("relationshipEvidence")},threat:{label:"苏晚受胁迫",unlocked:()=>has("threatFilm")},plagiarism:{label:"盗用白砚作品",unlocked:()=>has("plagiarism")},letters:{label:"阮明珠私人信件",unlocked:()=>has("mingzhuLetters")}};
+const HARM_PROOF={
+  liangsuqin:[["aconite"]],qiyue:[["liveBullet","mirrorWound"],["gunRegistry","mirrorImpact","glassPowder"]],
+  suwan:[["cutRope","threatFilm"]],han:[["secondBrake"],["springMissing","maintenanceLog","freshBrakeOil"]],baiyan:[["drugWine","reverseFilm"]]
+};
+function harmProofScore(id){const physical=Math.max(0,...(HARM_PROOF[id]||[]).map(route=>evidenceScore(route)));return physical+testimonyScore(id);}
+function harmProofValid(id){return !!(state.interviews[id]?.broken&&state.flags[`harm_${id}`]&&harmProofScore(id)>=2.5);}
+function refreshAutoAttachments(){
+  const ids=[];
+  state.connections.forEach(id=>ids.push(...(state.connectionEvidence[id]||[])));
+  Object.entries(HARM_PROOF).forEach(([id,routes])=>{if(state.report.harms[id])routes.flat().filter(has).forEach(clue=>ids.push(clue));});
+  if(state.puzzles.includes("oldcase"))ids.push("delayTape","oldCaseParts");
+  state.attachments=[...new Set(ids.filter(has))];
+  return state.attachments;
+}
+function connectionAttachmentValid(id){
+  const connection=CONNECTIONS.find(c=>c.id===id),selected=state.connectionEvidence[id]||[];
+  return !!(connection&&state.connections.includes(id)&&selected.length&&selected.every(clue=>state.attachments.includes(clue))&&connectionSolvedWith(connection,selected));
+}
+function autoAttachmentHTML(){
+  return CONNECTIONS.map(c=>{const ids=state.connectionEvidence[c.id]||[],score=evidenceScore(ids),done=connectionAttachmentValid(c.id);return `<div class="auto-attachment ${done?'done':''}"><b>${done?'✓':'○'} ${state.connections.includes(c.id)?c.title:c.question}</b><small>${ids.length?ids.map(id=>`${CLUES[id].t}（${scoreLabel(id)}）`).join("、"):"尚未形成证据连接"}</small><span>${score}/${c.threshold} 分</span></div>`;}).join("");
+}
 
 function renderReport(){
   const r=state.report;
+  refreshAutoAttachments();
   const unlockedSecrets=Object.entries(SECRET_CONFIG).filter(([,v])=>v.unlocked());
-  app.innerHTML=`<section class="screen"><button class="btn secondary small" id="backHub">← 暂不结案</button><div class="chapter-head local-head"><div><p class="eyebrow">FINAL CASE REPORT · ${clock()}</p><h2>${state.replayMode?'复盘案件报告':'提交完整案件报告'}</h2><p class="chapter-summary">答案、已连接证据、审讯效力和加害确认会共同判定结局。勾选猜测不能替代证明。</p></div><div class="chapter-no">VII</div></div><div class="report-grid"><div class="report-main">${reportField("culprit","最终责任人",REPORT_OPTIONS.culprit,r.culprit)}${reportField("cause","直接死因",REPORT_OPTIONS.cause,r.cause)}${reportField("room","密室原理",REPORT_OPTIONS.room,r.room)}${reportField("responsibility","使死亡不可逆的决定",REPORT_OPTIONS.responsibility,r.responsibility)}${reportField("oldcase","1978年最终责任",REPORT_OPTIONS.oldcase,r.oldcase)}<div class="deduction"><h3><span>REPORT 06</span>六人的加害行为</h3><p class="muted">只有经过物证修正的证词才能写入确认栏。</p><div class="harm-list">${Object.entries(HARM_LABELS).map(([id,label])=>{const proven=state.interviews[id]?.broken&&state.flags[`harm_${id}`];return `<label class="${proven?'':'locked-harm'}"><input type="checkbox" data-harm="${id}" ${r.harms[id]?'checked':''} ${!proven?'disabled':''}><span><b>${PEOPLE[id].name}</b>${label}${proven?'':' · 尚未证明'}</span></label>`;}).join("")}</div></div><div class="deduction"><h3><span>REPORT 07</span>证据附件与已连接结论</h3><p class="muted">附件负责保存来源；最高结局还要求你在调查甲板亲自完成四条证据连接。</p><div class="connection-summary">${CONNECTIONS.map(c=>`<span class="${state.connections.includes(c.id)?'done':''}">${state.connections.includes(c.id)?'✓':'○'} ${c.title}</span>`).join("")}</div><div class="attachment-grid">${state.clues.filter(id=>CLUES[id].stage>=4).map(id=>`<button class="option-pill ${state.attachments.includes(id)?'active':''}" data-attachment="${id}">${CLUES[id].t}${state.flags.degraded[id]?' · 降级':''}</button>`).join("")||"<p class='muted'>尚无达到证据等级的线索。</p>"}</div></div><div class="deduction"><h3><span>EPILOGUE</span>已发现的私人秘密</h3><div class="option-row">${unlockedSecrets.map(([id,v])=>`<button class="option-pill ${state.disclosure.includes(id)?'active':''}" data-disclosure="${id}">${v.label}</button>`).join("")||'<p class="muted">尚未发现可以合法写入报告的私人秘密。</p>'}</div></div><button class="btn danger report-submit" id="submitReport" ${![r.culprit,r.cause,r.room,r.responsibility,r.oldcase].every(Boolean)?'disabled':''}>${state.replayMode?'生成复盘结局':'封存首次案件报告'}</button></div>${sideFile()}</div></section>`;
+  app.innerHTML=`<section class="screen"><button class="btn secondary small" id="backHub">← 暂不结案</button><div class="chapter-head local-head"><div><p class="eyebrow">FINAL CASE REPORT · ${clock()}</p><h2>${state.replayMode?'复盘案件报告':'提交完整案件报告'}</h2><p class="chapter-summary">答案、自动附件的证明分、审讯效力和加害确认会共同判定结局。降级物证必须由独立来源补强。</p></div><div class="chapter-no">VII</div></div><div class="report-grid"><div class="report-main">${reportField("culprit","最终责任人",REPORT_OPTIONS.culprit,r.culprit)}${reportField("cause","直接死因",REPORT_OPTIONS.cause,r.cause)}${reportField("room","密室原理",REPORT_OPTIONS.room,r.room)}${reportField("responsibility","使死亡不可逆的决定",REPORT_OPTIONS.responsibility,r.responsibility)}${reportField("oldcase","1978年最终责任",REPORT_OPTIONS.oldcase,r.oldcase)}<div class="deduction"><h3><span>REPORT 06</span>六人的加害行为</h3><p class="muted">独立证言计 2 分，污染证言计 0.5 分；足量物证可以补强污染证言。</p><div class="harm-list">${Object.entries(HARM_LABELS).map(([id,label])=>{const proven=id==="liangyin"?state.interviews[id]?.broken:harmProofValid(id);const score=id==="liangyin"?testimonyScore(id):harmProofScore(id);return `<label class="${proven?'':'locked-harm'}"><input type="checkbox" data-harm="${id}" ${r.harms[id]?'checked':''} ${!proven?'disabled':''}><span><b>${PEOPLE[id].name}</b>${label}${proven?` · ${score}分`:' · 证明不足'}</span></label>`;}).join("")}</div></div><div class="deduction"><h3><span>REPORT 07</span>系统自动生成证据附件</h3><p class="muted">每条已验证连接的原始选证会自动封存；附件分数在提交报告时重新计算，不再需要重复勾选。</p><div class="auto-attachment-list">${autoAttachmentHTML()}</div></div><div class="deduction"><h3><span>EPILOGUE</span>已发现的私人秘密</h3><div class="option-row">${unlockedSecrets.map(([id,v])=>`<button class="option-pill ${state.disclosure.includes(id)?'active':''}" data-disclosure="${id}">${v.label}</button>`).join("")||'<p class="muted">尚未发现可以合法写入报告的私人秘密。</p>'}</div></div><button class="btn danger report-submit" id="submitReport" ${![r.culprit,r.cause,r.room,r.responsibility,r.oldcase].every(Boolean)?'disabled':''}>${state.replayMode?'生成复盘结局':'封存首次案件报告'}</button></div>${sideFile()}</div></section>`;
   document.querySelector("#backHub").addEventListener("click",()=>setScreen("hub"));
   document.querySelectorAll("[data-report]").forEach(el=>el.addEventListener("click",()=>{r[el.dataset.report]=el.dataset.value;saveState("");render();}));
   document.querySelectorAll("[data-harm]").forEach(el=>el.addEventListener("change",()=>{r.harms[el.dataset.harm]=el.checked;saveState("");}));
-  document.querySelectorAll("[data-attachment]").forEach(el=>el.addEventListener("click",()=>{const id=el.dataset.attachment;if(state.attachments.includes(id))state.attachments=state.attachments.filter(x=>x!==id);else if(state.attachments.length<8)state.attachments.push(id);else return toast("证据附件最多八项，请删去较弱的一项");saveState("");render();}));
   document.querySelectorAll("[data-disclosure]").forEach(el=>el.addEventListener("click",()=>{const id=el.dataset.disclosure;state.disclosure=state.disclosure.includes(id)?state.disclosure.filter(x=>x!==id):[...state.disclosure,id];saveState("");render();}));
   document.querySelector("#submitReport").addEventListener("click",submitReport);
 }
@@ -452,11 +522,12 @@ function reportField(id,label,options,value){return `<div class="deduction"><h3>
 
 function submitReport(){
   const r=state.report;
-  const directCauseSolved=r.cause==="drowning"&&state.connections.includes("waterSource")&&hasAll(["cable","handprints"])&&(has("freshWaterProof")||hasAll(["waterTrace","tankSample","scenePhotos"]));
-  const roomSolved=r.room==="moving"&&state.connections.includes("movingRoom")&&hasAll(["lockManual","railSample","sandMatch"]);
-  const victimAliveSolved=state.connections.includes("victimAlive")&&hasAll(["recoveredVoice","talkButton"])&&state.interviews.liangyin?.broken;
-  const finalActionSolved=r.responsibility==="override"&&state.connections.includes("rescueBlocked")&&hasAll(["overrideBurn","loadTape","trackMisalign","knowledgeLeak"]);
-  const otherAttemptsSolved=["liangsuqin","qiyue","suwan","han","baiyan"].every(id=>state.interviews[id]?.broken&&state.interviews[id]?.independent!==false&&state.flags[`harm_${id}`]&&r.harms[id]);
+  refreshAutoAttachments();
+  const directCauseSolved=r.cause==="drowning"&&connectionAttachmentValid("waterSource");
+  const roomSolved=r.room==="moving"&&connectionAttachmentValid("movingRoom");
+  const victimAliveSolved=connectionAttachmentValid("victimAlive")&&state.interviews.liangyin?.broken;
+  const finalActionSolved=r.responsibility==="override"&&connectionAttachmentValid("rescueBlocked");
+  const otherAttemptsSolved=["liangsuqin","qiyue","suwan","han","baiyan"].every(id=>harmProofValid(id)&&r.harms[id]);
   let type;
   if(r.culprit==="han")type="C";else if(r.culprit==="qiyue")type="D";else if(r.culprit==="liangsuqin")type="E";else if(r.culprit==="suwan")type="I";else if(r.culprit==="baiyan")type="J";else if(r.culprit==="collective")type="F";else if(r.culprit==="accident")type="G";
   else if(r.culprit==="liangyin"){
@@ -471,7 +542,7 @@ function submitReport(){
 }
 
 const ENDINGS={
-  A:{rank:"A",title:"最后的谢幕",lead:"完整破案",copy:["你没有把六次加害揉成一个方便的集体罪名。镇静药、乌头、断绳、真弹与主制动破坏制造了危险；梁音却是在确认祁重楼仍然活着之后，主动按住覆盖开关，让舞台继续旋转。","韩九章承认，不旋转时应急配重可以拉回布景舱。求救录音、开关烧蚀、校时记录和错位轨道闭合了证据链。梁音无法再躲进字面真话里。","1978年的后台录音也被重新封存：祁重楼没有制造最初坠落，却命令所有人等待九十秒。二十二年前与今晚，真正的罪都发生在有人有能力停下，却决定让演出继续的时刻。"]},
+  A:{rank:"A",title:"最后的谢幕",lead:"完整破案",copy:["你没有把六次加害揉成一个方便的集体罪名。镇静药、乌头、断绳、真弹与主制动破坏制造了危险；梁音却是在确认祁重楼仍然活着之后，主动按住覆盖开关，让舞台继续旋转。","韩九章承认，不旋转时应急配重可以拉回布景舱。监听声道、带血按钮或恢复录音，加上开关烧蚀、校时记录与错位轨道，闭合了证据链。梁音无法再躲进字面真话里。","1978年的后台录音也被重新封存：祁重楼没有制造最初坠落，却命令所有人等待九十秒。二十二年前与今晚，真正的罪都发生在有人有能力停下，却决定让演出继续的时刻。"]},
   B:{rank:"B",title:"无人作证",lead:"真相正确，证据不足",copy:["你的结论指向梁音，淡水与移动布景舱也基本成立。但证据附件无法同时证明她听见求救、主动覆盖以及旋转阻断了救援。","官方只能把死亡写成多人的舞台破坏共同造成的事故。你知道最后是谁按下确认键，却没能把推理变成可以成立的证明。"]},
   C:{rank:"C",title:"房间坠落之后",lead:"错误指认韩九章",copy:["韩九章承认破坏主制动，也承认让布景舱坠入水槽。他没有说自己后来恢复了第二制动。","你查清是谁让房间掉下去，却没有查清是谁不让它回来。韩九章替苏晚和梁音承担了机械责任。"]},
   D:{rank:"D",title:"没有击中的子弹",lead:"错误指认祁越",copy:["祁越完整认罪。他相信血来自自己射出的真弹，梁音没有纠正。","后续尸检没有在体内找到弹头。你抓住了一个真正想杀人的人，却没有找到决定死亡的人。"]},
@@ -504,13 +575,13 @@ function renderEnding(){
   document.querySelector("#returnCase")?.addEventListener("click",()=>{state.ending=null;setScreen("report");});
   document.querySelector("#openReplay")?.addEventListener("click",()=>{state.replayMode=true;state.ending=null;state.flags.evacuation=false;state.flags.pendingCrisis=null;saveState("");setScreen("report");});
   document.querySelector("#shareEnding").addEventListener("click",async()=>{const text=`我在《塞壬号：第七幕没有掌声》中达成「${e.title}」：${e.lead}。船体安全 ${state.safety}%。`;try{await navigator.clipboard.writeText(text);toast("结局摘要已复制");}catch{toast(text);}});
-  document.querySelector("#newGame").addEventListener("click",()=>{if(confirm("重新开始会覆盖当前自动存档，确定吗？")){state=freshState();localStorage.removeItem(STORAGE_KEY);render();}});
+  document.querySelector("#newGame").addEventListener("click",()=>{if(confirm("重新开始会覆盖当前自动存档，确定吗？")){state=freshState();clearSavedState();render();}});
 }
 
 function renderNotebook(){
   document.querySelectorAll("[data-notebook-tab]").forEach(x=>x.classList.toggle("active",x.dataset.notebookTab===notebookTab));
   if(notebookTab==="clues")notebookBody.innerHTML=state.clues.length?state.clues.map((id,i)=>`<div class="note-item"><span class="num">${String(i+1).padStart(2,"0")}</span><div><b>${CLUES[id].t}${state.flags.degraded[id]?' · 已降级':''}</b><p>${CLUES[id].d}</p><span class="note-stage">${["","痕迹","信息","关联","解释","证据"][CLUES[id].stage]} · ${CLUES[id].chain}</span></div></div>`).join(""):`<div class="empty-note">案卷还是空的。<br>先封存现场。</div>`;
-  else if(notebookTab==="chains")notebookBody.innerHTML=CONNECTIONS.map((c,i)=>`<div class="chain-note"><b>0${i+1} · ${c.title}</b><span>${state.connections.includes(c.id)?'已成立':'未连接'}</span><p>${state.connections.includes(c.id)?c.result:'收集线索后，在调查甲板的“连接证据”中亲自组成证明。'}</p></div>`).join("");
+  else if(notebookTab==="chains")notebookBody.innerHTML=CONNECTIONS.map((c,i)=>`<div class="chain-note"><b>0${i+1} · ${state.connections.includes(c.id)?c.title:c.question}</b><span>${state.connections.includes(c.id)?'已成立':'未连接'}</span><p>${state.connections.includes(c.id)?c.result:'收集线索后，在调查甲板的“连接证据”中亲自组成证明。'}</p></div>`).join("");
   else if(notebookTab==="people")notebookBody.innerHTML=Object.entries(PEOPLE).map(([id,p],i)=>{const rec=state.interviews[id];const status=rec?.broken?"证词已被物证修正":rec?.closed?"核心话题已封闭":rec?.falseConfession?"存在高压虚假认罪":rec?.originalRecorded?(rec.independent?"原始证词可独立使用":"传播后证词，不能独立证明"):"尚未记录原始证词";return `<div class="note-item"><span class="num">0${i+1}</span><div><b>${p.name} · ${p.role}</b><p>${p.desc}<br>保护对象：${p.protect}<br>${status}</p></div></div>`;}).join("");
   else{const visible=TIMELINE.filter(e=>timelineDiscovered(e[0]));notebookBody.innerHTML=visible.length?visible.map((e,i)=>`<div class="note-item"><span class="num">${String(i+1).padStart(2,"0")}</span><div><b>${timelineLabel(e[0])}</b><p>${state.puzzles.includes("timeline")?'已在完整时间线中固定':'事件已发现，顺序尚未正式固定'}</p></div></div>`).join(""):`<div class="empty-note">尚未发现足以进入时间线的事件碎片。</div>`;}
 }
@@ -531,7 +602,7 @@ document.querySelector("#resumeBtn").addEventListener("click",()=>pauseMenu.clos
 document.querySelector("#pauseClueBtn").addEventListener("click",()=>{pauseMenu.close();renderNotebook();notebook.showModal();});
 document.querySelector("#pauseSaveBtn").addEventListener("click",()=>saveState());
 document.querySelector("#titleBtn").addEventListener("click",()=>{state.resumeScreen=state.screen;state.screen="cover";pauseMenu.close();saveState("");render();});
-document.querySelector("#restartBtn").addEventListener("click",()=>{if(confirm("重新开始会覆盖当前自动存档，确定吗？")){state=freshState();localStorage.removeItem(STORAGE_KEY);pauseMenu.close();render();}});
+document.querySelector("#restartBtn").addEventListener("click",()=>{if(confirm("重新开始会覆盖当前自动存档，确定吗？")){state=freshState();clearSavedState();pauseMenu.close();render();}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&notebook.open)notebook.close();if(e.key.toLowerCase()==="n"&&!notebook.open&&!pauseMenu.open&&state.screen!=="cover"){renderNotebook();notebook.showModal();}});
 
 render();
