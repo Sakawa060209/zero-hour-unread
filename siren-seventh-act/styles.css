@@ -338,6 +338,21 @@ h3 { margin-bottom: 10px; font-size: 19px; }
 .chain-note p { margin: 10px 0 0; color: #655e55; font-size: 12px; line-height: 1.7; }
 .ending-subtitle { color: var(--brass-light); letter-spacing: .16em; }
 .ending-copy hr { height: 1px; margin: 30px 0; border: 0; background: var(--line); }
+.action-card.degraded { border-color: rgba(145,62,54,.45); }
+.action-card.degraded:not(:disabled)::before { content: "证据降级"; position: absolute; right: 46px; color: #d58e84; font: 9px var(--mono); }
+.action-card { position: relative; }
+.degraded-note { padding: 10px 12px; border: 1px solid rgba(145,62,54,.38); color: #d6a19a !important; background: rgba(145,62,54,.08); }
+.suspect-card.closed { opacity: .55; border-color: rgba(145,62,54,.42); }
+.connection-summary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin: 14px 0 18px; }
+.connection-summary span { padding: 10px; border: 1px solid var(--line); color: var(--paper-dim); font-size: 11px; }
+.connection-summary span.done { border-color: rgba(82,125,136,.58); color: #a9cbd2; background: rgba(82,125,136,.08); }
+.locked-harm { opacity: .48; cursor: not-allowed !important; }
+.gallery-note { margin: 20px auto 30px; color: var(--paper-dim); font: 10px var(--mono); letter-spacing: .1em; }
+.crisis-panel { padding: clamp(28px,6vw,60px); border: 1px solid rgba(145,62,54,.62); background: radial-gradient(circle at 50% 0,rgba(145,62,54,.16),rgba(255,255,255,.02)); box-shadow: var(--shadow); }
+.crisis-panel h1 { max-width: 720px; font-size: clamp(34px,6vw,66px); }
+.crisis-panel > p:not(.eyebrow) { color: var(--paper-soft); font-size: 17px; line-height: 1.9; }
+.crisis-actions { display: grid; gap: 10px; margin-top: 32px; }
+.crisis-actions .btn { width: 100%; min-height: 58px; }
 
 @media (max-width: 850px) {
   .case-clock { display: none; }
@@ -365,6 +380,7 @@ h3 { margin-bottom: 10px; font-size: 19px; }
   .chapter-no { display: none; }
   .location-grid, .suspect-grid, .approach-grid, .card-bank { grid-template-columns: 1fr; }
   .hub-tools, .mini-cast, .harm-list { grid-template-columns: 1fr; }
+  .connection-summary { grid-template-columns: 1fr; }
   .action-card { grid-template-columns: 66px 1fr auto; padding: 12px; }
   .ship-warning { align-items: flex-start; flex-direction: column; gap: 5px; }
   .location-card, .suspect-card { min-height: 150px; }
