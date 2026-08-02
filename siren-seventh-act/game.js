@@ -1,6 +1,7 @@
 "use strict";
 
-const STORAGE_KEY = "siren-seventh-act-save-v7";
+const STORAGE_KEY = "siren-seventh-act-save-v8";
+const LEGACY_V7_STORAGE_KEY = "siren-seventh-act-save-v7";
 const LEGACY_V6_STORAGE_KEY = "siren-seventh-act-save-v6";
 const LEGACY_V5_STORAGE_KEY = "siren-seventh-act-save-v5";
 const LEGACY_V4_STORAGE_KEY = "siren-seventh-act-save-v4";
@@ -253,20 +254,20 @@ function absorbStateMeta(saved){
 }
 function loadState(){
   try{
-    const current=localStorage.getItem(STORAGE_KEY),legacyV6=!current&&localStorage.getItem(LEGACY_V6_STORAGE_KEY),legacyV5=!current&&!legacyV6&&localStorage.getItem(LEGACY_V5_STORAGE_KEY),legacyV4=!current&&!legacyV6&&!legacyV5&&localStorage.getItem(LEGACY_V4_STORAGE_KEY),legacyV3=!current&&!legacyV6&&!legacyV5&&!legacyV4&&localStorage.getItem(LEGACY_V3_STORAGE_KEY),legacyV2=!current&&!legacyV6&&!legacyV5&&!legacyV4&&!legacyV3&&localStorage.getItem(LEGACY_STORAGE_KEY);
-    const x=JSON.parse(current||legacyV6||legacyV5||legacyV4||legacyV3||legacyV2);if(!x)return freshState();
+    const current=localStorage.getItem(STORAGE_KEY),legacyV7=!current&&localStorage.getItem(LEGACY_V7_STORAGE_KEY),legacyV6=!current&&!legacyV7&&localStorage.getItem(LEGACY_V6_STORAGE_KEY),legacyV5=!current&&!legacyV7&&!legacyV6&&localStorage.getItem(LEGACY_V5_STORAGE_KEY),legacyV4=!current&&!legacyV7&&!legacyV6&&!legacyV5&&localStorage.getItem(LEGACY_V4_STORAGE_KEY),legacyV3=!current&&!legacyV7&&!legacyV6&&!legacyV5&&!legacyV4&&localStorage.getItem(LEGACY_V3_STORAGE_KEY),legacyV2=!current&&!legacyV7&&!legacyV6&&!legacyV5&&!legacyV4&&!legacyV3&&localStorage.getItem(LEGACY_STORAGE_KEY);
+    const x=JSON.parse(current||legacyV7||legacyV6||legacyV5||legacyV4||legacyV3||legacyV2);if(!x)return freshState();
     const base=freshState(),merged=Object.assign(base,x);
     merged.report=Object.assign(base.report,x.report||{});merged.report.harms=Object.assign({},x.report?.harms||{});merged.connectionEvidence=Object.assign({},x.connectionEvidence||{});
     merged.flags=Object.assign({degraded:{},connectionAttempts:{},connectionLocks:{},clueVersion:0},x.flags||{});merged.flags.degraded=Object.assign({},x.flags?.degraded||{});merged.flags.connectionAttempts=Object.assign({},x.flags?.connectionAttempts||{});merged.flags.connectionLocks=Object.assign({},x.flags?.connectionLocks||{});
     rebuildDerivedTestimony(merged);
     if(merged.flags.disclosureLocked&&!merged.flags.reportDisclosureMode){merged.flags.mandatoryDisclosure=merged.disclosure?.[0]||null;merged.flags.reportDisclosureMode=(merged.disclosure?.length||0)>1?"limited":"sealed";delete merged.flags.disclosureLocked;}
     if(legacyV2){merged.connections=[];merged.connectionEvidence={};merged.attachments=[];merged.flags.migratedProofSystem=true;}
-    if(legacyV6||legacyV5||legacyV4||legacyV3||legacyV2)localStorage.setItem(STORAGE_KEY,JSON.stringify(merged));
+    if(legacyV7||legacyV6||legacyV5||legacyV4||legacyV3||legacyV2)localStorage.setItem(STORAGE_KEY,JSON.stringify(merged));
     return merged;
   }catch{return freshState();}
 }
 function saveState(message="进度已保存"){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));if(message)toast(message);}
-function clearSavedState(){localStorage.removeItem(STORAGE_KEY);localStorage.removeItem(LEGACY_V6_STORAGE_KEY);localStorage.removeItem(LEGACY_V5_STORAGE_KEY);localStorage.removeItem(LEGACY_V4_STORAGE_KEY);localStorage.removeItem(LEGACY_V3_STORAGE_KEY);localStorage.removeItem(LEGACY_STORAGE_KEY);}
+function clearSavedState(){localStorage.removeItem(STORAGE_KEY);localStorage.removeItem(LEGACY_V7_STORAGE_KEY);localStorage.removeItem(LEGACY_V6_STORAGE_KEY);localStorage.removeItem(LEGACY_V5_STORAGE_KEY);localStorage.removeItem(LEGACY_V4_STORAGE_KEY);localStorage.removeItem(LEGACY_V3_STORAGE_KEY);localStorage.removeItem(LEGACY_STORAGE_KEY);}
 function escapeHTML(v){return String(v).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));}
 function has(id){return state.clues.includes(id);}
 function hasAll(ids=[]){return ids.every(has);}
@@ -274,9 +275,16 @@ function addClues(ids=[]){ids.forEach(id=>{if(CLUES[id]&&!has(id)){state.clues.p
 function toast(text){const el=document.querySelector("#toast");el.textContent=text;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2600);}
 function clock(){let total=54+state.elapsed,h=Math.floor(total/60)%24,m=total%60;return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;}
 function safetyBand(){return state.safety>=70?"稳定":state.safety>=40?"受损":state.safety>0?"濒临沉没":"弃船程序";}
-function difficultyFactor(){return {normal:.7,hard:1,extreme:1.35}[state.difficulty]||1;}
+function startingSafety(difficulty){return difficulty==="normal"?90:78;}
+function stormWearRate(){return {normal:36,hard:18,extreme:14}[state.difficulty]||18;}
+function lowSafetyExposureRate(){return {normal:90,hard:45,extreme:30}[state.difficulty]||45;}
 function difficultyRules(){return {normal:{degradeAt:120,maxInterviews:99,showNeeds:true,showMeters:true},hard:{degradeAt:75,maxInterviews:3,showNeeds:true,showMeters:true},extreme:{degradeAt:45,maxInterviews:3,showNeeds:false,showMeters:false}}[state.difficulty];}
 function experimentLimit(){return 3;}
+const NORMAL_PROGRESS_EVENTS=[
+  {id:"machineWipe",at:8,title:"机械层有人回来过",text:"有人趁你离开后用煤油擦洗制动器、翻动维修簿并整理零件箱。越仓促的清理留下越明确的装配与出入记录。",clues:["freshBrakeOil","maintenanceLog","springMissing"]},
+  {id:"editingErase",at:18,title:"剪辑台的索引正在被删除",text:"有人同时清理剪辑台与换瓶残留：索引被覆盖，药瓶和酒塞也被挪动。匆忙的掩盖让一项原本隐蔽的痕迹暴露出来。",clues:["deletionIndex","winePuncture","sedativeVial"]},
+  {id:"costumeMove",at:30,title:"有人试图转移戏服证物",text:"一只戏服箱被拖向上层甲板，雨水把箱底残留冲成了一条连续痕迹。转移行为让原本藏在夹层里的材料暴露出来。",clues:["gloveAconite","ropeFibers","riggingKnife","costumeCache"]}
+];
 const EXPERIMENT_EVIDENCE=new Set(["freshWaterProof","liveBullet","mirrorWound","brakeDamage","secondBrake","recoveredVoice"]);
 const EVIDENCE_SOURCES={
   scenePhotos:"scene-water",waterTrace:"scene-water",dryCorridor:"scene-water",
@@ -322,20 +330,34 @@ function checkCrisisThresholds(before,after){
   else if(before>=35&&after<35&&!state.flags.crisisArchive)state.flags.pendingCrisis="archive";
   else if(before>=15&&after<15&&!state.flags.crisisTrack)state.flags.pendingCrisis="track";
 }
+function investigationProgress(){return state.actions.length+state.hypotheses.length+state.puzzles.length+state.connections.length+Object.values(state.interviews).filter(rec=>rec.originalRecorded).length+Object.values(state.interviews).filter(rec=>rec.broken).length;}
+function queueNormalProgressEvent(){
+  if(state.difficulty!=="normal"||state.flags.pendingProgressEvent)return null;
+  state.flags.progressEvents=state.flags.progressEvents||[];
+  const event=NORMAL_PROGRESS_EVENTS.find(item=>investigationProgress()>=item.at&&!state.flags.progressEvents.includes(item.id));if(!event)return null;
+  const clue=event.clues.find(id=>!has(id))||null;state.flags.progressEvents.push(event.id);state.flags.pendingProgressEvent={id:event.id,clue};if(clue)addClues([clue]);return state.flags.pendingProgressEvent;
+}
 function advance(minutes,risk=0,repair=0){
-  const before=state.safety;
+  const before=state.safety,beforeElapsed=state.elapsed,wearRate=stormWearRate();
   state.elapsed+=minutes;
-  const passive=Math.ceil(minutes/18*difficultyFactor());
+  const passive=Math.floor(state.elapsed/wearRate)-Math.floor(beforeElapsed/wearRate);
   state.safety=Math.max(0,Math.min(100,state.safety-passive-Math.max(0,risk)+Math.max(0,repair)));
   if(state.elapsed>=80&&!state.flags.isolated)state.flags.contaminated=true;
-  if(state.elapsed>=150&&!state.flags.deckSecured)state.safety=Math.max(0,state.safety-2);
-  if(state.safety>0&&state.safety<40){state.flags.accidents=(state.flags.accidents||0)+1;state.safety=Math.max(0,state.safety-2);}
+  if(state.elapsed>=240&&!state.flags.deckSecured&&!state.flags.lateStormPenalty){state.flags.lateStormPenalty=true;state.safety=Math.max(0,state.safety-4);}
+  if(state.safety>0&&state.safety<40){
+    const beforeExposure=state.flags.lowSafetyMinutes||0,afterExposure=beforeExposure+minutes,exposureRate=lowSafetyExposureRate();
+    const accidents=Math.floor(afterExposure/exposureRate)-Math.floor(beforeExposure/exposureRate);
+    state.flags.lowSafetyMinutes=afterExposure;
+    if(accidents>0){state.flags.accidents=(state.flags.accidents||0)+accidents;state.safety=Math.max(0,state.safety-accidents);}
+  }
   checkCrisisThresholds(before,state.safety);
   if(state.safety===0)state.flags.evacuation=true;
+  queueNormalProgressEvent();
 }
 function chapterName(){
   if(state.screen==="cover")return "标题";
   if(state.screen==="gallery")return "剧场座位 · 结局图鉴";
+  if(state.screen==="progressEvent")return "调查异动 · 有人正在掩盖痕迹";
   if(state.screen==="confrontation")return "终章 · 没有观众的对质";
   if(["prologue","discovery"].includes(state.screen))return "序章 · 没有观众的首演";
   const evidence=state.clues.length;
@@ -351,24 +373,32 @@ function setScreen(screen){state.screen=screen;saveState("");render();window.scr
 
 function sideFile(){
   const chains=["死因","密室","加害","存活","指令","旧案"].map(name=>[name,Object.values(CLUES).filter(c=>c.chain===name).length,state.clues.filter(id=>CLUES[id]?.chain===name).length]);
-  return `<aside class="side-file"><p class="eyebrow">SHIP STATUS</p><h3>${clock()} · ${safetyBand()}</h3><div class="meter"><div class="meter-label"><span>船体安全</span><b>${state.safety}%</b></div><div class="meter-track"><div class="meter-fill ${state.safety<40?'danger-fill':''}" style="width:${state.safety}%"></div></div></div>${chains.map(([n,total,g])=>`<div class="side-stat"><span>${n}</span><strong>${g}/${total}</strong></div>`).join("")}<div class="side-stat"><span>大型检验</span><strong>${state.experimentUses}/${experimentLimit()}</strong></div><div class="side-stat"><span>证据连接</span><strong>${state.connections.length}/${CONNECTIONS.length}</strong></div><div class="side-stat"><span>证词状态</span><strong>${state.flags.contaminated?"已发生传播":"可追溯"}</strong></div></aside>`;
+  return `<aside class="side-file"><p class="eyebrow">SHIP STATUS</p><h3>${clock()} · ${safetyBand()}</h3><div class="meter"><div class="meter-label"><span>船体安全</span><b>${state.safety}%</b></div><div class="meter-track"><div class="meter-fill ${state.safety<40?'danger-fill':''}" style="width:${state.safety}%"></div></div></div><div class="side-stat"><span>风暴损耗</span><strong>${stormWearRate()}分钟 / −1</strong></div>${state.difficulty==="normal"?`<div class="side-stat"><span>掩盖异动</span><strong>${state.flags.progressEvents?.length||0}/${NORMAL_PROGRESS_EVENTS.length}</strong></div>`:""}${chains.map(([n,total,g])=>`<div class="side-stat"><span>${n}</span><strong>${g}/${total}</strong></div>`).join("")}<div class="side-stat"><span>大型检验</span><strong>${state.experimentUses}/${experimentLimit()}</strong></div><div class="side-stat"><span>证据连接</span><strong>${state.connections.length}/${CONNECTIONS.length}</strong></div><div class="side-stat"><span>证词状态</span><strong>${state.flags.contaminated?"已发生传播":"可追溯"}</strong></div></aside>`;
 }
 
 function render(){
   const unresolvedCrisis=state.flags.evacuation||state.flags.pendingCrisis,reportAuthorized=state.screen==="report"&&state.flags.crisisReportAuthorized;
   if(unresolvedCrisis&&!["crisis","ending","cover","gallery"].includes(state.screen)&&!reportAuthorized)state.screen="crisis";
+  else if(state.screen==="hub"&&state.flags.pendingProgressEvent)state.screen="progressEvent";
   topbar.hidden=state.screen==="cover";
   chapterLabel.textContent=chapterName();timeLabel.textContent=clock();clueCount.textContent=state.clues.length;
-  const map={cover:renderCover,gallery:renderGallery,prologue:renderPrologue,discovery:renderDiscovery,hub:renderHub,location:renderLocation,videoSalvage:renderVideoSalvage,hypotheses:renderHypotheses,connections:renderConnections,interviews:renderInterviews,interview:renderInterview,puzzles:renderPuzzles,puzzle:renderPuzzle,crisis:renderCrisis,confrontation:renderConfrontation,report:renderReport,ending:renderEnding};
+  const map={cover:renderCover,gallery:renderGallery,prologue:renderPrologue,discovery:renderDiscovery,hub:renderHub,progressEvent:renderProgressEvent,location:renderLocation,videoSalvage:renderVideoSalvage,hypotheses:renderHypotheses,connections:renderConnections,interviews:renderInterviews,interview:renderInterview,puzzles:renderPuzzles,puzzle:renderPuzzle,crisis:renderCrisis,confrontation:renderConfrontation,report:renderReport,ending:renderEnding};
   (map[state.screen]||renderCover)();
   app.focus({preventScroll:true});
 }
 
+function renderProgressEvent(){
+  const pending=state.flags.pendingProgressEvent,event=NORMAL_PROGRESS_EVENTS.find(item=>item.id===pending?.id),clue=pending?.clue;
+  if(!event){delete state.flags.pendingProgressEvent;setScreen("hub");return;}
+  app.innerHTML=`<section class="screen narrow"><div class="crisis-panel"><p class="eyebrow">INVESTIGATION SHIFT · PROGRESS ${investigationProgress()}</p><h1>${event.title}</h1><p>${event.text}</p>${clue?`<div class="reveal"><p class="eyebrow">NEW EVIDENCE</p><h3>${CLUES[clue].t}</h3><p>${CLUES[clue].d}</p><span class="evidence-tag">＋ 已加入案卷</span></div>`:`<div class="reveal"><h3>旧线索得到再次确认</h3><p>相关物证已经在此前调查中封存；这次掩盖行为进一步确认了它并非偶然残留。</p></div>`}<button class="btn" id="recordProgressEvent">记录异动并继续调查</button></div></section>`;
+  document.querySelector("#recordProgressEvent").addEventListener("click",()=>{delete state.flags.pendingProgressEvent;state.screen="hub";saveState("");render();});
+}
+
 function renderCover(){
   const hasSave=!!localStorage.getItem(STORAGE_KEY);
-  app.innerHTML=`<section class="cover"><div class="cover-inner"><div class="cover-seal"><span>VII</span></div><p class="eyebrow">A LOCKED ROOM AT SEA · 2000</p><h1>塞壬号</h1><p class="subtitle">第 七 幕 没 有 掌 声</p><div class="cover-quote">“不要问谁进入过房间。<br>先问房间去过哪里。”</div><form class="intake" id="startForm"><input id="nameInput" maxlength="12" placeholder="侦探署名（可留空）" value="${escapeHTML(state.investigator)}"><button class="btn" type="submit">${hasSave?'覆盖存档并开始':'开始新调查'}</button></form><div class="difficulty-select" aria-label="新游戏难度">${[["normal","普通"],["hard","困难"],["extreme","极难"]].map(([id,n])=>`<button type="button" class="option-pill ${newGameDifficulty===id?'active':''}" data-difficulty="${id}">${n}</button>`).join("")}</div>${hasSave?`<button class="btn secondary" id="continueBtn">继续当前存档 · ${state.difficulty==="normal"?"普通":state.difficulty==="hard"?"困难":"极难"}</button>`:""}${meta.endings.length?`<button class="btn secondary" id="galleryBtn">剧场座位 · ${meta.endings.length} 名观众</button>`:""}<p class="continue-note">难度只影响新游戏；结局图鉴会跨周目保留</p></div></section>`;
+  app.innerHTML=`<section class="cover"><div class="cover-inner"><div class="cover-seal"><span>VII</span></div><p class="eyebrow">A LOCKED ROOM AT SEA · 2000</p><h1>塞壬号</h1><p class="subtitle">第 七 幕 没 有 掌 声</p><div class="cover-quote">“不要问谁进入过房间。<br>先问房间去过哪里。”</div><form class="intake" id="startForm"><input id="nameInput" maxlength="12" placeholder="侦探署名（可留空）" value="${escapeHTML(state.investigator)}"><button class="btn" type="submit">${hasSave?'覆盖存档并开始':'开始新调查'}</button></form><div class="difficulty-select" aria-label="新游戏难度">${[["normal","普通"],["hard","困难"],["extreme","极难"]].map(([id,n])=>`<button type="button" class="option-pill ${newGameDifficulty===id?'active':''}" data-difficulty="${id}">${n}</button>`).join("")}</div>${hasSave?`<button class="btn secondary" id="continueBtn">继续当前存档 · ${state.difficulty==="normal"?"普通":state.difficulty==="hard"?"困难":"极难"}</button>`:""}${meta.endings.length?`<button class="btn secondary" id="galleryBtn">剧场座位 · ${meta.endings.length} 名观众</button>`:""}<p class="continue-note">普通模式初始安全 90%，每 36 分钟结算 1 点风暴损耗；难度只影响新游戏</p></div></section>`;
   document.querySelectorAll("[data-difficulty]").forEach(el=>el.addEventListener("click",()=>{newGameDifficulty=el.dataset.difficulty;render();}));
-  document.querySelector("#startForm").addEventListener("submit",e=>{e.preventDefault();if(hasSave&&!confirm("开始新调查会覆盖当前调查进度，但不会清除结局图鉴。确定继续吗？"))return;const name=document.querySelector("#nameInput").value.trim();state=freshState();state.investigator=name||"受邀侦探";state.difficulty=newGameDifficulty;state.screen="prologue";state.resumeScreen="prologue";saveState("");render();});
+  document.querySelector("#startForm").addEventListener("submit",e=>{e.preventDefault();if(hasSave&&!confirm("开始新调查会覆盖当前调查进度，但不会清除结局图鉴。确定继续吗？"))return;const name=document.querySelector("#nameInput").value.trim();state=freshState();state.investigator=name||"受邀侦探";state.difficulty=newGameDifficulty;state.safety=startingSafety(newGameDifficulty);state.screen="prologue";state.resumeScreen="prologue";saveState("");render();});
   document.querySelector("#continueBtn")?.addEventListener("click",()=>{state.screen=state.resumeScreen||"hub";render();});
   document.querySelector("#galleryBtn")?.addEventListener("click",()=>setScreen("gallery"));
 }
@@ -391,7 +421,7 @@ function renderDiscovery(){
 
 function renderHub(){
   const interviews=Object.values(state.interviews).filter(x=>x.broken).length, solved=state.puzzles.length,finalScreen=state.replayMode||state.flags.confrontationComplete?"report":"confrontation";
-  app.innerHTML=`<section class="screen"><div class="chapter-head"><div><p class="eyebrow">INVESTIGATION DECK · ${clock()}</p><h2>今晚，房间去过哪里？</h2><p class="chapter-summary">调查、假说、审讯与复原会互相解锁。五次加害都是真的，但“制造危险”不等于“决定死亡”。</p></div><div class="chapter-no">${state.safety}</div></div>${state.safety<40?`<div class="ship-warning"><b>船体安全 ${state.safety}%</b><span>每次行动都会触发额外船体事故；安全归零将强制进入撤离。</span></div>`:""}<div class="case-layout"><div><div class="hub-tools"><button class="hub-tool" data-hub="hypotheses"><b>${state.hypotheses.length}/6</b><span>提出假说</span><small>用已知痕迹开启二次调查</small></button><button class="hub-tool" data-hub="connections"><b>${state.connections.length}/4</b><span>连接证据</span><small>亲自把痕迹组成可验证结论</small></button><button class="hub-tool" data-hub="interviews"><b>${interviews}/6</b><span>审讯嫌疑人</span><small>${state.flags.contaminated?'部分新证词已失去独立性':'先保存原始版本，再用证据突破'}</small></button><button class="hub-tool" data-hub="puzzles"><b>${solved}/${PUZZLES.length}</b><span>复原与实验</span><small>大型检验 ${state.experimentUses}/${experimentLimit()} · 时间线不会提前泄密</small></button><button class="hub-tool report-tool" data-hub="${finalScreen}"><b>VII</b><span>${finalScreen==='confrontation'?'进入最终对质':'提交案件报告'}</span><small>${state.replayMode?'复盘提交只会标记预演':state.flags.confrontationComplete?'对质完成，正式归档':'出示连接、处理保护关系并诱导嫌疑人'}</small></button></div><h3 class="section-label">可调查区域</h3><div class="location-grid">${LOCATIONS.map((loc,i)=>{const actions=visibleLocationActions(loc),done=actions.filter(a=>state.actions.includes(`${loc.id}:${a.id}`)).length;return `<button class="location-card ${done===actions.length?'done':''}" data-location="${loc.id}"><span class="card-index">DECK · ${String(i+1).padStart(2,"0")} · ${done}/${actions.length}</span><h3>${loc.title}</h3><p>${loc.teaser}</p><span class="card-icon">${loc.icon}</span></button>`;}).join("")}</div></div>${sideFile()}</div></section>`;
+  app.innerHTML=`<section class="screen"><div class="chapter-head"><div><p class="eyebrow">INVESTIGATION DECK · ${clock()}</p><h2>今晚，房间去过哪里？</h2><p class="chapter-summary">调查、假说、审讯与复原会互相解锁。风暴按累计时间侵蚀船体，短操作不会被重复计罚。</p></div><div class="chapter-no">${state.safety}</div></div>${state.safety<40?`<div class="ship-warning"><b>船体安全 ${state.safety}%</b><span>危险区事故按累计停留时间发生；安全归零仍将强制进入撤离。</span></div>`:""}<div class="case-layout"><div><div class="hub-tools"><button class="hub-tool" data-hub="hypotheses"><b>${state.hypotheses.length}/6</b><span>提出假说</span><small>用已知痕迹开启二次调查</small></button><button class="hub-tool" data-hub="connections"><b>${state.connections.length}/4</b><span>连接证据</span><small>亲自把痕迹组成可验证结论</small></button><button class="hub-tool" data-hub="interviews"><b>${interviews}/6</b><span>审讯嫌疑人</span><small>${state.flags.contaminated?'部分新证词已失去独立性':'先保存原始版本，再用证据突破'}</small></button><button class="hub-tool" data-hub="puzzles"><b>${solved}/${PUZZLES.length}</b><span>复原与实验</span><small>大型检验 ${state.experimentUses}/${experimentLimit()} · 时间线不会提前泄密</small></button><button class="hub-tool report-tool" data-hub="${finalScreen}"><b>VII</b><span>${finalScreen==='confrontation'?'进入最终对质':'提交案件报告'}</span><small>${state.replayMode?'复盘提交只会标记预演':state.flags.confrontationComplete?'对质完成，正式归档':'出示连接、处理保护关系并诱导嫌疑人'}</small></button></div><h3 class="section-label">可调查区域</h3><div class="location-grid">${LOCATIONS.map((loc,i)=>{const actions=visibleLocationActions(loc),done=actions.filter(a=>state.actions.includes(`${loc.id}:${a.id}`)).length;return `<button class="location-card ${done===actions.length?'done':''}" data-location="${loc.id}"><span class="card-index">DECK · ${String(i+1).padStart(2,"0")} · ${done}/${actions.length}</span><h3>${loc.title}</h3><p>${loc.teaser}</p><span class="card-icon">${loc.icon}</span></button>`;}).join("")}</div></div>${sideFile()}</div></section>`;
   document.querySelectorAll("[data-location]").forEach(el=>el.addEventListener("click",()=>{state.flags.activeLocation=el.dataset.location;setScreen("location");}));
   document.querySelectorAll("[data-hub]").forEach(el=>el.addEventListener("click",()=>setScreen(el.dataset.hub)));
 }
