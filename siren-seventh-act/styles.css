@@ -230,6 +230,8 @@ h3 { margin-bottom: 10px; font-size: 19px; }
 .deduction.done { border-color: rgba(82,125,136,.55); }
 .deduction h3 { display: flex; justify-content: space-between; align-items: center; }
 .deduction h3 span { color: var(--paper-dim); font: 10px var(--mono); }
+.deduction.salvage-choice { width: 100%; color: var(--paper); cursor: pointer; text-align: left; }
+.deduction.salvage-choice:hover, .deduction.salvage-choice.active { border-color: var(--brass); background: rgba(185,151,97,.08); }
 .option-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .option-pill { padding: 9px 12px; border: 1px solid var(--line); background: transparent; cursor: pointer; font-size: 12px; }
 .option-pill:hover { border-color: var(--brass); }
@@ -263,6 +265,9 @@ h3 { margin-bottom: 10px; font-size: 19px; }
 .ending-stats div { min-width: 135px; padding: 17px; background: rgba(255,255,255,.035); }
 .ending-stats b { display: block; color: var(--brass-light); font: 20px var(--mono); }
 .ending-stats small { color: var(--paper-dim); }
+.investigation-style { display: inline-grid; gap: 7px; margin: 4px auto 8px; padding: 14px 22px; border: 1px solid rgba(185,151,97,.42); background: rgba(185,151,97,.06); }
+.investigation-style small { color: var(--paper-dim); font: 9px var(--mono); letter-spacing: .18em; }
+.investigation-style b { color: var(--brass-light); font-size: 18px; }
 
 .notebook { width: min(760px, calc(100% - 28px)); max-height: min(82vh, 820px); padding: 0; border: 0; color: #24231f; background: #d8d0c3; box-shadow: 0 40px 120px rgba(0,0,0,.7); }
 .notebook::backdrop { background: rgba(3,7,9,.78); backdrop-filter: blur(6px); }
