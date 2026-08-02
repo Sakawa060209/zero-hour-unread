@@ -280,6 +280,11 @@ function stormWearRate(){return {normal:36,hard:18,extreme:14}[state.difficulty]
 function lowSafetyExposureRate(){return {normal:90,hard:45,extreme:30}[state.difficulty]||45;}
 function difficultyRules(){return {normal:{degradeAt:120,maxInterviews:99,showNeeds:true,showMeters:true},hard:{degradeAt:75,maxInterviews:3,showNeeds:true,showMeters:true},extreme:{degradeAt:45,maxInterviews:3,showNeeds:false,showMeters:false}}[state.difficulty];}
 function experimentLimit(){return 3;}
+const NORMAL_PROGRESS_EVENTS=[
+  {id:"machineWipe",at:8,title:"机械层有人回来过",text:"有人趁你离开后用煤油擦洗制动器、翻动维修簿并整理零件箱。越仓促的清理留下越明确的装配与出入记录。",clues:["freshBrakeOil","maintenanceLog","springMissing"]},
+  {id:"editingErase",at:18,title:"剪辑台的索引正在被删除",text:"有人同时清理剪辑台与换瓶残留：索引被覆盖，药瓶和酒塞也被挪动。匆忙的掩盖让一项原本隐蔽的痕迹暴露出来。",clues:["deletionIndex","winePuncture","sedativeVial"]},
+  {id:"costumeMove",at:30,title:"有人试图转移戏服证物",text:"一只戏服箱被拖向上层甲板，雨水把箱底残留冲成了一条连续痕迹。转移行为让原本藏在夹层里的材料暴露出来。",clues:["gloveAconite","ropeFibers","riggingKnife","costumeCache"]}
+];
 const EXPERIMENT_EVIDENCE=new Set(["freshWaterProof","liveBullet","mirrorWound","brakeDamage","secondBrake","recoveredVoice"]);
 const EVIDENCE_SOURCES={
   scenePhotos:"scene-water",waterTrace:"scene-water",dryCorridor:"scene-water",
@@ -325,6 +330,13 @@ function checkCrisisThresholds(before,after){
   else if(before>=35&&after<35&&!state.flags.crisisArchive)state.flags.pendingCrisis="archive";
   else if(before>=15&&after<15&&!state.flags.crisisTrack)state.flags.pendingCrisis="track";
 }
+function investigationProgress(){return state.actions.length+state.hypotheses.length+state.puzzles.length+state.connections.length+Object.values(state.interviews).filter(rec=>rec.originalRecorded).length+Object.values(state.interviews).filter(rec=>rec.broken).length;}
+function queueNormalProgressEvent(){
+  if(state.difficulty!=="normal"||state.flags.pendingProgressEvent)return null;
+  state.flags.progressEvents=state.flags.progressEvents||[];
+  const event=NORMAL_PROGRESS_EVENTS.find(item=>investigationProgress()>=item.at&&!state.flags.progressEvents.includes(item.id));if(!event)return null;
+  const clue=event.clues.find(id=>!has(id))||null;state.flags.progressEvents.push(event.id);state.flags.pendingProgressEvent={id:event.id,clue};if(clue)addClues([clue]);return state.flags.pendingProgressEvent;
+}
 function advance(minutes,risk=0,repair=0){
   const before=state.safety,beforeElapsed=state.elapsed,wearRate=stormWearRate();
   state.elapsed+=minutes;
@@ -340,10 +352,12 @@ function advance(minutes,risk=0,repair=0){
   }
   checkCrisisThresholds(before,state.safety);
   if(state.safety===0)state.flags.evacuation=true;
+  queueNormalProgressEvent();
 }
 function chapterName(){
   if(state.screen==="cover")return "标题";
   if(state.screen==="gallery")return "剧场座位 · 结局图鉴";
+  if(state.screen==="progressEvent")return "调查异动 · 有人正在掩盖痕迹";
   if(state.screen==="confrontation")return "终章 · 没有观众的对质";
   if(["prologue","discovery"].includes(state.screen))return "序章 · 没有观众的首演";
   const evidence=state.clues.length;
@@ -359,17 +373,25 @@ function setScreen(screen){state.screen=screen;saveState("");render();window.scr
 
 function sideFile(){
   const chains=["死因","密室","加害","存活","指令","旧案"].map(name=>[name,Object.values(CLUES).filter(c=>c.chain===name).length,state.clues.filter(id=>CLUES[id]?.chain===name).length]);
-  return `<aside class="side-file"><p class="eyebrow">SHIP STATUS</p><h3>${clock()} · ${safetyBand()}</h3><div class="meter"><div class="meter-label"><span>船体安全</span><b>${state.safety}%</b></div><div class="meter-track"><div class="meter-fill ${state.safety<40?'danger-fill':''}" style="width:${state.safety}%"></div></div></div><div class="side-stat"><span>风暴损耗</span><strong>${stormWearRate()}分钟 / −1</strong></div>${chains.map(([n,total,g])=>`<div class="side-stat"><span>${n}</span><strong>${g}/${total}</strong></div>`).join("")}<div class="side-stat"><span>大型检验</span><strong>${state.experimentUses}/${experimentLimit()}</strong></div><div class="side-stat"><span>证据连接</span><strong>${state.connections.length}/${CONNECTIONS.length}</strong></div><div class="side-stat"><span>证词状态</span><strong>${state.flags.contaminated?"已发生传播":"可追溯"}</strong></div></aside>`;
+  return `<aside class="side-file"><p class="eyebrow">SHIP STATUS</p><h3>${clock()} · ${safetyBand()}</h3><div class="meter"><div class="meter-label"><span>船体安全</span><b>${state.safety}%</b></div><div class="meter-track"><div class="meter-fill ${state.safety<40?'danger-fill':''}" style="width:${state.safety}%"></div></div></div><div class="side-stat"><span>风暴损耗</span><strong>${stormWearRate()}分钟 / −1</strong></div>${state.difficulty==="normal"?`<div class="side-stat"><span>掩盖异动</span><strong>${state.flags.progressEvents?.length||0}/${NORMAL_PROGRESS_EVENTS.length}</strong></div>`:""}${chains.map(([n,total,g])=>`<div class="side-stat"><span>${n}</span><strong>${g}/${total}</strong></div>`).join("")}<div class="side-stat"><span>大型检验</span><strong>${state.experimentUses}/${experimentLimit()}</strong></div><div class="side-stat"><span>证据连接</span><strong>${state.connections.length}/${CONNECTIONS.length}</strong></div><div class="side-stat"><span>证词状态</span><strong>${state.flags.contaminated?"已发生传播":"可追溯"}</strong></div></aside>`;
 }
 
 function render(){
   const unresolvedCrisis=state.flags.evacuation||state.flags.pendingCrisis,reportAuthorized=state.screen==="report"&&state.flags.crisisReportAuthorized;
   if(unresolvedCrisis&&!["crisis","ending","cover","gallery"].includes(state.screen)&&!reportAuthorized)state.screen="crisis";
+  else if(state.screen==="hub"&&state.flags.pendingProgressEvent)state.screen="progressEvent";
   topbar.hidden=state.screen==="cover";
   chapterLabel.textContent=chapterName();timeLabel.textContent=clock();clueCount.textContent=state.clues.length;
-  const map={cover:renderCover,gallery:renderGallery,prologue:renderPrologue,discovery:renderDiscovery,hub:renderHub,location:renderLocation,videoSalvage:renderVideoSalvage,hypotheses:renderHypotheses,connections:renderConnections,interviews:renderInterviews,interview:renderInterview,puzzles:renderPuzzles,puzzle:renderPuzzle,crisis:renderCrisis,confrontation:renderConfrontation,report:renderReport,ending:renderEnding};
+  const map={cover:renderCover,gallery:renderGallery,prologue:renderPrologue,discovery:renderDiscovery,hub:renderHub,progressEvent:renderProgressEvent,location:renderLocation,videoSalvage:renderVideoSalvage,hypotheses:renderHypotheses,connections:renderConnections,interviews:renderInterviews,interview:renderInterview,puzzles:renderPuzzles,puzzle:renderPuzzle,crisis:renderCrisis,confrontation:renderConfrontation,report:renderReport,ending:renderEnding};
   (map[state.screen]||renderCover)();
   app.focus({preventScroll:true});
+}
+
+function renderProgressEvent(){
+  const pending=state.flags.pendingProgressEvent,event=NORMAL_PROGRESS_EVENTS.find(item=>item.id===pending?.id),clue=pending?.clue;
+  if(!event){delete state.flags.pendingProgressEvent;setScreen("hub");return;}
+  app.innerHTML=`<section class="screen narrow"><div class="crisis-panel"><p class="eyebrow">INVESTIGATION SHIFT · PROGRESS ${investigationProgress()}</p><h1>${event.title}</h1><p>${event.text}</p>${clue?`<div class="reveal"><p class="eyebrow">NEW EVIDENCE</p><h3>${CLUES[clue].t}</h3><p>${CLUES[clue].d}</p><span class="evidence-tag">＋ 已加入案卷</span></div>`:`<div class="reveal"><h3>旧线索得到再次确认</h3><p>相关物证已经在此前调查中封存；这次掩盖行为进一步确认了它并非偶然残留。</p></div>`}<button class="btn" id="recordProgressEvent">记录异动并继续调查</button></div></section>`;
+  document.querySelector("#recordProgressEvent").addEventListener("click",()=>{delete state.flags.pendingProgressEvent;state.screen="hub";saveState("");render();});
 }
 
 function renderCover(){
