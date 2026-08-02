@@ -259,6 +259,7 @@ function loadState(){
     const base=freshState(),merged=Object.assign(base,x);
     merged.report=Object.assign(base.report,x.report||{});merged.report.harms=Object.assign({},x.report?.harms||{});merged.connectionEvidence=Object.assign({},x.connectionEvidence||{});
     merged.flags=Object.assign({degraded:{},connectionAttempts:{},connectionLocks:{},clueVersion:0},x.flags||{});merged.flags.degraded=Object.assign({},x.flags?.degraded||{});merged.flags.connectionAttempts=Object.assign({},x.flags?.connectionAttempts||{});merged.flags.connectionLocks=Object.assign({},x.flags?.connectionLocks||{});
+    if(legacyV7&&merged.difficulty==="normal"&&!merged.flags.v26NormalSafetyBonus){merged.safety=Math.min(100,(merged.safety??78)+12);merged.flags.v26NormalSafetyBonus=true;}
     rebuildDerivedTestimony(merged);
     if(merged.flags.disclosureLocked&&!merged.flags.reportDisclosureMode){merged.flags.mandatoryDisclosure=merged.disclosure?.[0]||null;merged.flags.reportDisclosureMode=(merged.disclosure?.length||0)>1?"limited":"sealed";delete merged.flags.disclosureLocked;}
     if(legacyV2){merged.connections=[];merged.connectionEvidence={};merged.attachments=[];merged.flags.migratedProofSystem=true;}

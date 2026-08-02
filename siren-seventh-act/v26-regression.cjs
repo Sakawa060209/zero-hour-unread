@@ -18,6 +18,7 @@ vm.createContext(context);
 let source = fs.readFileSync(__dirname + '/game.js','utf8');
 source += `\n;globalThis.T={
   set(s,m={}){meta=Object.assign(JSON.parse(JSON.stringify(DEFAULT_META)),m);meta.endings=[...(m.endings||[])];meta.previews=[...(m.previews||[])];state=Object.assign(freshState(),s);state.report=Object.assign(freshState().report,s.report||{});state.report.harms=Object.assign({},s.report?.harms||{});state.flags=Object.assign({degraded:{},connectionAttempts:{},connectionLocks:{},clueVersion:0},s.flags||{});state.flags.degraded=Object.assign({},s.flags?.degraded||{});state.flags.connectionAttempts=Object.assign({},s.flags?.connectionAttempts||{});state.flags.connectionLocks=Object.assign({},s.flags?.connectionLocks||{});},
+  migrateV7(s){localStorage.removeItem(STORAGE_KEY);localStorage.setItem(LEGACY_V7_STORAGE_KEY,JSON.stringify(s));return loadState();},
   startSafety(d){return startingSafety(d);},wearRate(){return stormWearRate();},exposureRate(){return lowSafetyExposureRate();},
   progress(){return investigationProgress();},queueProgress(){return queueNormalProgressEvent();},
   conn(id,selected){return connectionEvaluation(CONNECTIONS.find(c=>c.id===id),selected);},score(ids){return evidenceScore(ids);},qual(id){return scoreLabel(id);},prereq(id){return interviewPrerequisites(id,INTERVIEWS[id]);},
@@ -54,6 +55,7 @@ setClues(['channels','talkButton','propagationTrace','overrideBurn'],{interviews
 
 assert.equal(T.startSafety('normal'),90,'normal mode receives twelve extra starting safety points');
 assert.equal(T.startSafety('hard'),78,'hard mode keeps the original starting safety');
+const migratedNormal=T.migrateV7({difficulty:'normal',safety:64,flags:{},report:{harms:{}}});assert.equal(migratedNormal.safety,76,'an existing v7 normal save receives the twelve-point allowance once');assert.equal(migratedNormal.flags.v26NormalSafetyBonus,true,'legacy normal save records the one-time migration');const migratedHard=T.migrateV7({difficulty:'hard',safety:64,flags:{},report:{harms:{}}});assert.equal(migratedHard.safety,64,'hard legacy saves keep their original safety');
 T.set({difficulty:'normal',safety:90,elapsed:0});for(let i=0;i<7;i++)T.advance(5);assert.equal(T.get().safety,90,'short normal-mode actions do not each consume safety');T.advance(5);assert.equal(T.get().safety,89,'normal storm wear is charged only after the cumulative 36-minute window');
 T.set({difficulty:'normal',safety:90,elapsed:0});T.advance(40);assert.equal(T.get().safety,89,'split and continuous investigation time have equal storm cost');
 T.set({difficulty:'normal',safety:90,elapsed:0,flags:{degraded:{},connectionAttempts:{},connectionLocks:{},clueVersion:0,deckSecured:true}});T.advance(500,17);assert.equal(T.get().safety,60,'a thorough 500-minute normal route with every major investigation risk remains playable');
