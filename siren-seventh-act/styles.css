@@ -219,6 +219,14 @@ h3 { margin-bottom: 10px; font-size: 19px; }
 .sequence .event-card::before { content: attr(data-order); position: absolute; left: 12px; color: var(--brass); font-family: var(--mono); }
 .card-bank { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-top: 14px; }
 .puzzle-actions { display: flex; gap: 10px; margin-top: 22px; }
+.timeline-sequence { display: grid; gap: 7px; min-height: 72px; padding: 10px; border: 1px dashed rgba(185,151,97,.35); background: rgba(0,0,0,.15); }
+.timeline-empty { padding: 18px; color: #6f716d; font-size: 12px; text-align: center; }
+.timeline-event { display: grid; grid-template-columns: 34px minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid var(--line); background: #111a1f; }
+.timeline-order { color: var(--brass); font: 10px var(--mono); }
+.timeline-event b { color: var(--paper-soft); font-size: 12px; line-height: 1.55; }
+.timeline-controls { display: flex; gap: 4px; }
+.timeline-controls button { width: 30px; height: 30px; border: 1px solid var(--line); color: var(--paper-soft); background: transparent; cursor: pointer; }
+.timeline-controls button:disabled { opacity: .25; cursor: default; }
 
 .fragment-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin: 28px 0; }
 .fragment { min-height: 190px; padding: 20px 14px; border: 1px solid rgba(89,70,45,.55); color: #332c23; background: #c9bca7; box-shadow: 0 10px 30px rgba(0,0,0,.24); cursor: pointer; font-size: 13px; line-height: 1.8; transform: rotate(var(--r)); transition: .2s; }
@@ -274,11 +282,12 @@ h3 { margin-bottom: 10px; font-size: 19px; }
 .notebook-head { display: flex; justify-content: space-between; align-items: center; padding: 27px 30px 20px; border-bottom: 1px solid rgba(50,40,29,.18); }
 .notebook-head h2 { margin: 0; font-size: 28px; }
 .close-button { width: 38px; height: 38px; border: 1px solid rgba(50,40,29,.22); color: #332d26; background: transparent; cursor: pointer; font-size: 24px; }
-.notebook-tabs { display: flex; padding: 0 30px; border-bottom: 1px solid rgba(50,40,29,.18); }
-.notebook-tabs button { padding: 14px 18px; border: 0; border-bottom: 2px solid transparent; color: #70685d; background: none; cursor: pointer; }
+.notebook-tabs { display: flex; overflow-x: auto; padding: 0 30px; border-bottom: 1px solid rgba(50,40,29,.18); scrollbar-width: thin; }
+.notebook-tabs button { flex: 0 0 auto; padding: 14px 18px; border: 0; border-bottom: 2px solid transparent; color: #70685d; background: none; cursor: pointer; }
 .notebook-tabs button.active { color: #24231f; border-color: #8c6c43; }
 .notebook-body { max-height: 58vh; overflow: auto; padding: 25px 30px 34px; }
 .note-item { display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 15px 0; border-bottom: 1px solid rgba(50,40,29,.13); }
+.note-item > div { min-width: 0; }
 .note-item .num { color: #8c6c43; font: 10px var(--mono); }
 .note-item b { display: block; margin-bottom: 5px; font-size: 14px; }
 .note-item p { margin: 0; color: #686157; font-size: 12px; line-height: 1.65; }
@@ -344,7 +353,7 @@ h3 { margin-bottom: 10px; font-size: 19px; }
 .filter-chip.active, .star-clue.active { border-color: var(--brass); color: var(--gold); background: rgba(184,145,84,.08); }
 .star-clue { margin-top: 9px; }
 .report-submit { width: 100%; min-height: 58px; margin-top: 8px; }
-.note-stage { display: inline-block; margin-top: 6px; color: #776143; font: 9px var(--mono); letter-spacing: .12em; }
+.note-stage { display: inline-block; max-width: 100%; margin-top: 6px; color: #776143; font: 9px var(--mono); letter-spacing: .12em; white-space: normal; overflow-wrap: anywhere; }
 .chain-note { padding: 18px 0; border-bottom: 1px solid rgba(20,20,20,.14); }
 .chain-note > b { display: inline-block; margin-right: 10px; }
 .chain-note > span { color: #776143; font: 10px var(--mono); }
@@ -439,6 +448,11 @@ h3 { margin-bottom: 10px; font-size: 19px; }
   .fragment { min-height: 160px; }
   .accuse-grid { grid-template-columns: repeat(2,1fr); }
   .notebook-body, .notebook-head { padding-left: 20px; padding-right: 20px; }
+  .notebook-tabs { padding: 0 12px; }
+  .notebook-tabs button { padding: 13px 12px; }
+  .timeline-event { grid-template-columns: 28px minmax(0,1fr); }
+  .timeline-controls { grid-column: 2; justify-content: flex-end; }
+  .puzzle-actions { flex-wrap: wrap; }
 }
 
 @media (prefers-reduced-motion: reduce) {
