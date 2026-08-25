@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#081014">
+  <meta name="description" content="《错层》——所有证据都是真的，为什么结论会是假的？一款浏览器本格推理游戏。">
+  <title>错层｜网页推理游戏</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  <header class="topbar" id="topbar" hidden>
+    <button class="brand-button" data-action="show-home" aria-label="返回案件总览">
+      <span class="brand-mark">错层</span>
+      <span class="brand-sub">WRONG FLOOR</span>
+    </button>
+    <div class="case-status" aria-live="polite">
+      <span id="chapter-label">第一章</span>
+      <span class="status-divider"></span>
+      <span id="progress-label">调查进度 0%</span>
+    </div>
+    <nav class="quick-nav" aria-label="案件工具">
+      <button data-action="show-map">建筑地图</button>
+      <button data-action="show-notebook">案件簿 <span class="badge" id="evidence-count">0</span></button>
+      <button data-action="show-timeline">时间线</button>
+      <button data-action="save-game">保存</button>
+    </nav>
+  </header>
+
+  <main id="app" tabindex="-1"></main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="modal" class="modal">
+    <div class="modal-inner">
+      <button class="modal-close" data-action="close-modal" aria-label="关闭">×</button>
+      <div id="modal-content"></div>
+    </div>
+  </dialog>
+
+  <noscript>本游戏需要启用 JavaScript。</noscript>
+  <script src="logic.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
