@@ -335,3 +335,49 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
   .epilogue-grid { grid-template-columns: 1fr; }
   .bar-checkin, .bar-stream, .bar-location, .bar-point { margin-left: 0; margin-right: 0; }
 }
+
+/* v3 fairness and narrative pass */
+.chapter-pins { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.chapter-pins > span { color: var(--muted); font-size: .64rem; }
+.chapter-pins button { border: 1px solid var(--line); background: rgba(201,253,99,.04); color: var(--accent); padding: 5px 7px; font-size: .65rem; cursor: pointer; }
+.ruler-control { position: absolute; left: 18px; right: 18px; bottom: 42px; z-index: 3; display: grid; grid-template-columns: 1fr auto; gap: 5px 10px; color: var(--ink); font-size: .7rem; }
+.measure-slider { grid-column: 1 / -1; position: relative; display: block; }
+.ruler-control input { width: 100%; margin: 0; accent-color: var(--accent); position: relative; z-index: 2; }
+.ruler-control output { color: var(--accent); font-weight: 800; }
+.target-notch { position: absolute; z-index: 1; top: -6px; bottom: -5px; border-left: 2px solid var(--blue); filter: drop-shadow(0 0 4px var(--blue)); }
+.target-notch::before { content: "B"; position: absolute; bottom: 100%; left: 4px; color: var(--blue); font-size: .64rem; font-weight: 800; }
+.range-labels { grid-column: 1 / -1; display: flex; justify-content: space-between; color: var(--muted); font-size: .58rem; }
+.range-labels b { font-weight: 500; }
+.scale-line { position: absolute; left: 20%; right: 10%; top: 44%; display: flex; justify-content: space-between; border-top: 2px solid var(--blue); padding-top: 8px; color: var(--blue); font-size: .65rem; }
+.scale-line::before, .scale-line::after { content:""; position:absolute; top:-7px; height:12px; border-left:2px solid var(--blue); }
+.scale-line::before { left:0; } .scale-line::after { right:0; }
+.measurement-result { border: 1px solid var(--line); padding: 14px; text-align: center; margin: 18px 0; color: var(--muted); }
+.measurement-result strong { color: var(--accent); font-size: 1.1rem; }
+.difference { min-width: 44px; min-height: 44px; margin: -8px; }
+.difference-note { display: grid; grid-template-columns: 22px 1fr; gap: 8px; border: 1px solid var(--line); padding: 10px; margin: 5px 0; cursor: pointer; }
+.difference-note input { margin-top: 3px; accent-color: var(--accent); }
+.difference-note strong, .difference-note small { display: block; }
+.difference-note small { color: var(--muted); line-height: 1.5; margin-top: 3px; }
+.deduction-banner { display: flex; flex-direction: column; gap: 5px; border: 1px solid var(--accent-dim); border-left: 4px solid var(--accent); background: rgba(201,253,99,.07); padding: 15px 18px; margin: 0 0 20px; }
+.deduction-banner strong { color: var(--accent); font: 650 1.05rem var(--serif); }
+.deduction-banner span { color: #b9c2be; line-height: 1.6; }
+.lead-board { margin: 30px 0; padding: 22px; border: 1px dashed var(--blue); }
+.reveal-quote { margin: 24px 0; padding: 18px; border-left: 3px solid var(--accent); background: rgba(201,253,99,.05); font: 500 1.1rem/1.9 var(--serif); }
+.matrix th:first-child, .matrix td:first-child { position: sticky; left: 0; z-index: 2; background: #111a1d; box-shadow: 2px 0 0 var(--line); }
+.matrix thead th:first-child { z-index: 3; }
+.matrix-cell { min-width: 44px; min-height: 42px; }
+.matrix-cell small { display: block; font-size: .45rem; color: var(--blue); }
+.matrix-cell.auto { border-style: dashed; opacity: .9; }
+.file-fragments { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 18px 0; }
+.file-fragments article { background: #d6d1c3; color: #202526; padding: 14px; transform: rotate(-.3deg); font-family: var(--serif); }
+.file-fragments article:nth-child(even) { transform: rotate(.4deg); }
+.file-fragments p { margin: 8px 0 0; line-height: 1.55; }
+.interlude { min-height: 440px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; max-width: 720px; margin: 0 auto; font: 500 1.12rem/2 var(--serif); }
+.interlude blockquote { margin: 15px 0; color: var(--accent); font-size: 1.35rem; }
+.dialogue-line { flex-wrap: wrap; }
+.dialogue-line p { flex-basis: 100%; margin: 3px 0 0; color: #b9c3bf; font: .85rem/1.65 var(--serif); }
+
+@media (max-width: 600px) {
+  .file-fragments { grid-template-columns: 1fr; }
+  .ruler-control { left: 10px; right: 10px; }
+}
