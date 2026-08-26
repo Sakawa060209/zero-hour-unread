@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const SAVE_VERSION = 3;
+  const SAVE_VERSION = 4;
   const CORE_INTERVIEWS = ["guxue", "liangwen", "shenman", "zhoulan"];
   const CHAPTER_REQUIREMENTS = {
     2: ["p01"], 3: ["p02"], 4: ["p03"], 5: ["p04"],
@@ -14,9 +14,9 @@
 
   const CORE_EVIDENCE = [
     "e_lock", "e_access", "e_body", "e_water", "e_cufflink",
-    "e_stream", "e_location", "e_checkin", "e_shelf", "e_plan1102",
+    "e_stream", "e_location", "e_checkin", "e_shelf", "e_plan1102", "e_fixed",
     "e_plan2012", "e_plan2019", "e_impact", "e_floor", "e_window",
-    "e_pipe", "e_cardlog", "e_cuffphoto", "e_permission", "e_oldfile", "e_watch"
+    "e_pipe", "e_cardlog", "e_cuffphoto", "e_permission", "e_oldfile", "e_watch", "e_waterlab"
   ];
 
   const MATRIX_ANSWERS = {
@@ -28,9 +28,17 @@
     zhoulan_know: "yes", zhoulan_permission: "yes", zhoulan_blank: "yes", zhoulan_card: "yes"
   };
   const MATRIX_AUTO = { xuyoa_blank: "no", zhoulan_know: "yes", zhoulan_permission: "yes" };
+  const EXCLUSION_ANSWERS = {
+    xuyoa: "alibi", guxue: "permission", liangwen: "permission",
+    chengyi: "permission", shenman: "permission"
+  };
+  const ZHOU_CONDITIONS = ["know", "permission", "blank", "card"];
 
   const CHAIN_ANSWERS = {
     developer: "lower", supervisor: "approve", design: "sign", contractor: "execute"
+  };
+  const CHAIN_FILE_ANSWERS = {
+    developer: "file-a", supervisor: "file-b", design: "file-c", contractor: "file-d"
   };
 
   function freshState() {
@@ -38,7 +46,8 @@
       version: SAVE_VERSION, started: false, chapter: 1, screen: "home",
       evidence: [], examined: [], solved: [], deductions: [],
       interviews: {}, interviewData: {}, mirrorFound: [], mirrorProof: [],
-      factAnswers: {}, testimonyAnswers: {}, matrixAnswers: {}, chainAnswers: {},
+      factAnswers: {}, testimonyAnswers: {}, matrixAnswers: {}, chainAnswers: {}, chainFiles: {},
+      exclusionAnswers: {}, zhouConditions: [], matrixExpanded: [],
       report: {}, confrontation: {}, confrontationStep: 0,
       pinnedEvidence: [], currentTheory: {}, interludeSeen: false, hints: [], mistakes: 0, ending: null,
       meta: { endings: [], bestEvidence: 0 }, updatedAt: null
@@ -57,17 +66,22 @@
     const state = { ...base, ...raw };
     state.version = SAVE_VERSION;
     state.chapter = Math.max(1, Math.min(9, Number(state.chapter) || 1));
-    ["evidence", "examined", "solved", "deductions", "mirrorFound", "mirrorProof", "pinnedEvidence", "hints"].forEach(key => {
+    ["evidence", "examined", "solved", "deductions", "mirrorFound", "mirrorProof", "pinnedEvidence", "hints", "zhouConditions", "matrixExpanded"].forEach(key => {
       state[key] = uniqueStrings(state[key]);
     });
     state.pinnedEvidence = state.pinnedEvidence.filter(id => state.evidence.includes(id)).slice(0, 3);
-    ["interviews", "interviewData", "factAnswers", "testimonyAnswers", "matrixAnswers", "chainAnswers", "report", "confrontation", "currentTheory"].forEach(key => {
+    ["interviews", "interviewData", "factAnswers", "testimonyAnswers", "matrixAnswers", "chainAnswers", "chainFiles", "exclusionAnswers", "report", "confrontation", "currentTheory"].forEach(key => {
       state[key] = safeObject(state[key]);
     });
     Object.keys(state.interviews).forEach(id => state.interviews[id] = Math.max(0, Math.min(3, Number(state.interviews[id]) || 0)));
     state.confrontationStep = Math.max(0, Math.min(5, Number(state.confrontationStep) || 0));
     Object.keys(state.confrontation).forEach(key => state.confrontation[key] = uniqueStrings(Array.isArray(state.confrontation[key]) ? state.confrontation[key] : [state.confrontation[key]]));
     state.interludeSeen = Boolean(state.interludeSeen);
+    if (Number(raw.version || 0) < 4 && !hasSolved(state, "p10") && validateMatrix(state.matrixAnswers).ok) {
+      state.exclusionAnswers = { ...EXCLUSION_ANSWERS };
+      state.zhouConditions = [...ZHOU_CONDITIONS];
+    }
+    if (hasSolved(state, "p11") && Object.keys(state.chainFiles).length === 0) state.chainFiles = { ...CHAIN_FILE_ANSWERS };
     state.meta = {
       endings: uniqueStrings(state.meta && state.meta.endings),
       bestEvidence: Math.max(0, Number(state.meta && state.meta.bestEvidence) || 0)
@@ -83,7 +97,7 @@
   function chapterUnlocked(state, chapter) {
     if (chapter <= 1) return true;
     if (chapter === 8) return hasSolved(state, "p09") && keyInterviewCount(state) >= 2;
-    if (chapter === 9) return chapterUnlocked(state, 8) && hasSolved(state, "p10");
+    if (chapter === 9) return chapterUnlocked(state, 8) && hasSolved(state, "p10") && state.evidence.includes("e_waterlab");
     return (CHAPTER_REQUIREMENTS[chapter] || []).every(id => hasSolved(state, id));
   }
 
@@ -120,9 +134,26 @@
     return { ok: wrong.length === 0, wrongCount: wrong.length };
   }
 
+  function validateExclusionMatrix(exclusions, conditions) {
+    const wrongPeople = Object.keys(EXCLUSION_ANSWERS).filter(id => exclusions[id] !== EXCLUSION_ANSWERS[id]);
+    const picked = uniqueStrings(conditions);
+    const missingConditions = ZHOU_CONDITIONS.filter(id => !picked.includes(id));
+    const extraConditions = picked.filter(id => !ZHOU_CONDITIONS.includes(id));
+    return {
+      ok: wrongPeople.length === 0 && missingConditions.length === 0 && extraConditions.length === 0,
+      wrongPeople, missingConditions
+    };
+  }
+
   function validateResponsibilityChain(answers) {
     const wrong = Object.keys(CHAIN_ANSWERS).filter(key => answers[key] !== CHAIN_ANSWERS[key]);
     return { ok: wrong.length === 0, wrongCount: wrong.length };
+  }
+
+  function validateResponsibilityPuzzle(files, answers) {
+    const fileWrong = Object.keys(CHAIN_FILE_ANSWERS).filter(key => files[key] !== CHAIN_FILE_ANSWERS[key]);
+    const actionResult = validateResponsibilityChain(answers);
+    return { ok: fileWrong.length === 0 && actionResult.ok, fileWrong, actionWrong: actionResult.wrongCount };
   }
 
   const REPORT_ANSWERS = {
@@ -189,11 +220,12 @@
   }
 
   return {
-    SAVE_VERSION, CORE_EVIDENCE, CORE_INTERVIEWS, MATRIX_ANSWERS, MATRIX_AUTO, CHAIN_ANSWERS,
+    SAVE_VERSION, CORE_EVIDENCE, CORE_INTERVIEWS, MATRIX_ANSWERS, MATRIX_AUTO, EXCLUSION_ANSWERS, ZHOU_CONDITIONS,
+    CHAIN_ANSWERS, CHAIN_FILE_ANSWERS,
     REPORT_ANSWERS, CONFRONTATION_ROUTES,
     freshState, normalizeState, coreInterviewsComplete, keyInterviewCount, chapterUnlocked, highestUnlockedChapter,
-    evidenceProgress, validateEvidenceSet, validateAlibiCoverage, validateMatrix,
-    validateResponsibilityChain, validateReport, validateConfrontationAnswer,
+    evidenceProgress, validateEvidenceSet, validateAlibiCoverage, validateMatrix, validateExclusionMatrix,
+    validateResponsibilityChain, validateResponsibilityPuzzle, validateReport, validateConfrontationAnswer,
     knowledgeComplete, determineEnding, evaluateTheory, recordEnding
   };
 });

@@ -25,7 +25,9 @@ test("chapter gates follow solved deductions rather than stored flags", () => {
   assert.equal(Logic.chapterUnlocked(state, 8), false, "one key interview is insufficient");
   state.interviews.liangwen = 3;
   assert.equal(Logic.chapterUnlocked(state, 8), true, "two key interviews open the permission investigation");
-  assert.equal(Logic.chapterUnlocked(state, 9), true, "P10 opens the main report without optional P11");
+  assert.equal(Logic.chapterUnlocked(state, 9), false, "P10 alone cannot explain the staged discovery time");
+  state.evidence.push("e_waterlab");
+  assert.equal(Logic.chapterUnlocked(state, 9), true, "P10 plus the water reenactment opens the report without optional P11");
 });
 
 test("evidence validation rejects unrelated padding", () => {
@@ -42,20 +44,19 @@ test("alibi coverage requires three independent overlapping sources", () => {
   assert.match(Logic.validateAlibiCoverage(["e_checkin", "e_stream", "e_location", "e_cuffphoto"]).reason, /无关/);
 });
 
-test("matrix preserves unknowns and merges evidence-backed automatic cells", () => {
-  assert.equal(Logic.validateMatrix({}).ok, false);
-  assert.equal(Logic.validateMatrix(Logic.MATRIX_ANSWERS).ok, true);
-  const playerCells = { ...Logic.MATRIX_ANSWERS };
-  delete playerCells.xuyoa_blank;
-  delete playerCells.zhoulan_know;
-  delete playerCells.zhoulan_permission;
-  assert.equal(Logic.validateMatrix(playerCells).ok, true);
-  assert.equal(Logic.validateMatrix({ ...playerCells, chengyi_blank: "yes" }).wrongCount, 1);
+test("exclusion table separates evidence status from player-authored reasons", () => {
+  assert.equal(Logic.validateExclusionMatrix({}, []).ok, false);
+  assert.equal(Logic.validateExclusionMatrix(Logic.EXCLUSION_ANSWERS, Logic.ZHOU_CONDITIONS).ok, true);
+  const wrongReason = { ...Logic.EXCLUSION_ANSWERS, guxue: "time" };
+  assert.deepEqual(Logic.validateExclusionMatrix(wrongReason, Logic.ZHOU_CONDITIONS).wrongPeople, ["guxue"]);
+  assert.deepEqual(Logic.validateExclusionMatrix(Logic.EXCLUSION_ANSWERS, ["know", "permission"]).missingConditions, ["blank", "card"]);
 });
 
-test("old-case chain checks every responsible actor", () => {
-  assert.equal(Logic.validateResponsibilityChain(Logic.CHAIN_ANSWERS).ok, true);
-  assert.equal(Logic.validateResponsibilityChain({ ...Logic.CHAIN_ANSWERS, design: "approve" }).wrongCount, 1);
+test("old-case puzzle checks both document-to-actor and actor-to-action links", () => {
+  assert.equal(Logic.validateResponsibilityPuzzle(Logic.CHAIN_FILE_ANSWERS, Logic.CHAIN_ANSWERS).ok, true);
+  const wrongFile = { ...Logic.CHAIN_FILE_ANSWERS, design: "file-d" };
+  assert.deepEqual(Logic.validateResponsibilityPuzzle(wrongFile, Logic.CHAIN_ANSWERS).fileWrong, ["design"]);
+  assert.equal(Logic.validateResponsibilityPuzzle(Logic.CHAIN_FILE_ANSWERS, { ...Logic.CHAIN_ANSWERS, design: "approve" }).actionWrong, 1);
 });
 
 test("report rejects a correct culprit paired with a contradictory room", () => {
@@ -114,11 +115,13 @@ test("normalization preserves meta records and repairs malformed collections", (
   assert.deepEqual(state.matrixAnswers, {});
 });
 
-test("v2 saves migrate scalar confrontation evidence into v3 arrays", () => {
-  const state = Logic.normalizeState({ version: 2, confrontation: { q1: "e_impact", q2: ["e_floor", "e_floor"] } });
-  assert.equal(state.version, 3);
+test("v2/v3 saves migrate confrontation and completed matrix work into v4", () => {
+  const state = Logic.normalizeState({ version: 3, matrixAnswers: Logic.MATRIX_ANSWERS, confrontation: { q1: "e_impact", q2: ["e_floor", "e_floor"] } });
+  assert.equal(state.version, 4);
   assert.deepEqual(state.confrontation.q1, ["e_impact"]);
   assert.deepEqual(state.confrontation.q2, ["e_floor"]);
+  assert.deepEqual(state.exclusionAnswers, Logic.EXCLUSION_ANSWERS);
+  assert.deepEqual(state.zhouConditions, Logic.ZHOU_CONDITIONS);
   assert.equal(state.interludeSeen, false);
 });
 

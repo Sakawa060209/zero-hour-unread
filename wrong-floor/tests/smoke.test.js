@@ -50,17 +50,21 @@ async function solveThroughChapter6(page, checkSpoilers = false) {
   await examineAll(page, 2);
   await page.locator('[data-measure="photo"]').fill("83");
   await page.locator('[data-measure="plan"]').fill("96");
-  await page.locator("#fixed-check").selectOption("window");
-  await page.locator('input[name="p03"][value="room"]').check();
+  await clickAction(page, "lock-p03-measure");
+  await page.locator('input[name="p03-explanation"][value="room"]').check();
+  await clickAction(page, "lock-p03-explanation");
+  await page.locator('input[name="p03-fixed"][value="window"]').check();
   await clickAction(page, "solve-p03");
-  await assertText(page, "十三厘米差值");
+  await assertText(page, "推理成立 · P03");
 
   await page.reload();
   await clickAction(page, "continue-game");
   await page.locator('[data-action="go-chapter"][data-chapter="4"]').click();
   await page.locator('[data-action="examine"]').click();
-  await page.locator('[data-action="toggle-blueprint"][data-id="2012"]').click();
-  await page.locator('[data-action="toggle-blueprint"][data-id="2019"]').click();
+  await page.locator('[data-action="select-blueprint"][data-id="2012"]').click();
+  await clickAction(page, "confirm-p04-first");
+  await page.locator('[data-action="select-blueprint"][data-id="2019"]').click();
+  await clickAction(page, "confirm-p04-second");
   for (const id of ["number", "door", "wall-kept", "pipe"]) await page.locator(`input[name="p04-change"][value="${id}"]`).check();
   await clickAction(page, "solve-p04");
 
@@ -69,6 +73,7 @@ async function solveThroughChapter6(page, checkSpoilers = false) {
   await assertText(page, "房号已从旧图恢复");
   await goChapter(page, 5);
   for (const id of ["socket", "drag", "frame", "nail", "pipe", "impact"]) await page.locator(`[data-action="find-diff"][data-diff="${id}"]`).click();
+  await clickAction(page, "save-p05-observations");
   await page.locator('input[name="p05-proof"][value="impact"]').check();
   await page.locator('input[name="p05-proof"][value="frame"]').check();
   await clickAction(page, "solve-p05");
@@ -77,7 +82,7 @@ async function solveThroughChapter6(page, checkSpoilers = false) {
   await page.locator('input[name="p05-proof"][value="drag"]').check();
   await clickAction(page, "solve-p05");
   await assertText(page, "推论形成：1402 为第一现场");
-  await page.locator('[data-action="set-view-floor"][data-floor="14"]').click();
+  for (const floor of [11,12,14]) await page.locator(`[data-action="set-view-floor"][data-floor="${floor}"]`).click();
   await clickAction(page, "solve-p06");
 
   await goChapter(page, 6);
@@ -88,7 +93,7 @@ async function solveThroughChapter6(page, checkSpoilers = false) {
   await clickAction(page, "solve-p08");
 }
 
-async function completeInterview(page, id, requiredTopic, kind, evidence, revealText) {
+async function completeInterview(page, id, requiredTopic, kind, evidence, revealText, correctRoute) {
   await page.locator(`[data-action="interview"][data-person="${id}"]`).click();
   const topics = page.locator('input[name="interview-topic"]');
   await page.locator(`input[name="interview-topic"][value="${requiredTopic}"]`).check();
@@ -100,7 +105,14 @@ async function completeInterview(page, id, requiredTopic, kind, evidence, reveal
   await page.locator(`input[name="interview-kind"][value="${kind}"]`).check();
   await clickAction(page, "submit-interview-kind");
   const lead = page.locator(`[data-action="investigate-lead"][data-person="${id}"]`);
-  if (await lead.count()) await lead.click();
+  if (await lead.count()) {
+    if (id === "guxue") {
+      await page.locator(`[data-action="investigate-lead"][data-person="${id}"][data-route="parking-camera"]`).click();
+      const interim = await page.evaluate(() => JSON.parse(localStorage.getItem("wrong-floor-save-v1")));
+      assert.equal(interim.evidence.includes("e_copy"), false, "a plausible but wrong external route must not auto-award the interview proof");
+    }
+    await page.locator(`[data-action="investigate-lead"][data-person="${id}"][data-route="${correctRoute}"]`).click();
+  }
   await page.locator(`[data-action="interview"][data-person="${id}"]`).click();
   await page.locator(`input[name="interview-evidence"][value="${evidence}"]`).check();
   await clickAction(page, "submit-interview-evidence");
@@ -115,18 +127,27 @@ async function solveP09(page) {
 }
 
 async function fillMatrix(page) {
-  const noCells = [
-    "xuyoa_permission", "xuyoa_card", "guxue_permission", "guxue_card",
-    "liangwen_permission", "liangwen_card", "chengyi_permission", "chengyi_card",
-    "shenman_permission", "shenman_card"
-  ];
-  for (const key of noCells) await page.locator(`[data-action="cycle-matrix"][data-key="${key}"]`).click();
-  for (const key of ["zhoulan_blank", "zhoulan_card"]) {
-    await page.locator(`[data-action="cycle-matrix"][data-key="${key}"]`).click();
-    await page.locator(`[data-action="cycle-matrix"][data-key="${key}"]`).click();
-  }
+  const exclusions = { xuyoa:"alibi", guxue:"permission", liangwen:"permission", chengyi:"permission", shenman:"permission" };
+  for (const [person,reason] of Object.entries(exclusions)) await page.locator(`[data-exclusion="${person}"]`).selectOption(reason);
+  for (const condition of ["know","permission","blank","card"]) await page.locator(`input[name="zhou-condition"][value="${condition}"]`).check();
   await clickAction(page, "solve-p10");
-  await assertText(page, "矩阵闭合");
+  await assertText(page, "主案报告已开放");
+}
+
+async function solveOldCase(page) {
+  const links = {
+    developer:["file-a","lower"], supervisor:["file-b","approve"],
+    design:["file-c","sign"], contractor:["file-d","execute"]
+  };
+  for (const [actor,[file,action]] of Object.entries(links)) {
+    await page.locator(`[data-action="select-chain-file"][data-file="${file}"]`).click();
+    await page.locator(`[data-action="assign-chain-file"][data-actor="${actor}"]`).click();
+    await page.locator(`[data-action="choose-chain-action"][data-actor="${actor}"][data-value="${action}"]`).click();
+  }
+  await page.locator('input[name="p11-private"][value="e_casualty"]').check();
+  await page.locator('input[name="p11-private"][value="e_hr"]').check();
+  await clickAction(page, "solve-p11");
+  await assertText(page, "周屿是旧案遇难者");
 }
 
 async function fillReport(page) {
@@ -141,6 +162,7 @@ async function confront(page, routes) {
   for (const route of routes) {
     for (const evidence of route) await page.locator(`input[name="confrontation-evidence"][value="${evidence}"]`).check();
     await clickAction(page, "validate-confrontation");
+    if (route.includes("e_impact")) await assertText(page, "独立来源共同指向致命冲突现场");
   }
 }
 
@@ -159,8 +181,8 @@ async function confront(page, routes) {
   assert.equal(prematureZhouEvidence.includes("OPS-04"), false, "raw OPS-04 log must not be filed under Zhou before account mapping");
 
   await goChapter(page, 7);
-  await completeInterview(page, "guxue", "案发后去向", "omission", "e_copy", "19:03 我在停车场");
-  await completeInterview(page, "liangwen", "与死者通信", "omission", "e_message", "附件收到了");
+  await completeInterview(page, "guxue", "案发后去向", "omission", "e_copy", "19:03 我在停车场", "parking-access");
+  await completeInterview(page, "liangwen", "与死者通信", "omission", "e_message", "附件收到了", "attachment-checksum");
   await completeInterview(page, "shenman", "声音位置", "inference", "e_pipe", "管井旁听见");
   await completeInterview(page, "zhoulan", "物业旧图", "omission", "e_cardlog", "现行系统");
   await solveP09(page);
@@ -168,21 +190,24 @@ async function confront(page, routes) {
   await clickAction(page, "show-notebook");
   await page.locator('[data-action="notebook-tab"][data-tab="deductions"]').click();
   await assertText(page, "DEDUCTION");
+  await assertText(page, "关联证据");
   await page.locator('[data-action="notebook-tab"][data-tab="evidence"]').click();
   await page.locator("#notebook-person").selectOption("all");
+  await assertText(page, "独立来源");
   await page.locator('[data-action="pin-evidence"]').first().click();
 
   await goChapter(page, 8);
   await assertText(page, "00:48");
   await clickAction(page, "continue-interlude");
-  await examineAll(page, 2);
+  await assertText(page, "证据不足");
+  await examineAll(page, 3);
+  await page.locator('[data-action="toggle-matrix-rationale"][data-person="guxue"]').click();
+  await assertText(page, "权限审计明确排除她");
   await fillMatrix(page);
-  const chain = { developer:"lower", supervisor:"approve", design:"sign", contractor:"execute" };
-  for (const [key, value] of Object.entries(chain)) await page.locator(`[data-chain="${key}"]`).selectOption(value);
-  await page.locator('input[name="p11-private"][value="e_casualty"]').check();
-  await page.locator('input[name="p11-private"][value="e_hr"]').check();
-  await clickAction(page, "solve-p11");
-  await assertText(page, "周屿是旧案遇难者");
+  await solveOldCase(page);
+
+  await clickAction(page, "show-timeline");
+  await assertText(page, "约20:46");
 
   await goChapter(page, 9);
   await fillReport(page);
@@ -212,7 +237,7 @@ async function confront(page, routes) {
   await assertText(page, "正确的问题");
 
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("wrong-floor-save-v1")));
-  assert.equal(saved.version, 3);
+  assert.equal(saved.version, 4);
   assert.equal(saved.ending, "D");
   assert.equal(saved.interviews.xuyoa, undefined);
   assert.deepEqual(errors, []);
@@ -222,6 +247,7 @@ async function confront(page, routes) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert.equal(overflow <= 1, true, `mobile overflow: ${overflow}px`);
   await page.locator('[data-action="go-chapter"][data-chapter="5"]').click();
+  await clickAction(page, "resume-p05-observation");
   const touchSize = await page.locator('[data-action="find-diff"]').first().evaluate(node => ({ width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height }));
   assert.equal(touchSize.width >= 42 && touchSize.height >= 42, true, `P05 touch target: ${touchSize.width}x${touchSize.height}`);
   await goChapter(page, 8);
@@ -240,20 +266,22 @@ async function confront(page, routes) {
   await failurePage.locator('[data-theory="place"]').selectOption("1102");
   await failurePage.locator('[data-theory="method"]').selectOption("远程装置");
   await clickAction(failurePage, "check-theory");
-  await assertText(failurePage, "直接冲突");
+  await assertText(failurePage, "与证据矛盾");
   await clickAction(failurePage, "ending-b");
   await assertText(failurePage, "完美证据");
+  await assertText(failurePage, "报告内部自洽度不足");
 
   const aContext = await browser.newContext({ viewport: { width: 1024, height: 768 } });
   const aPage = await aContext.newPage();
   await solveThroughChapter6(aPage);
   await goChapter(aPage, 7);
-  await completeInterview(aPage, "guxue", "案发后去向", "omission", "e_copy", "19:03 我在停车场");
-  await completeInterview(aPage, "liangwen", "与死者通信", "omission", "e_message", "附件收到了");
+  await completeInterview(aPage, "guxue", "案发后去向", "omission", "e_copy", "19:03 我在停车场", "parking-access");
+  await completeInterview(aPage, "liangwen", "与死者通信", "omission", "e_message", "附件收到了", "attachment-checksum");
   await solveP09(aPage);
   await goChapter(aPage, 8);
   await clickAction(aPage, "continue-interlude");
   await aPage.locator('[data-action="examine"][data-id="permission-audit"]').click();
+  await aPage.locator('[data-action="examine"][data-id="water-reenactment"]').click();
   await fillMatrix(aPage);
   await goChapter(aPage, 9);
   await fillReport(aPage);
@@ -268,5 +296,5 @@ async function confront(page, routes) {
   assert.equal(aSaved.solved.includes("p11"), false);
 
   await aContext.close(); await failureContext.close(); await cContext.close(); await context.close(); await browser.close();
-  process.stdout.write("✓ v3 natural A/C/D endings, theory failure, fair measurement, gated spoilers, interviews, mobile controls and migration\n");
+  process.stdout.write("✓ v3.1 natural A/C/D endings, branched external investigation, exclusion table, responsibility puzzle, theory failure and mobile controls\n");
 })().catch(error => { console.error(error); process.exit(1); });
