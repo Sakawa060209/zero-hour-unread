@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const SAVE_VERSION = 5;
+  const SAVE_VERSION = 6;
   const CORE_INTERVIEWS = ["guxue", "liangwen", "shenman", "zhoulan"];
   const CHAPTER_REQUIREMENTS = {
     2: ["p01"], 3: ["p02"], 4: ["p03"], 5: ["p04"],
@@ -17,7 +17,7 @@
     "e_stream", "e_location", "e_checkin", "e_shelf", "e_plan1102", "e_fixed",
     "e_plan2012", "e_plan2019", "e_impact", "e_floor", "e_window",
     "e_pipe", "e_cardlog", "e_cuffphoto", "e_permission", "e_oldfile", "e_watch", "e_waterlab",
-    "e_cardauth", "e_route", "e_hatch", "e_chaintrial", "e_remote_sweep"
+    "e_cardauth", "e_route", "e_hatch", "e_chaintrial", "e_remote_sweep", "e_trainingaccess"
   ];
 
   const MATRIX_ANSWERS = {
@@ -42,6 +42,11 @@
     developer: "file-a", supervisor: "file-b", design: "file-c", contractor: "file-d"
   };
 
+  const RECONSTRUCTION_ORDER = ["water", "card", "transfer", "chain", "leave"];
+  const RECONSTRUCTION_SOURCES = {
+    water: "e_waterlab", card: "e_cardauth", transfer: "e_cart", chain: "e_lock", leave: "e_hatch"
+  };
+
   function freshState() {
     return {
       version: SAVE_VERSION, started: false, chapter: 1, screen: "home",
@@ -50,6 +55,9 @@
       factAnswers: {}, testimonyAnswers: {}, matrixAnswers: {}, chainAnswers: {}, chainFiles: {},
       exclusionAnswers: {}, zhouConditions: [], matrixExpanded: [],
       report: {}, confrontation: {}, confrontationStep: 0,
+      confrontationDraft: {}, confrontationExpanded: {},
+      reconstructionOrder: ["transfer", "water", "leave", "card", "chain"], reconstructionSources: {},
+      notebookReturnChapter: null, legacyCaseRecord: null,
       pinnedEvidence: [], currentTheory: {}, interludeSeen: false, hints: [], mistakes: 0, ending: null,
       meta: { endings: [], bestEvidence: 0 }, updatedAt: null
     };
@@ -71,12 +79,18 @@
       state[key] = uniqueStrings(state[key]);
     });
     state.pinnedEvidence = state.pinnedEvidence.filter(id => state.evidence.includes(id)).slice(0, 3);
-    ["interviews", "interviewData", "factAnswers", "testimonyAnswers", "matrixAnswers", "chainAnswers", "chainFiles", "exclusionAnswers", "report", "confrontation", "currentTheory"].forEach(key => {
+    ["interviews", "interviewData", "factAnswers", "testimonyAnswers", "matrixAnswers", "chainAnswers", "chainFiles", "exclusionAnswers", "report", "confrontation", "confrontationDraft", "confrontationExpanded", "reconstructionSources", "currentTheory"].forEach(key => {
       state[key] = safeObject(state[key]);
     });
     Object.keys(state.interviews).forEach(id => state.interviews[id] = Math.max(0, Math.min(3, Number(state.interviews[id]) || 0)));
     state.confrontationStep = Math.max(0, Math.min(5, Number(state.confrontationStep) || 0));
     Object.keys(state.confrontation).forEach(key => state.confrontation[key] = uniqueStrings(Array.isArray(state.confrontation[key]) ? state.confrontation[key] : [state.confrontation[key]]));
+    Object.keys(state.confrontationDraft).forEach(key => state.confrontationDraft[key] = uniqueStrings(state.confrontationDraft[key]).slice(0, 3));
+    Object.keys(state.confrontationExpanded).forEach(key => state.confrontationExpanded[key] = uniqueStrings(state.confrontationExpanded[key]));
+    const order = uniqueStrings(state.reconstructionOrder);
+    state.reconstructionOrder = order.length === RECONSTRUCTION_ORDER.length && RECONSTRUCTION_ORDER.every(id => order.includes(id)) ? order : [...base.reconstructionOrder];
+    state.notebookReturnChapter = Number.isInteger(Number(state.notebookReturnChapter)) && Number(state.notebookReturnChapter) >= 1 && Number(state.notebookReturnChapter) <= 9 ? Number(state.notebookReturnChapter) : null;
+    state.legacyCaseRecord = state.legacyCaseRecord && typeof state.legacyCaseRecord === "object" && !Array.isArray(state.legacyCaseRecord) ? state.legacyCaseRecord : null;
     state.interludeSeen = Boolean(state.interludeSeen);
     if (Number(raw.version || 0) < 4 && !hasSolved(state, "p10") && validateMatrix(state.matrixAnswers).ok) {
       state.exclusionAnswers = { ...EXCLUSION_ANSWERS };
@@ -92,7 +106,19 @@
     if (Number(raw.version || 0) < 5 && hasSolved(state, "p12")) {
       state.report.waterStart = state.report.waterStart || REPORT_ANSWERS.waterStart;
       state.report.chainMethod = state.report.chainMethod || REPORT_ANSWERS.chainMethod;
-      if (state.confrontation.q5 && !state.confrontation.q6) state.confrontation.q6 = state.confrontation.q5;
+    }
+    if (Number(raw.version || 0) < 6 && state.evidence.includes("e_chaintrial") && !state.solved.includes("p10r")) state.solved.push("p10r");
+    if (hasSolved(state, "p12") && state.ending) {
+      const currentProofValid = [1,2,3,4,5].every(step => validateConfrontationAnswer(step, state.confrontation[`q${step}`] || []).ok);
+      if (Number(raw.version || 0) < 5 || !currentProofValid) {
+        if (!state.legacyCaseRecord) state.legacyCaseRecord = {
+          saveVersion: Number(raw.version || 0),
+          confrontation: Object.fromEntries(Object.entries(state.confrontation).map(([key,value]) => [key,[...value]])),
+          note: "旧版结案证明记录按当时题序封存，不映射为新版举证轮次。"
+        };
+        state.confrontation = {};
+        state.confrontationStep = 0;
+      }
     }
     if (hasSolved(state, "p11") && Object.keys(state.chainFiles).length === 0) state.chainFiles = { ...CHAIN_FILE_ANSWERS };
     state.meta = {
@@ -110,7 +136,7 @@
   function chapterUnlocked(state, chapter) {
     if (chapter <= 1) return true;
     if (chapter === 8) return hasSolved(state, "p09") && keyInterviewCount(state) >= 2;
-    if (chapter === 9) return chapterUnlocked(state, 8) && (hasSolved(state, "p12") || (hasSolved(state, "p10") &&
+    if (chapter === 9) return chapterUnlocked(state, 8) && (hasSolved(state, "p12") || (hasSolved(state, "p10") && hasSolved(state, "p10r") &&
       ["e_waterlab", "e_cardauth", "e_route", "e_hatch", "e_chaintrial"].every(id => state.evidence.includes(id))));
     return (CHAPTER_REQUIREMENTS[chapter] || []).every(id => hasSolved(state, id));
   }
@@ -154,7 +180,7 @@
     if (person === "xuyoa" && (field === "blank" || field === "card") && hasSolved(state, "p02")) return "no";
     if (field === "permission" && evidence.has("e_permission")) return person === "zhoulan" ? "yes" : "no";
     if (person !== "zhoulan") return "unknown";
-    if (field === "know" && evidence.has("e_accountmap")) return "yes";
+    if (field === "know" && evidence.has("e_accountmap") && evidence.has("e_trainingaccess")) return "yes";
     if (field === "blank" && evidence.has("e_shift") && evidence.has("e_route")) return "yes";
     if (field === "card" && evidence.has("e_cardlog") && evidence.has("e_cardauth") && evidence.has("e_route")) return "yes";
     return "unknown";
@@ -188,16 +214,31 @@
     return { ok: fileWrong.length === 0 && actionResult.ok, fileWrong, actionWrong: actionResult.wrongCount };
   }
 
+  function validateSceneReconstruction(order, sources, state) {
+    const arranged = uniqueStrings(order);
+    const safeSources = safeObject(sources);
+    const missingEvidence = Object.values(RECONSTRUCTION_SOURCES).filter(id => !state || !state.evidence.includes(id));
+    if (missingEvidence.length) return { ok:false, issue:"evidence", reason:"现场复原仍缺直接记录或痕迹来源，先完成对应调查。", missingEvidence };
+    const position = Object.fromEntries(arranged.map((id,index) => [id,index]));
+    if (position.leave < position.chain) return { ok:false, issue:"order", reason:"离开后无法再从室内挂上门链；这条顺序不能保留锁闭状态。" };
+    if (position.transfer < position.card) return { ok:false, issue:"order", reason:"A047 尚未取出，尸体无法经 1102 正门完成这次搬运。" };
+    const firstWrong = RECONSTRUCTION_ORDER.find((id,index) => arranged[index] !== id);
+    if (firstWrong) return { ok:false, issue:"order", reason:"现有时间记录仍发生冲突：放水、取卡与正门搬运的先后关系需要重新核对。" };
+    const wrongSources = RECONSTRUCTION_ORDER.filter(id => safeSources[id] !== RECONSTRUCTION_SOURCES[id]);
+    if (wrongSources.length) return { ok:false, issue:"source", wrongSources, reason:`有 ${wrongSources.length} 个步骤尚未连接到能直接支持它的来源；行为、时间与物理状态不能互相替代。` };
+    return { ok:true, issue:null, reason:"五个步骤的顺序与来源均闭合。" };
+  }
+
   const REPORT_ANSWERS = {
-    deathPlace: "1402", deathTime: "19:16", foundPlace: "1102", cardUser: "周岚",
+    deathPlace: "1402", deathTime: "19:16—19:18", foundPlace: "1102", cardUser: "周岚",
     cufflink: "两周前遗留", sound: "14层管道结构传声",
     transferReason: "伪造1102内晚间死亡", waterStart: "约20:46",
     chainMethod: "室内挂链后经浴室检修通道离开", culprit: "周岚"
   };
 
   const REPORT_REQUIREMENTS = {
-    deathPlace: { category: "地点连接", solved: ["p05"], evidence: ["e_impact", "e_watch"] },
-    deathTime: { category: "时间锚点", evidence: ["e_watch"] },
+    deathPlace: { category: "地点连接", solved: ["p05"], evidence: ["e_impact", "e_body"] },
+    deathTime: { category: "死亡区间", evidence: ["e_watch", "e_body"] },
     foundPlace: { category: "发现现场", evidence: ["e_lock"] },
     cardUser: { category: "身份归属", evidence: ["e_cardlog", "e_cardauth", "e_route"] },
     cufflink: { category: "物证时间", solved: ["p09"], evidence: ["e_cufflink", "e_cuffphoto"] },
@@ -220,7 +261,7 @@
   const CONFRONTATION_ROUTES = {
     q1: { category: "地点连接", relevant: ["e_impact", "e_body", "e_watch"], routes: [
       { id: "autopsy", all: ["e_impact", "e_body"], explanation: "尸表固定伤情范围，1402 撞击痕固定碰撞位置；两处形态相互吻合。" },
-      { id: "watch", all: ["e_impact", "e_watch"], explanation: "手表固定 19:16 的冲击时间，1402 撞击痕固定冲突地点；设备与现场形成独立闭环。" }
+      { id: "watch", all: ["e_impact", "e_watch", "e_body"], explanation: "手表固定 19:16 的冲击与心率急降，法医把死亡判断缩至 19:16—19:18，1402 撞击痕再固定冲突地点。" }
     ] },
     q2: { category: "搬运连接", relevant: ["e_floor", "e_cart"], routes: [{ id: "cart", all: ["e_floor", "e_cart"], explanation: "地板拖痕证明尸体离开 1402，轮距、轮宽与磨损缺口把拖痕连接到物业搬运车。" }] },
     q3: { category: "身份归属", relevant: ["e_cardlog", "e_cardauth", "e_route"], routes: [{ id: "identity", all: ["e_cardlog", "e_cardauth", "e_route"], explanation: "原始日志固定 A047 的取用，活体认证落实取卡人，连续服务区记录把卡的后续路线连接到周岚。" }] },
@@ -251,6 +292,12 @@
     if (!hasSolved(state, "p12")) return null;
     if (!knowledgeComplete(state)) return "A";
     return disclosure === "culprit-only" ? "C" : "D";
+  }
+
+  function caseResolutionState(state) {
+    if (state && state.ending) return "closed";
+    if (state && hasSolved(state, "p12")) return "awaiting-disclosure";
+    return "proving";
   }
 
   function evaluateTheory(theory, state) {
@@ -290,11 +337,11 @@
 
   return {
     SAVE_VERSION, CORE_EVIDENCE, CORE_INTERVIEWS, MATRIX_ANSWERS, MATRIX_AUTO, EXCLUSION_ANSWERS, ZHOU_CONDITIONS,
-    CHAIN_ANSWERS, CHAIN_FILE_ANSWERS,
+    CHAIN_ANSWERS, CHAIN_FILE_ANSWERS, RECONSTRUCTION_ORDER, RECONSTRUCTION_SOURCES,
     REPORT_ANSWERS, REPORT_REQUIREMENTS, CONFRONTATION_ROUTES,
     freshState, normalizeState, coreInterviewsComplete, keyInterviewCount, chapterUnlocked, highestUnlockedChapter,
     evidenceProgress, validateEvidenceSet, validateAlibiCoverage, validateMatrix, candidateStatus, validateExclusionMatrix,
-    validateResponsibilityChain, validateResponsibilityPuzzle, validateReport, validateConfrontationAnswer,
-    knowledgeComplete, determineEnding, evaluateTheory, recordEnding
+    validateResponsibilityChain, validateResponsibilityPuzzle, validateSceneReconstruction, validateReport, validateConfrontationAnswer,
+    knowledgeComplete, determineEnding, caseResolutionState, evaluateTheory, recordEnding
   };
 });

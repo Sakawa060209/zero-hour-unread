@@ -29,6 +29,7 @@ test("chapter gates require the complete reconstruction rather than P10 alone", 
   state.evidence.push("e_waterlab", "e_cardauth", "e_route", "e_hatch");
   assert.equal(Logic.chapterUnlocked(state, 9), false, "missing the chain reenactment keeps the report locked");
   state.evidence.push("e_chaintrial");
+  state.solved.push("p10r");
   assert.equal(Logic.chapterUnlocked(state, 9), true, "identity, timing and locked-exit reconstruction open the report without optional P11");
 });
 
@@ -57,11 +58,11 @@ test("candidate cells derive from their own evidence and permission never proves
   assert.equal(Logic.candidateStatus(state, "zhoulan", "blank"), "unknown");
   assert.equal(Logic.candidateStatus(state, "zhoulan", "card"), "unknown");
 
-  state.evidence.push("e_accountmap", "e_shift", "e_cardlog", "e_cardauth", "e_route");
+  state.evidence.push("e_accountmap", "e_trainingaccess", "e_shift", "e_cardlog", "e_cardauth", "e_route");
   for (const field of Logic.ZHOU_CONDITIONS) assert.equal(Logic.candidateStatus(state, "zhoulan", field), "yes", field);
   assert.equal(Logic.validateExclusionMatrix(Logic.EXCLUSION_ANSWERS, Logic.ZHOU_CONDITIONS, state).ok, true);
 
-  for (const [removed, field] of [["e_permission","permission"],["e_accountmap","know"],["e_shift","blank"],["e_cardauth","card"]]) {
+  for (const [removed, field] of [["e_permission","permission"],["e_accountmap","know"],["e_trainingaccess","know"],["e_shift","blank"],["e_cardauth","card"]]) {
     const reduced = Logic.normalizeState({ ...state, version: Logic.SAVE_VERSION, evidence: state.evidence.filter(id => id !== removed) });
     assert.equal(Logic.candidateStatus(reduced, "zhoulan", field), "unknown", `${removed} must downgrade ${field}`);
     assert.equal(Logic.validateExclusionMatrix(Logic.EXCLUSION_ANSWERS, Logic.ZHOU_CONDITIONS, reduced).ok, false);
@@ -82,10 +83,22 @@ test("old-case puzzle checks both document-to-actor and actor-to-action links", 
   assert.equal(Logic.validateResponsibilityPuzzle(Logic.CHAIN_FILE_ANSWERS, { ...Logic.CHAIN_ANSWERS, design: "approve" }).actionWrong, 1);
 });
 
+test("scene reconstruction checks chronology, locked exit and per-step sources", () => {
+  const state=Logic.freshState();
+  state.evidence.push(...Object.values(Logic.RECONSTRUCTION_SOURCES));
+  assert.equal(Logic.validateSceneReconstruction(Logic.RECONSTRUCTION_ORDER,Logic.RECONSTRUCTION_SOURCES,state).ok,true);
+  const leftBeforeChain=["water","card","transfer","leave","chain"];
+  assert.match(Logic.validateSceneReconstruction(leftBeforeChain,Logic.RECONSTRUCTION_SOURCES,state).reason,/无法再从室内挂上门链/);
+  const transferBeforeCard=["water","transfer","card","chain","leave"];
+  assert.match(Logic.validateSceneReconstruction(transferBeforeCard,Logic.RECONSTRUCTION_SOURCES,state).reason,/A047 尚未取出/);
+  const wrongSource={...Logic.RECONSTRUCTION_SOURCES,leave:"e_lock"};
+  assert.equal(Logic.validateSceneReconstruction(Logic.RECONSTRUCTION_ORDER,wrongSource,state).issue,"source");
+});
+
 test("report rejects contradictions and correct answers without reconstruction evidence", () => {
   const state = Logic.freshState();
   state.solved.push("p05", "p08", "p09", "p10");
-  state.evidence.push("e_impact","e_watch","e_lock","e_cardlog","e_cardauth","e_route","e_cufflink","e_cuffphoto","e_pipe","e_floor","e_waterlab","e_hatch","e_chaintrial");
+  state.evidence.push("e_impact","e_watch","e_body","e_lock","e_cardlog","e_cardauth","e_route","e_cufflink","e_cuffphoto","e_pipe","e_floor","e_waterlab","e_hatch","e_chaintrial");
   assert.equal(Logic.validateReport(Logic.REPORT_ANSWERS, state).ok, true);
   const contradiction = { ...Logic.REPORT_ANSWERS, deathPlace: "1102" };
   assert.deepEqual(Logic.validateReport(contradiction, state).wrong, ["deathPlace"]);
@@ -110,15 +123,24 @@ test("A, C and D endings are all reachable through natural completion states", (
   assert.equal(Logic.determineEnding(state, "culprit-only"), "C");
 });
 
+test("case resolution distinguishes proving, pending disclosure and closed", () => {
+  const state=Logic.freshState();
+  assert.equal(Logic.caseResolutionState(state),"proving");
+  state.solved.push("p12");
+  assert.equal(Logic.caseResolutionState(state),"awaiting-disclosure");
+  state.ending="A";
+  assert.equal(Logic.caseResolutionState(state),"closed");
+});
+
 test("final confrontation reports categories and explains the route actually submitted", () => {
   const autopsy = Logic.validateConfrontationAnswer(1, ["e_impact", "e_body"]);
-  const watch = Logic.validateConfrontationAnswer(1, ["e_impact", "e_watch"]);
+  const watch = Logic.validateConfrontationAnswer(1, ["e_impact", "e_watch", "e_body"]);
   assert.equal(autopsy.ok, true);
   assert.equal(watch.ok, true);
   assert.match(autopsy.explanation, /尸表/);
   assert.doesNotMatch(autopsy.explanation, /手表/);
   assert.match(watch.explanation, /手表/);
-  assert.equal(Logic.validateConfrontationAnswer(1,["e_impact","e_body","e_watch"]).issue,"excess");
+  assert.equal(Logic.validateConfrontationAnswer(1,["e_impact","e_body","e_watch"]).ok,true);
   assert.equal(Logic.validateConfrontationAnswer(2, ["e_floor", "e_cart"]).ok, true);
   assert.equal(Logic.validateConfrontationAnswer(3, ["e_cardlog", "e_cardauth", "e_route"]).ok, true);
   assert.equal(Logic.validateConfrontationAnswer(4, ["e_permission", "e_cart", "e_route"]).ok, true);
@@ -137,9 +159,11 @@ test("every confrontation route rejects each missing item", () => {
     const step=Number(key.slice(1));
     for (const route of rule.routes) {
       for (const missing of route.all) {
-        const result=Logic.validateConfrontationAnswer(step,route.all.filter(id=>id!==missing));
-        assert.equal(result.ok,false,`${key}/${route.id} should require ${missing}`);
-        assert.equal(result.category,rule.category);
+        const submitted=route.all.filter(id=>id!==missing);
+        const result=Logic.validateConfrontationAnswer(step,submitted);
+        const equivalent=rule.routes.some(candidate=>candidate.all.length===submitted.length && candidate.all.every(id=>submitted.includes(id)));
+        assert.equal(result.ok,equivalent,`${key}/${route.id} missing ${missing} should pass only through an explicit equivalent route`);
+        if (!equivalent) assert.equal(result.category,rule.category);
       }
     }
   }
@@ -177,7 +201,7 @@ test("normalization preserves meta records and repairs malformed collections", (
 
 test("v2/v3 saves migrate matrix work and v4 in-progress finals reopen new reconstruction", () => {
   const state = Logic.normalizeState({ version: 3, matrixAnswers: Logic.MATRIX_ANSWERS, confrontation: { q1: "e_impact", q2: ["e_floor", "e_floor"] } });
-  assert.equal(state.version, 5);
+  assert.equal(state.version, 6);
   assert.deepEqual(state.confrontation.q1, ["e_impact"]);
   assert.deepEqual(state.confrontation.q2, ["e_floor"]);
   assert.deepEqual(state.exclusionAnswers, Logic.EXCLUSION_ANSWERS);
@@ -187,6 +211,28 @@ test("v2/v3 saves migrate matrix work and v4 in-progress finals reopen new recon
   assert.equal(v4.solved.includes("report"),false);
   assert.equal(v4.confrontationStep,2);
   assert.deepEqual(Object.keys(v4.confrontation),["q1","q2"]);
+});
+
+test("v4 closed A/C/D proofs stay in a legacy archive without Q5 to Q6 remapping", () => {
+  for (const ending of ["A","C","D"]) {
+    const oldQ5=["e_oldfile","e_casualty","e_hr"];
+    const migrated=Logic.normalizeState({version:4,ending,solved:["p12"],evidence:["e_chaintrial"],confrontationStep:5,confrontation:{q1:["e_impact","e_watch"],q5:oldQ5},meta:{endings:[ending]}});
+    assert.equal(migrated.ending,ending);
+    assert.equal(Logic.caseResolutionState(migrated),"closed");
+    assert.deepEqual(migrated.confrontation,{});
+    assert.deepEqual(migrated.legacyCaseRecord.confrontation.q5,oldQ5);
+    assert.equal(migrated.legacyCaseRecord.confrontation.q6,undefined);
+    assert.equal(migrated.solved.includes("p10r"),true);
+  }
+});
+
+test("v5 pending disclosure and final drafts survive normalization", () => {
+  const pending=Logic.normalizeState({version:5,solved:["p12"],ending:null,confrontationDraft:{q3:["e_cardlog","e_cardauth"]},confrontationExpanded:{q3:["e_cardlog"]},report:{deathPlace:"1402"},notebookReturnChapter:9});
+  assert.equal(Logic.caseResolutionState(pending),"awaiting-disclosure");
+  assert.deepEqual(pending.confrontationDraft.q3,["e_cardlog","e_cardauth"]);
+  assert.deepEqual(pending.confrontationExpanded.q3,["e_cardlog"]);
+  assert.equal(pending.report.deathPlace,"1402");
+  assert.equal(pending.notebookReturnChapter,9);
 });
 
 if (process.exitCode) process.exit(process.exitCode);

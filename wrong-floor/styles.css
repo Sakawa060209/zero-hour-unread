@@ -462,6 +462,39 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
   .origin-badge { float: none; display: inline-block; margin-left: 6px; }
 }
 
+/* v3.3 resumable final report and player-authored reconstruction */
+.notebook-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:18px; }
+.notebook-heading .chapter-title { margin-bottom:0; }
+.pending-disclosure { border-color:rgba(203,181,106,.7); }
+.pending-disclosure .btn, .deduction-banner .btn { margin-top:14px; justify-self:start; }
+.legacy-proof-record { margin:16px 0; padding:14px; border:1px solid var(--line); background:rgba(203,181,106,.06); }
+.legacy-proof-record strong { color:var(--accent); }
+.legacy-proof-record p { margin:.45em 0 0; color:var(--muted); }
+.scene-reconstruction { scroll-margin-top:90px; }
+.reconstruction-task { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:9px; margin:20px 0; }
+.reconstruction-task-card { min-width:0; padding:13px; border:1px solid var(--line); background:rgba(120,185,197,.035); }
+.reconstruction-task-card h3 { margin:10px 0 5px; font-size:1rem; }
+.reconstruction-task-card p { min-height:4.2em; margin:0 0 13px; color:var(--muted); font-size:.7rem; line-height:1.5; }
+.reconstruction-task-card label { display:block; color:var(--muted); font-size:.65rem; }
+.reconstruction-task-card select { width:100%; margin-top:6px; padding:9px; color:var(--ink); background:#081013; border:1px solid var(--line); font-size:.7rem; }
+.reconstruction-position { display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--accent); font-size:.62rem; letter-spacing:.06em; }
+.reconstruction-position div { display:flex; gap:5px; }
+.reconstruction-position button { width:34px; min-height:34px; border:1px solid var(--line); background:#0b1518; color:var(--ink); cursor:pointer; }
+.reconstruction-position button:disabled { opacity:.28; cursor:default; }
+.reconstruction-strip.compact { margin-bottom:0; }
+
+@media (max-width: 900px) {
+  .reconstruction-task { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width: 600px) {
+  .notebook-heading { align-items:flex-start; flex-direction:column; }
+  .notebook-heading .btn { width:100%; }
+  .reconstruction-task { grid-template-columns:1fr; }
+  .reconstruction-task-card p { min-height:0; }
+  .reconstruction-position button { width:44px; min-height:44px; }
+}
+
 /* v3.2 reconstruction, evidence states and touch controls */
 .measure-adjust { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 6px; }
 .measure-adjust button { min-width: 48px; min-height: 38px; border: 1px solid var(--line); background: #0a1214; color: var(--blue); cursor: pointer; }

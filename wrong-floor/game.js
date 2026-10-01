@@ -20,13 +20,13 @@
     { title: "21:41", subtitle: "记录从未说谎。说得太多的是我们。", objective: "剥离门禁与证言中的解释，重建可验证事实。" },
     { title: "所有人都说了真话", subtitle: "没有一句假话，却共同拼出了一个错误现场。", objective: "完成至少两名关键证人的“询问→外查→回审”闭环，并厘清袖扣时间。" },
     { title: "知道还不够", subtitle: "知道 1402 的人不止一个。真正的问题，是谁同时拥有让它重新成为现场的条件。", objective: "用排除理由和知识、权限、时间、行为四项交集锁定置换者。" },
-    { title: "错误的问题", subtitle: "回答八个问题，然后决定哪些真相应该走出这栋楼。", objective: "提交一致的案件报告并完成最终举证。" }
+    { title: "错误的问题", subtitle: "回答十个问题，然后决定哪些真相应该走出这栋楼。", objective: "完成现场复原、提交一致的案件报告并完成最终举证。" }
   ];
 
   const EVIDENCE = {
     e_lock: ["门锁状态", "现场·观察", "1102 门链从室内挂上；电子锁无撬动。破门前无法从外侧复位门链。"],
     e_access: ["21:41 门禁记录", "系统·原始记录", "21:41:08，卡号 A047，1102，开启成功。记录没有持卡人的影像。"],
-    e_body: ["尸表与伤口", "法医·初检", "后枕部钝器样撞击，死亡约在 19:00—20:00；尸体周围缺少对应喷溅。"],
+    e_body: ["尸表与伤口", "法医·复核", "后枕部钝器样撞击与 1402 墙内结构件形态吻合；法医结合手表心率急降与尸体现象，将死亡判断缩至 19:16—19:18。"],
     e_water: ["浴室溢水", "现场·痕迹", "水龙头保持异常小流量，22:36 才渗到楼下；阀门位置与自然漏水不符，需要复现实验确认其计时作用。"],
     e_waterlab: ["浴室渗漏复现实验", "实验·独立验证", "按现场阀门开度与排水口堵塞程度复现，连续 1 小时 50 分钟后出现同等楼下渗漏；22:36 倒推约 20:46 开始放水。"],
     e_remote_sweep: ["远程触发排查记录", "技术队·排除性调查", "无线频谱、蓝牙与局域网日志无异常连接；现场机械触发检查也未发现定时器、牵引线或残留安装点。"],
@@ -47,13 +47,14 @@
     e_cardlog: ["A047 卡片流转原始日志", "系统·原始记录", "21:19:04，应急卡柜，A047 取出；操作账号 OPS-04。原始日志不记录自然人姓名。"],
     e_pipe: ["垂直排水管图", "工程·结构记录", "1402 与 1102 共用竖向管井。14 层撞击与拖动可在 11 层管井旁被放大听见。"],
     e_permission: ["物业权限审计", "系统·权限记录", "14F 服务门、搬运车架与应急卡柜均需工牌加个人口令；单人闸机无尾随、强开或备用机械钥匙记录。其余受查人员均不在授权名单中。"],
-    e_accountmap: ["后台账号对应表", "系统·账号记录", "OPS-04 对应“物业运营负责人”岗位账号；该岗位培训含历史楼层图，账号与岗位相连，仍需当班记录确认实际使用人。"],
+    e_accountmap: ["后台账号对应表", "系统·账号记录", "OPS-04 对应“物业运营负责人”岗位账号；该岗位制度上可接触历史楼层图，但账号目录不能证明周岚本人看过哪份资料。"],
+    e_trainingaccess: ["历史图培训签收与访问审计", "培训·本人记录", "周岚于 2025 年 11 月签收隐蔽空间处置培训；ZL-017 在案发前一周打开过含 1402 原始编号的 2012 图纸。记录证明本人知情，不代表当晚实施行为。"],
     e_shift: ["当班人员表", "物业·人员记录", "9 月 17 日 18:00—23:00，物业运营负责人岗位由周岚单人值守并签名交接。"],
     e_cardauth: ["应急卡柜活体认证", "卡柜·身份原始记录", "21:18:58，OPS-04 与工牌 ZL-017 完成口令和活体人脸双重认证；留存帧与周岚人事照匹配，21:19:04 A047 随后取出。"],
     e_route: ["服务区通行原始记录", "门控·路径记录", "ZL-017 于 19:08—19:27 进出 14F 服务区；20:43—20:50 进出 11F 管井走廊；21:24 再入 14F，21:37 服务梯下行，21:49 从 11F 管井走廊离开。门控顶置帧与卡柜活体帧为同一人，各门无尾随报警。"],
     e_hatch: ["浴室检修口痕迹", "1102·现场物证", "浴室镜柜后的 58×82 厘米检修口通向管井走廊；内沿有新鲜鞋擦、搬运毯蓝灰纤维与当晚未干的清洁剂印迹。"],
-    e_chaintrial: ["门链与检修通道复原", "实验·现场复原", "复原组从正门推入同重量模型，在室内挂上门链后，可经浴室检修口离开并让管井防火门自动闭合；其他顺序无法同时保留门链和走廊门控记录。"],
-    e_watch: ["死者智能手表记录", "设备·独立时间锚点", "19:16:21 检测到剧烈冲击，心率随后急降；19:18 后没有有效活动记录。"],
+    e_chaintrial: ["门链与检修通道复原", "实验·现场复原", "门缝复位模型无法挂链；经前门离开会新增门控记录；先离开再挂链在物理上不成立。只有室内挂链后经检修口离开，同时保留门链与 21:49 管井记录。"],
+    e_watch: ["死者智能手表记录", "设备·独立时间锚点", "19:16:21 检测到剧烈冲击，心率随后急降；19:18 后没有有效活动记录。它固定冲击与生理变化，不单独等同于法医死亡判断。"],
     e_oldfile: ["2014 原始验收卷", "旧案·原始文件", "会议纪要、监理联系单、修改验收页与施工日志共同保存了降配责任链。"],
     e_casualty: ["2014 事故死亡名单", "旧案·人员记录", "遇难者：周屿，男，27 岁；另一名遇难者为施工班组成员。"],
     e_hr: ["物业人事历史档案", "物业·人事记录", "周岚入职档案的历史紧急联系人：周屿（兄）。"],
@@ -105,9 +106,9 @@
   const DEDUCTION_LINKS = {
     d_lock: ["e_lock","e_access","e_body"], d_alibi: ["e_checkin","e_stream","e_location"],
     d_dimension: ["e_shelf","e_plan1102","e_fixed"], d_1402: ["e_plan2012","e_plan2019"],
-    d_mirror: ["e_impact","e_floor","e_watch"], d_semantics: ["e_access","e_cardlog"],
+    d_mirror: ["e_impact","e_floor","e_body","e_watch"], d_semantics: ["e_access","e_cardlog"],
     d_sound: ["e_pipe"], d_cuff: ["e_cufflink","e_cuffphoto"],
-    d_access: ["e_permission","e_cardlog","e_accountmap","e_shift","e_cardauth","e_route"],
+    d_access: ["e_permission","e_cardlog","e_accountmap","e_trainingaccess","e_shift","e_cardauth","e_route"],
     d_reconstruction: ["e_waterlab","e_lock","e_hatch","e_chaintrial","e_route"],
     d_oldcase: ["e_oldfile"], d_private: ["e_casualty","e_hr"]
   };
@@ -115,7 +116,7 @@
   const ORIGIN_BADGES = {
     e_checkin: "独立来源 · 会场", e_stream: "独立来源 · 公开影像", e_location: "独立来源 · 运营商",
     e_watch: "独立来源 · 设备", e_body: "独立来源 · 法医", e_impact: "独立来源 · 现场",
-    e_cardlog: "卡柜数据库", e_accountmap: "账号目录", e_shift: "人事排班", e_cardauth: "卡柜活体认证",
+    e_cardlog: "卡柜数据库", e_accountmap: "账号目录", e_trainingaccess: "培训与访问审计", e_shift: "人事排班", e_cardauth: "卡柜活体认证",
     e_route: "门控独立记录", e_hatch: "现场痕迹", e_chaintrial: "独立复原实验", e_remote_sweep: "技术排除调查",
     e_casualty: "旧案名册", e_hr: "人事档案", e_waterlab: "独立来源 · 复现实验"
   };
@@ -216,7 +217,7 @@
         <div class="landing-copy">
           <div class="eyebrow">澄江市刑侦支队 · 案件分析终端</div>
           <h1 class="display">错层</h1>
-          <div class="landing-deck">WRONG FLOOR · V3.2 · 2026/09/17</div>
+          <div class="landing-deck">WRONG FLOOR · V3.3 · 2026/09/17</div>
           <p class="landing-quote">“如果所有证据都是真的，为什么结论会是假的？”</p>
           <div class="landing-actions">
             <button class="btn primary" data-action="${hasSave ? "continue-game" : "new-game"}">${hasSave ? "继续调查" : "接受委托"}</button>
@@ -313,7 +314,7 @@
     return `<div class="grid">
       ${investigationCard("door", "门口与电子锁", "门链从室内挂上，门锁后台只记录成功开启。", ["e_lock","e_access"])}
       ${investigationCard("body", "尸体与客厅", "后枕部有致命撞击，地毯却异常干净。", ["e_body"])}
-      ${investigationCard("bath", "持续溢水的浴室", "水量经过计算，像一枚粗糙的定时器。", ["e_water"])}
+      ${investigationCard("bath", "持续溢水的浴室", "小流量、阀门开度和排水口堵塞状态已记录；原因与时间作用仍待复现。", ["e_water"])}
       ${investigationCard("shelf", "书柜底部", "一枚刻有 X.Y. 的袖扣落在积灰中。", ["e_cufflink"])}
       ${investigationCard("access", "1102 使用痕迹", "死者曾把这里当临时办公室，旧痕迹很多。", ["e_dna"])}
       ${investigationCard("remote-sweep", "无线与机械触发排查", "排除远程通信、定时器与牵引装置；这是可选的排除性调查。", ["e_remote_sweep"])}
@@ -433,6 +434,25 @@
       <div class="choices">${[["e_cufflink","袖扣凹槽内的旧灰尘"],["e_cuffphoto","9 月 3 日右袖缺扣的照片"],["e_stream","论坛连续直播"],["e_debt","程逸的债务"]].map(([v,t]) => `<label class="choice"><input type="checkbox" name="p09" value="${v}"><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="solve-p09">校验遗留时间</button><div class="feedback" id="feedback-p09"></div></section>`;
   }
 
+  function sceneReconstructionHtml() {
+    const labels = {
+      water: ["放水", "1102 浴室开始形成延迟渗漏"],
+      card: ["取卡", "从应急卡柜取出 A047"],
+      transfer: ["搬运", "尸体经正门进入 1102"],
+      chain: ["挂链", "人在室内形成门链锁闭状态"],
+      leave: ["离开", "不再经过正门离开 1102"]
+    };
+    const sourceIds = ["e_waterlab", "e_cardauth", "e_cart", "e_lock", "e_hatch"];
+    const ready = sourceIds.every(id => state.evidence.includes(id));
+    const complete = state.solved.includes("p10r");
+    const cards = state.reconstructionOrder.map((id,index) => `<article class="reconstruction-task-card" data-reconstruction-step="${id}" tabindex="-1">
+      <div class="reconstruction-position"><span>顺序 ${index + 1}</span><div><button type="button" data-action="move-reconstruction" data-step="${id}" data-delta="-1" ${complete || index === 0 ? "disabled" : ""} aria-label="将${labels[id][0]}前移">↑</button><button type="button" data-action="move-reconstruction" data-step="${id}" data-delta="1" ${complete || index === state.reconstructionOrder.length - 1 ? "disabled" : ""} aria-label="将${labels[id][0]}后移">↓</button></div></div>
+      <h3>${labels[id][0]}</h3><p>${labels[id][1]}</p>
+      <label>连接来源<select data-reconstruction-source="${id}" ${complete ? "disabled" : ""}><option value="">— 选择能直接支持此步骤的材料 —</option>${sourceIds.map(eid => `<option value="${eid}" ${state.reconstructionSources[id] === eid ? "selected" : ""} ${state.evidence.includes(eid) ? "" : "disabled"}>${EVIDENCE[eid][0]}</option>`).join("")}</select></label>
+    </article>`).join("");
+    return `<section class="puzzle scene-reconstruction"><div class="puzzle-tag">P10-R · 现场复原</div><h2>排列五个行为，并为每一步连接直接来源</h2><p class="muted">顺序必须同时满足时间记录、正门搬运与室内门链。使用上下按钮调整；连接来源时，不要用权限证明实际行为。</p><div class="reconstruction-task">${cards}</div><button class="btn primary" data-action="validate-reconstruction" ${ready && !complete ? "" : "disabled"}>${complete ? "复原已通过" : ready ? "运行现场复原" : "先取得五类来源"}</button><div class="feedback ${complete ? "good" : ""}" id="feedback-reconstruction">${complete ? "五个步骤的顺序与来源已经闭合，完整复原时间线现已开放。" : ready ? "" : "还需要渗漏实验、身份认证、搬运痕迹、门链状态与检修口痕迹。"}</div>${complete ? '<section class="reconstruction-strip compact" aria-label="已完成现场复原"><article><b>约20:46</b><span>放水</span><small>渗漏实验</small></article><article><b>21:19</b><span>取卡</span><small>活体认证</small></article><article><b>21:41</b><span>搬运</span><small>正门与轮迹</small></article><article><b>门链锁闭</b><span>室内挂链</span><small>破门记录</small></article><article><b>21:49</b><span>检修口离开</span><small>现场痕迹</small></article></section>' : ""}</section>`;
+  }
+
   function chapter8() {
     const people = [["xuyoa","许遥"],["guxue","顾雪"],["liangwen","梁闻"],["chengyi","程逸"],["shenman","沈曼"],["zhoulan","周岚"]];
     const fields = [["know","知道隐蔽房间历史"],["permission","具备受控物业权限"],["blank","19点存在实施窗口"],["card","A047 当晚行为链"]];
@@ -446,32 +466,44 @@
       liangwen:"通信记录只能证明他收到资料。权限记录可以排除受控实施条件，但不会自动生成一条“未接触 A047”的事实。",
       chengyi:"债务只能构成动机推测。权限记录可以排除受控实施条件；其余知识、行程和卡片接触仍应保持证据不足。",
       shenman:"她的证词解释声音来源。权限记录可以排除受控实施条件，但不能把未调查的卡片接触写成已排除。",
-      zhoulan:"四格分别取证：岗位培训对应历史知识；权限审计对应受控能力；当班表与 19:08 通行记录共同固定实施窗口；卡柜日志、活体认证和连续路径共同固定 A047 行为链。"
+      zhoulan:"四格分别取证：本人培训签收与访问审计对应实际知情；权限审计对应受控能力；当班表与 19:08 通行记录共同固定实施窗口；卡柜日志、活体认证和连续路径共同固定 A047 行为链。"
     };
     const reasonSelect = id => `<select data-exclusion-input="${id}" aria-label="${people.find(([pid])=>pid===id)[1]}主要排除理由">${reasons.map(([v,t]) => `<option value="${v}" ${state.exclusionAnswers[id] === v ? "selected" : ""}>${t}</option>`).join("")}</select>`;
     const rationaleButton = id => `<button class="text-button" data-action="toggle-matrix-rationale" data-person="${id}">${state.matrixExpanded.includes(id) ? "收起依据" : "为什么？"}</button>`;
     const mobileCards = people.map(([id,name]) => `<article class="exclusion-card" data-person-card="${id}"><header><h3>${name}</h3>${id === "zhoulan" ? '<strong class="intersection-label">四项交集候选</strong>' : ""}</header><div class="candidate-status-list">${fields.map(([field,label]) => `<div><span>${label}</span>${statusBadge(id,field)}</div>`).join("")}</div><div class="candidate-decision">${id === "zhoulan" ? '<strong class="intersection-label">需证明四项同时成立</strong>' : reasonSelect(id)}${rationaleButton(id)}</div>${state.matrixExpanded.includes(id) ? `<div class="candidate-rationale"><strong>当前证据说明</strong><p>${rationale[id]}</p></div>` : ""}</article>`).join("");
     const fileLabels={"file-a":"A · 开发商会议纪要","file-b":"B · 监理联系单","file-c":"C · 验收修改页","file-d":"D · 施工日志"};
     const actionLabels={lower:"提出结构降配",approve:"批准继续施工",sign:"签署修改验收页",execute:"现场执行变更"};
-    const reconstructionReady=["e_waterlab","e_cardauth","e_route","e_hatch","e_chaintrial"].every(id=>state.evidence.includes(id));
-    return `<section class="free-investigation"><div class="eyebrow">OPEN INVESTIGATION · 自由调查时间</div><h2>分别核验权限、身份、时间与锁闭路径</h2><div class="grid">${investigationCard("permission-audit", "物业 · 权限与岗位", "核验受控门点、岗位账号与当班签名；权限不等于实际操作。", ["e_permission","e_accountmap","e_shift"])}${investigationCard("operation-audit", "卡柜与服务区 · 身份路径", "调取 A047 活体认证、工牌连续通行与搬运车轮迹，把账号落实到自然人和实际路线。", ["e_cardauth","e_route","e_cart"])}${investigationCard("water-reenactment", "1102 · 浴室渗漏复现", "按现场阀门开度和排水状态复现，检验 22:36 的发现时间是否被人为安排。", ["e_waterlab"])}${investigationCard("chain-reconstruction", "1102 · 门链离场复原", "检查浴室检修口，并验证从室内挂链后是否存在不经过正门的离场路径。", ["e_hatch","e_chaintrial"])}${investigationCard("old-case-file", "旧案档案 · 2014 原始验收卷", "可选深度调查；决定能否查清十二年前责任与周岚的私人联系。", ["e_oldfile","e_casualty","e_hr"])}</div></section>
+    const reconstructionReady=state.solved.includes("p10r") && ["e_waterlab","e_cardauth","e_route","e_hatch","e_chaintrial"].every(id=>state.evidence.includes(id));
+    return `<section class="free-investigation"><div class="eyebrow">OPEN INVESTIGATION · 自由调查时间</div><h2>分别核验权限、身份、时间与锁闭路径</h2><div class="grid">${investigationCard("permission-audit", "物业 · 权限、知情与岗位", "分别核验受控权限、账号岗位、本人培训访问与当班签名；岗位可接触不等于本人知情。", ["e_permission","e_accountmap","e_trainingaccess","e_shift"])}${investigationCard("operation-audit", "卡柜与服务区 · 身份路径", "调取 A047 活体认证、工牌连续通行与搬运车轮迹，把账号落实到自然人和实际路线。", ["e_cardauth","e_route","e_cart"])}${investigationCard("water-reenactment", "1102 · 浴室渗漏复现", "按现场阀门开度和排水状态复现，检验 22:36 的发现时间是否被人为安排。", ["e_waterlab"])}${investigationCard("chain-reconstruction", "1102 · 检修口勘查", "只记录另一出口的尺寸、鞋擦、纤维与清洁剂痕迹；门链如何保留，要由你完成复原。", ["e_hatch"])}${investigationCard("old-case-file", "旧案档案 · 2014 原始验收卷", "可选深度调查；决定能否查清十二年前责任与周岚的私人联系。", ["e_oldfile","e_casualty","e_hr"])}</div></section>
     ${state.solved.includes("p10") ? `<div class="deduction-banner"><strong>${reconstructionReady ? "现场复原材料齐备 · 主案报告已开放" : "置换者条件交集成立 · 现场复原尚未闭合"}</strong><span>${reconstructionReady ? "20:46 放水、21:19 取卡、21:41 正门开启与挂链后离场均已有可追溯来源。" : "继续取得渗漏实验、身份路径和门链离场材料；仅锁定人不能替代复原方法。"}</span></div>` : ""}
     <section class="puzzle"><div class="puzzle-tag">P10 · 条件交集</div><h2>知道还不够：逐人记录为什么不能完成置换</h2><p class="muted">✓ 已证实 · × 已排除 · ? 证据不足。每个状态分别读取自己的来源；权限记录不会自动点亮 A047 行为。</p><div class="matrix-wrap desktop-exclusion"><table class="matrix exclusion-matrix"><thead><tr><th>人物</th>${fields.map(([,label]) => `<th>${label}</th>`).join("")}<th>主要判断</th></tr></thead><tbody>${people.map(([id,name]) => `<tr data-person-row="${id}"><td>${name}</td>${fields.map(([field]) => statusCell(id,field)).join("")}<td>${id === "zhoulan" ? '<strong class="intersection-label">四项交集候选</strong>' : reasonSelect(id)}${rationaleButton(id)}</td></tr>${state.matrixExpanded.includes(id) ? `<tr class="matrix-rationale"><td colspan="6"><strong>${name} · 证据说明</strong><p>${rationale[id]}</p></td></tr>` : ""}`).join("")}</tbody></table></div><div class="mobile-exclusion-cards">${mobileCards}</div>
-      <div class="condition-proof"><h3>周岚为什么没有被排除？选择必须同时成立且分别有来源的四个条件</h3>${fields.map(([id,label]) => `<label><input type="checkbox" name="zhou-condition" value="${id}" ${state.zhouConditions.includes(id) ? "checked" : ""}><span><b>${label}</b><small>${id === "know" ? "账号岗位培训 → 历史图知识" : id === "permission" ? "权限审计 → 受控门与工具" : id === "blank" ? "当班表 + 19:08 通行 → 实施窗口" : "卡柜日志 + 活体认证 + 连续路径"}</small></span></label>`).join("")}</div><button class="btn primary" data-action="solve-p10">提交排除链与唯一交集</button><div class="feedback" id="feedback-p10"></div></section>
+      <div class="condition-proof"><h3>周岚为什么没有被排除？选择必须同时成立且分别有来源的四个条件</h3>${fields.map(([id,label]) => `<label><input type="checkbox" name="zhou-condition" value="${id}" ${state.zhouConditions.includes(id) ? "checked" : ""}><span><b>${label}</b><small>${id === "know" ? "岗位目录 + 本人签收与访问 → 实际知情" : id === "permission" ? "权限审计 → 受控门与工具" : id === "blank" ? "当班表 + 19:08 通行 → 实施窗口" : "卡柜日志 + 活体认证 + 连续路径"}</small></span></label>`).join("")}</div><button class="btn primary" data-action="solve-p10">提交排除链与唯一交集</button><div class="feedback" id="feedback-p10"></div></section>
+    ${sceneReconstructionHtml()}
     <section class="puzzle">${state.solved.includes("p11") ? '<div class="deduction-banner"><strong>推理成立 · P11 旧案责任链</strong><span>四份原始文件分别固定提案、批准、签署与执行；两份人员记录独立连接周屿和周岚。</span></div>' : ""}<div class="puzzle-tag">P11 · 可选深度调查</div><h2>选择卷宗卡，再把它连接到责任主体与行为</h2><p class="muted">先点击一张档案卡，再点击主体槽位；随后为该主体选择文件实际记载的行为。手机端同样使用点击连接。</p><div class="file-fragments interactive-files">${[["file-a","A · 开发商会议纪要","“结构方案调整为 B 案，控制本季度成本。”"],["file-b","B · 监理联系单","“同意按 B 案继续施工，不停工复核。”"],["file-c","C · 验收修改页","林知秋、监理代表、工程总监签字。"],["file-d","D · 施工日志","“班组按 B 方案完成地下结构施工。”"]].map(([id,label,text]) => `<button class="file-card ${state.factAnswers.selectedChainFile === id ? "selected" : ""}" data-action="select-chain-file" data-file="${id}"><b>${label}</b><span>${text}</span></button>`).join("")}</div><div class="responsibility-board">${[["developer","开发商"],["supervisor","监理方"],["design","设计团队"],["contractor","施工方"]].map(([id,label]) => `<article class="responsibility-slot"><h3>${label}</h3><button class="attach-file" data-action="assign-chain-file" data-actor="${id}" ${state.factAnswers.selectedChainFile ? "" : "disabled"}>${state.chainFiles[id] ? `已连接：${fileLabels[state.chainFiles[id]]}` : "连接当前档案卡"}</button><div class="action-chips">${Object.entries(actionLabels).map(([value,text]) => `<button class="${state.chainAnswers[id] === value ? "selected" : ""}" data-action="choose-chain-action" data-actor="${id}" data-value="${value}">${text}</button>`).join("")}</div></article>`).join("")}</div><h3>哪两份人员记录能证明周岚与旧案的私人联系？</h3><div class="choices"><label class="choice"><input type="checkbox" name="p11-private" value="e_casualty"><span>2014 事故死亡名单</span></label><label class="choice"><input type="checkbox" name="p11-private" value="e_hr"><span>物业人事历史档案</span></label><label class="choice"><input type="checkbox" name="p11-private" value="e_debt"><span>程逸债务记录</span></label></div><button class="btn primary" data-action="solve-p11" ${state.evidence.includes("e_oldfile") ? "" : "disabled"}>形成责任链与私人联系</button><div class="feedback" id="feedback-p11">${state.evidence.includes("e_oldfile") ? "" : "先调查原始验收卷。"}</div></section>`;
   }
 
   function reportSelect(key, label, options) {
-    return `<div class="report-field"><label for="report-${key}">${label}</label><select id="report-${key}" data-report="${key}"><option value="">— 选择 —</option>${options.map(value => `<option value="${value}" ${state.report[key] === value ? "selected" : ""}>${value}</option>`).join("")}</select></div>`;
+    return `<div class="report-field"><label for="report-${key}">${label}</label><select id="report-${key}" data-report="${key}" ${state.solved.includes("report") ? "disabled" : ""}><option value="">— 选择 —</option>${options.map(value => `<option value="${value}" ${state.report[key] === value ? "selected" : ""}>${value}</option>`).join("")}</select></div>`;
+  }
+
+  function finalProofSummary() {
+    const keys = Object.keys(state.confrontation).sort((a,b) => Number(a.slice(1)) - Number(b.slice(1)));
+    if (!keys.length && state.legacyCaseRecord) return `<div class="legacy-proof-record"><strong>旧版证明记录</strong><p>${escapeHtml(state.legacyCaseRecord.note || "该结案记录按旧版题序封存，不映射为新版现场复原。")}</p></div>`;
+    return `<div class="final-proof-summary">${keys.map(key => { const proof=Logic.validateConfrontationAnswer(Number(key.slice(1)),state.confrontation[key]); return `<p><strong>${state.confrontation[key].map(id=>EVIDENCE[id] ? EVIDENCE[id][0] : id).join(" + ")}</strong><span>${proof.explanation || "该轮证据组合已通过校验。"}</span></p>`; }).join("")}</div>`;
+  }
+
+  function disclosureModalHtml() {
+    return `<div class="eyebrow">JUDGMENT · 等待公开决定</div><h2>最后，哪些事实写入公开报告？</h2>${finalProofSummary()}<p>${state.solved.includes("p11") ? "主案与旧案责任链都已成立。" : "主案已经成立，但旧案责任链仍不完整。"}</p><div class="card-actions"><button class="btn primary" data-action="choose-disclosure" data-choice="full">提交现有全部调查</button>${state.solved.includes("p11") ? '<button class="btn ghost" data-action="choose-disclosure" data-choice="culprit-only">只报告本案刑事事实</button>' : ""}</div>`;
   }
 
   function chapter9() {
     const reportPassed = state.solved.includes("report");
+    const resolution = Logic.caseResolutionState(state);
     return `<div class="document"><h3>案件重构报告 · CJ-0917</h3><p>报告不是材料数量检查。每一步必须能回到直接记录、实验估算或由二者形成的推论。</p></div>
     <section class="reconstruction-strip" aria-label="现场复原步骤"><article><b>19:08—19:27</b><span>工牌进入 14F 服务区</span><small>直接记录 · 服务区门控</small></article><article><b>19:16</b><span>1402 发生致命撞击</span><small>设备记录 + 现场推论</small></article><article><b>20:43 / 约20:46</b><span>经管井进入 1102 并开始放水</span><small>直接记录 + 实验估算</small></article><article><b>21:19—21:41</b><span>取出 A047、搬运尸体、开启正门</span><small>身份与路径记录</small></article><article><b>21:49</b><span>室内挂链后经检修口离开</span><small>现场痕迹 + 复原实验</small></article></section>
     <section class="puzzle"><div class="puzzle-tag">P12 · 完整案件重构</div><h2>填写十项关键事实</h2><div class="report-grid">
       ${reportSelect("deathPlace","死亡地点",["1102","1402","消防楼梯"])}
-      ${reportSelect("deathTime","死亡时间",["18:34","19:16","21:41","22:36"])}
+      ${reportSelect("deathTime","法医死亡判断区间",["18:34—18:40","19:16—19:18","21:41—21:45","无法判断"])}
       ${reportSelect("foundPlace","尸体发现地点",["1102","1402","物业档案室"])}
       ${reportSelect("cardUser","A047 门禁卡使用者",["林知秋","许遥","周岚","无法判断"])}
       ${reportSelect("cufflink","袖扣来源",["当晚搏斗掉落","两周前遗留","周岚伪造"])}
@@ -480,8 +512,8 @@
       ${reportSelect("waterStart","浴室开始放水",["约19:16","约20:46","21:41","无法估算"])}
       ${reportSelect("chainMethod","门链形成与离场",["从门缝复位门链","室内挂链后经浴室检修通道离开","一直藏在1102直到破门","无法解释"])}
       ${reportSelect("culprit","导致死亡并置换现场的人",["许遥","顾雪","梁闻","周岚"])}
-      </div><button class="btn primary" data-action="validate-report">封存报告</button><div class="feedback" id="feedback-report">${reportPassed ? "报告已通过一致性校验。继续完成最终举证。" : ""}</div></section>
-      ${reportPassed && !state.solved.includes("p12") ? confrontationHtml() : state.solved.includes("p12") ? '<div class="deduction-banner"><strong>本周目已完成最终举证</strong><span>旧版本已结案记录会保留；重新开案可体验新增的门链与完整时间顺序复原。</span></div>' : ""}`;
+      </div><button class="btn primary" data-action="validate-report">封存报告</button><div class="feedback" id="feedback-report">${reportPassed ? "报告草稿已通过一致性校验。继续完成最终举证。" : "选择会实时保存；可随时往返案件簿核对材料。"}</div></section>
+      ${reportPassed && resolution === "proving" ? confrontationHtml() : resolution === "awaiting-disclosure" ? `<div class="deduction-banner pending-disclosure"><strong>最终举证已完成 · 等待公开决定</strong><span>即使关闭弹窗、刷新或离开页面，也可以从这里继续，不必重新举证。</span><button class="btn primary" data-action="continue-disclosure">继续提交报告</button></div>` : resolution === "closed" ? `<div class="deduction-banner"><strong>本周目已结案 · 结局 ${state.ending}</strong><span>${state.legacyCaseRecord ? "旧版证明记录已按原题序封存，不会套入新版门链举证。" : "举证、公开决定与结案记录均已保存。"}</span><button class="btn" data-action="view-ending">查看结局</button></div>` : ""}`;
   }
 
   function confrontationHtml() {
@@ -498,13 +530,14 @@
     const step = Math.min(state.confrontationStep, total - 1);
     const transcript = Object.keys(state.confrontation).sort().map((key,index) => { const proof=Logic.validateConfrontationAnswer(Number(key.slice(1)),state.confrontation[key]); return `<div class="dialogue-line"><span>第 ${index + 1} 轮闭环</span><strong>${state.confrontation[key].map(id => EVIDENCE[id][0]).join(" + ")}</strong><p>${proof.explanation || "该轮证据组合已通过校验。"}</p><blockquote>${responses[index]}</blockquote></div>`; }).join("");
     const orderedEvidence = [...state.pinnedEvidence, ...state.evidence.filter(id => !state.pinnedEvidence.includes(id))];
-    return `<section class="puzzle confrontation"><div class="puzzle-tag">FINAL CONFRONTATION · ${state.confrontationStep + 1}/${total}</div><h2>周岚：“${questions[step]}”</h2>${transcript}<p class="muted">从实际收集的材料中选择 1—3 条组成证明。可展开摘要；失败后选择会保留，反馈只指出缺失的连接类型。</p><div class="confrontation-evidence">${orderedEvidence.map(id => `<article class="evidence-choice-card ${state.pinnedEvidence.includes(id) ? "pinned" : ""}"><label class="evidence-choice"><input type="checkbox" name="confrontation-evidence" value="${id}"><span class="source">${EVIDENCE[id][1]}</span><strong>${EVIDENCE[id][0]}</strong></label><button type="button" class="evidence-summary-toggle" data-action="toggle-proof-summary">展开摘要</button><p class="evidence-choice-summary" hidden>${EVIDENCE[id][2]}</p></article>`).join("")}</div><button class="btn primary" data-action="validate-confrontation">出示所选材料</button><div class="feedback" id="feedback-confrontation"></div></section>`;
+    const draftKey = `q${step + 1}`, draft = state.confrontationDraft[draftKey] || [], expanded = state.confrontationExpanded[draftKey] || [];
+    return `<section class="puzzle confrontation" id="current-confrontation"><div class="puzzle-tag">FINAL CONFRONTATION · ${state.confrontationStep + 1}/${total}</div><h2>周岚：“${questions[step]}”</h2>${transcript}<p class="muted">从实际收集的材料中选择 1—3 条组成证明。勾选、摘要展开状态和报告草稿都会实时保存，往返案件簿或刷新不会丢失。</p><div class="confrontation-evidence">${orderedEvidence.map(id => { const isExpanded=expanded.includes(id); return `<article class="evidence-choice-card ${state.pinnedEvidence.includes(id) ? "pinned" : ""}" data-proof-id="${id}"><label class="evidence-choice"><input type="checkbox" name="confrontation-evidence" value="${id}" ${draft.includes(id) ? "checked" : ""}><span class="source">${EVIDENCE[id][1]}</span><strong>${EVIDENCE[id][0]}</strong></label><button type="button" class="evidence-summary-toggle" data-action="toggle-proof-summary" data-evidence="${id}" aria-expanded="${isExpanded}">${isExpanded ? "收起摘要" : "展开摘要"}</button><p class="evidence-choice-summary" ${isExpanded ? "" : "hidden"}>${EVIDENCE[id][2]}</p></article>`; }).join("")}</div><button class="btn primary" data-action="validate-confrontation">出示所选材料</button><div class="feedback" id="feedback-confrontation"></div></section>`;
   }
 
   function evidenceMatches(id) {
     const personMap = {
       xu: ["e_cufflink","e_cuffphoto","e_stream","e_location","e_checkin"],
-      zhou: ["e_permission","e_accountmap","e_shift","e_cardauth","e_route","e_cart","e_oldfile","e_casualty","e_hr"],
+      zhou: ["e_permission","e_accountmap","e_trainingaccess","e_shift","e_cardauth","e_route","e_cart","e_oldfile","e_casualty","e_hr"],
       lin: ["e_body","e_dna","e_water","e_waterlab","e_shelf","e_plan1102","e_fixed","e_impact","e_floor","e_watch","e_hatch","e_chaintrial","e_oldfile"],
       gu: ["e_copy"], liang: ["e_message"], shen: ["e_pipe"]
     };
@@ -524,7 +557,7 @@
     const filtered = state.evidence.filter(evidenceMatches);
     const evidenceHtml = `<div class="notebook-tools"><label>人物<select id="notebook-person"><option value="all">全部人物</option><option value="xu">许遥</option><option value="zhou">周岚</option><option value="lin">林知秋</option><option value="gu">顾雪</option><option value="liang">梁闻</option><option value="shen">沈曼</option></select></label><label>来源<select id="notebook-source"><option value="all">全部来源</option><option value="scene">现场 / 物证</option><option value="system">系统 / 记录</option><option value="plan">图纸 / 工程</option><option value="old">旧案</option></select></label><span class="meta">已钉选 ${state.pinnedEvidence.length}/3</span></div><div class="evidence-list">${filtered.length ? filtered.map(id => { const e = EVIDENCE[id], pinned = state.pinnedEvidence.includes(id); return `<article class="evidence-card ${pinned ? "pinned" : ""}"><span class="source">${e[1]}</span>${ORIGIN_BADGES[id] ? `<span class="origin-badge">${ORIGIN_BADGES[id]}</span>` : ""}<h3>${e[0]}</h3><p>${e[2]}</p><button class="text-button" data-action="pin-evidence" data-evidence="${id}">${pinned ? "取消钉选" : "钉在顶部"}</button></article>`; }).join("") : '<p class="muted">当前筛选下没有材料。</p>'}</div>`;
     const deductionHtml = `<div class="evidence-list">${state.deductions.length ? state.deductions.map(id => { const d = DEDUCTIONS[id], links=(DEDUCTION_LINKS[id] || []).filter(eid => state.evidence.includes(eid)); return `<article class="evidence-card deduction-card"><span class="source">DEDUCTION</span><h3>${d[0]}</h3><p>${d[1]}</p>${links.length ? `<div class="related-evidence"><strong>关联证据</strong>${links.map(eid => `<span>${EVIDENCE[eid][0]}</span>`).join("")}</div>` : ""}</article>`; }).join("") : '<p class="muted">推论必须由材料组合产生。</p>'}</div>`;
-    app.innerHTML = `<section class="screen"><div class="eyebrow">CASE NOTEBOOK</div><h1 class="chapter-title">案件簿</h1>${state.pinnedEvidence.length ? `<div class="pinned-strip">${state.pinnedEvidence.map(id => `<span class="evidence-chip">${EVIDENCE[id][0]}</span>`).join("")}</div>` : ""}<div class="notebook-tabs"><button class="${notebookView.tab === "evidence" ? "active" : ""}" data-action="notebook-tab" data-tab="evidence">原始材料 ${state.evidence.length}</button><button class="${notebookView.tab === "deductions" ? "active" : ""}" data-action="notebook-tab" data-tab="deductions">推论 ${state.deductions.length}</button></div>${notebookView.tab === "evidence" ? evidenceHtml : deductionHtml}</section>`;
+    app.innerHTML = `<section class="screen"><div class="eyebrow">CASE NOTEBOOK</div><div class="notebook-heading"><h1 class="chapter-title">案件簿</h1>${state.notebookReturnChapter ? `<button class="btn primary" data-action="return-from-notebook">${state.notebookReturnChapter === 9 ? "返回当前举证" : `返回第${toChinese(state.notebookReturnChapter)}章`}</button>` : ""}</div>${state.pinnedEvidence.length ? `<div class="pinned-strip">${state.pinnedEvidence.map(id => `<span class="evidence-chip">${EVIDENCE[id][0]}</span>`).join("")}</div>` : ""}<div class="notebook-tabs"><button class="${notebookView.tab === "evidence" ? "active" : ""}" data-action="notebook-tab" data-tab="evidence">原始材料 ${state.evidence.length}</button><button class="${notebookView.tab === "deductions" ? "active" : ""}" data-action="notebook-tab" data-tab="deductions">推论 ${state.deductions.length}</button></div>${notebookView.tab === "evidence" ? evidenceHtml : deductionHtml}</section>`;
     const person = document.querySelector("#notebook-person"), source = document.querySelector("#notebook-source");
     if (person) person.value = notebookView.person;
     if (source) source.value = notebookView.source;
@@ -541,7 +574,8 @@
       { time:"18:34", text:"林知秋抵达临江壹号", source:"停车场记录", type:"direct", known:true },
       { time:"19:03", text:Number(state.interviews.guxue || 0) >= 3 ? "顾雪在停车场再次见到林知秋" : "该时段尚待外查", source:"顾雪复制日志", type:"direct", known:Number(state.interviews.guxue || 0) >= 3 },
       { time:"19:08—19:27", text:has("e_route") ? "ZL-017 工牌进出 14F 服务区" : "14F 服务区通行待核验", source:"服务区门控原始记录", type:"direct", known:has("e_route") },
-      { time:has("e_watch") ? "19:16" : "19:00—20:00", text:solved("p05") ? "致命撞击发生在 1402" : "记录到剧烈冲击与心率急降", source:solved("p05") ? "手表记录 + 1402 撞击痕" : "手表 / 法医初检", type:solved("p05") ? "inference" : "direct", known:has("e_watch") },
+      { time:has("e_watch") ? "19:16" : "时间待核验", text:solved("p05") ? "剧烈冲击发生在 1402" : "记录到剧烈冲击与心率急降", source:solved("p05") ? "手表记录 + 1402 撞击痕" : "智能手表", type:solved("p05") ? "inference" : "direct", known:has("e_watch") },
+      { time:has("e_watch") && has("e_body") ? "19:16—19:18" : "区间待复核", text:"法医结合生理记录判断死亡区间", source:"尸表复核 + 智能手表", type:"inference", known:has("e_watch") && has("e_body") },
       { time:"19:31—22:31", text:solved("p02") ? "许遥连续处于建筑论坛会场" : "许遥的会场记录待核验", source:"直播、位置与会场三种来源", type:"direct", known:solved("p02") },
       { time:"20:43—20:50", text:has("e_route") ? "ZL-017 工牌进出 11F 管井走廊" : "11F 管井走廊通行待核验", source:"服务区门控原始记录", type:"direct", known:has("e_route") },
       { time:has("e_waterlab") ? "约20:46" : "约?", text:has("e_waterlab") ? "1102 浴室开始按现场流量放水" : "浴室放水开始时间待复现", source:"浴室渗漏复现实验", type:"estimate", known:has("e_waterlab") },
@@ -574,6 +608,7 @@
 
   function renderEnding(id) {
     topbar.hidden = true;
+    state.screen = `ending-${id}`;
     const endings = {
       A: ["ENDING A · 正确答案","正确答案","周岚承认 19:16 的冲突与之后的现场置换，主案证据链完整闭合。你找到了从系统中消失的房间，却没有查全十二年前的原始卷宗与人员关系；2014 年事故只留下待复核标记，尚未进入公开追责程序。"],
       B: ["ENDING B · 完美证据","完美证据","你指认许遥，却无法让他同时出现在论坛和 1102。案件因证据链自相矛盾而搁置。三年后，一封匿名邮件抵达：你一直在寻找进入房间的方法。可你有没有想过——为什么一定是那个房间？"],
@@ -623,7 +658,18 @@
     if (action === "continue-game") renderHome();
     if (action === "show-home" || action === "review-case") renderHome();
     if (action === "show-map") renderMap();
-    if (action === "show-notebook") renderNotebook();
+    if (action === "show-notebook") {
+      if (state.screen === "chapter-9") state.notebookReturnChapter = 9;
+      saveState(true);
+      renderNotebook();
+    }
+    if (action === "return-from-notebook") {
+      const chapter = state.notebookReturnChapter || state.chapter;
+      state.notebookReturnChapter = null;
+      saveState(true);
+      renderChapter(chapter);
+      requestAnimationFrame(() => document.querySelector("#current-confrontation, [data-report]")?.scrollIntoView({ block:"center" }));
+    }
     if (action === "show-timeline") renderTimeline();
     if (action === "save-game") saveState(false);
     if (action === "close-modal") closeModal();
@@ -779,6 +825,24 @@
       if (result.ok) { solve("p10","d_access"); renderChapter(8); }
       else wrong("feedback-p10",result.unsupportedPeople.length ? `有 ${result.unsupportedPeople.length} 名候选人的排除理由尚未获得对应来源；权限、行程和卡片接触不能互相替代。` : result.unsupportedConditions.length ? `周岚的四项条件中仍有 ${result.unsupportedConditions.length} 项处于“证据不足”；继续核验岗位、权限、通行窗口或 A047 身份链。` : result.wrongPeople.length ? `仍有 ${result.wrongPeople.length} 人的主要排除理由与现有材料不匹配。点击“为什么？”复核。` : `还缺 ${result.missingConditions.length} 个必须同时成立的条件。`);
     }
+    if (action === "move-reconstruction") {
+      const id=target.dataset.step, from=state.reconstructionOrder.indexOf(id), to=Math.max(0,Math.min(state.reconstructionOrder.length-1,from+Number(target.dataset.delta)));
+      if (from >= 0 && from !== to) {
+        const next=[...state.reconstructionOrder];
+        [next[from],next[to]]=[next[to],next[from]];
+        state.reconstructionOrder=next;
+        saveState(true);
+        renderChapterPreserving(`[data-reconstruction-step="${id}"]`);
+      }
+    }
+    if (action === "validate-reconstruction") {
+      const result=Logic.validateSceneReconstruction(state.reconstructionOrder,state.reconstructionSources,state);
+      if (result.ok) {
+        solve("p10r","d_reconstruction",["e_chaintrial"]);
+        renderChapter(8);
+        setFeedback("feedback-reconstruction","五个步骤的顺序与来源均闭合。替代顺序的失败原因已写入复原记录。",true);
+      } else wrong("feedback-reconstruction",result.reason);
+    }
     if (action === "select-chain-file") { state.factAnswers.selectedChainFile = target.dataset.file; saveState(true); renderChapterPreserving(`[data-action="select-chain-file"][data-file="${target.dataset.file}"]`); }
     if (action === "assign-chain-file") { if (state.factAnswers.selectedChainFile) state.chainFiles[target.dataset.actor] = state.factAnswers.selectedChainFile; saveState(true); renderChapterPreserving(`[data-action="assign-chain-file"][data-actor="${target.dataset.actor}"]`); }
     if (action === "choose-chain-action") { state.chainAnswers[target.dataset.actor] = target.dataset.value; saveState(true); renderChapterPreserving(`[data-action="choose-chain-action"][data-actor="${target.dataset.actor}"][data-value="${target.dataset.value}"]`); }
@@ -796,14 +860,25 @@
     }
     if (action === "toggle-proof-summary") {
       const card = target.closest(".evidence-choice-card"), summary = card && card.querySelector(".evidence-choice-summary");
-      if (summary) { summary.hidden = !summary.hidden; target.textContent = summary.hidden ? "展开摘要" : "收起摘要"; }
+      if (summary) {
+        const key=`q${state.confrontationStep + 1}`, id=target.dataset.evidence;
+        const expanded=state.confrontationExpanded[key] || [];
+        state.confrontationExpanded[key]=expanded.includes(id) ? expanded.filter(value=>value!==id) : [...expanded,id];
+        summary.hidden = !summary.hidden;
+        target.textContent = summary.hidden ? "展开摘要" : "收起摘要";
+        target.setAttribute("aria-expanded",String(!summary.hidden));
+        saveState(true);
+      }
     }
     if (action === "validate-confrontation") {
       const evidence = checked("confrontation-evidence"), step = state.confrontationStep + 1;
       const result = Logic.validateConfrontationAnswer(step,evidence), total = state.solved.includes("p11") ? 6 : 5;
       if (result.ok) {
-        state.confrontation[`q${step}`] = evidence; state.confrontationStep += 1; saveState(true);
-        if (state.confrontationStep >= total) { solve("p12"); openModal(`<div class="eyebrow">JUDGMENT · 证据闭环完成</div><h2>最后，哪些事实写入公开报告？</h2><div class="final-proof-summary">${Object.keys(state.confrontation).sort().map(key => { const proof=Logic.validateConfrontationAnswer(Number(key.slice(1)),state.confrontation[key]); return `<p><strong>${state.confrontation[key].map(id=>EVIDENCE[id][0]).join(" + ")}</strong><span>${proof.explanation || "该轮证据组合已通过校验。"}</span></p>`; }).join("")}</div><p>${state.solved.includes("p11") ? "主案与旧案责任链都已成立。" : "主案已经成立，但旧案责任链仍不完整。"}</p><div class="card-actions"><button class="btn primary" data-action="choose-disclosure" data-choice="full">提交现有全部调查</button>${state.solved.includes("p11") ? '<button class="btn ghost" data-action="choose-disclosure" data-choice="culprit-only">只报告本案刑事事实</button>' : ""}</div>`); }
+        state.confrontation[`q${step}`] = evidence;
+        delete state.confrontationDraft[`q${step}`];
+        state.confrontationStep += 1;
+        saveState(true);
+        if (state.confrontationStep >= total) { solve("p12"); renderChapter(9); openModal(disclosureModalHtml()); }
         else renderChapter(9);
       } else {
         wrong("feedback-confrontation",result.reason || "这组材料不能直接回答当前质疑。 ");
@@ -811,9 +886,11 @@
         if (feedback) feedback.insertAdjacentHTML("beforeend",'<div><button class="text-button" data-action="show-notebook">打开案件簿核对现有材料</button></div>');
       }
     }
+    if (action === "continue-disclosure") openModal(disclosureModalHtml());
+    if (action === "view-ending" && state.ending) renderEnding(state.ending);
     if (action === "choose-disclosure") {
       const ending = Logic.determineEnding(state,target.dataset.choice);
-      closeModal(); state = Logic.recordEnding(state,ending); saveState(true); renderEnding(ending);
+      state = Logic.recordEnding(state,ending); saveState(true); closeModal(); renderEnding(ending);
     }
   }
 
@@ -833,6 +910,15 @@
       saveState(true);
     }
     if (event.target.name === "zhou-condition") { state.zhouConditions=checked("zhou-condition"); saveState(true); }
+    if (event.target.dataset.report) { state.report[event.target.dataset.report]=event.target.value; saveState(true); }
+    if (event.target.dataset.reconstructionSource) { state.reconstructionSources[event.target.dataset.reconstructionSource]=event.target.value; saveState(true); }
+    if (event.target.name === "confrontation-evidence") {
+      const key=`q${state.confrontationStep + 1}`;
+      let values=checked("confrontation-evidence");
+      if (values.length > 3) { event.target.checked=false; toast("每轮最多组合三条材料"); values=checked("confrontation-evidence"); }
+      state.confrontationDraft[key]=values;
+      saveState(true);
+    }
   });
 
   document.addEventListener("input", event => {
@@ -844,10 +930,12 @@
       const result = document.querySelector(`#result-${kind}`); if (result) result.textContent = value;
       const diff = document.querySelector("#result-diff"); if (diff) diff.textContent = Math.abs(plan-photo);
     }
-    if (event.target.name === "confrontation-evidence" && checked("confrontation-evidence").length > 3) { event.target.checked = false; toast("每轮最多组合三条材料"); }
   });
 
   modal.addEventListener("click", event => { if (event.target === modal) closeModal(); });
+  modal.addEventListener("close", () => {
+    if (Logic.caseResolutionState(state) === "awaiting-disclosure" && state.screen === "chapter-9") renderChapter(9);
+  });
   window.addEventListener("beforeunload", () => { if (state.started) saveState(true); });
   renderLanding();
 })();
