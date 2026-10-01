@@ -29,6 +29,7 @@
     e_body: ["尸表与伤口", "法医·初检", "后枕部钝器样撞击，死亡约在 19:00—20:00；尸体周围缺少对应喷溅。"],
     e_water: ["浴室溢水", "现场·痕迹", "水龙头保持异常小流量，22:36 才渗到楼下；阀门位置与自然漏水不符，需要复现实验确认其计时作用。"],
     e_waterlab: ["浴室渗漏复现实验", "实验·独立验证", "按现场阀门开度与排水口堵塞程度复现，连续 1 小时 50 分钟后出现同等楼下渗漏；22:36 倒推约 20:46 开始放水。"],
+    e_remote_sweep: ["远程触发排查记录", "技术队·排除性调查", "无线频谱、蓝牙与局域网日志无异常连接；现场机械触发检查也未发现定时器、牵引线或残留安装点。"],
     e_cufflink: ["许遥的袖扣", "现场·物证", "书柜底部发现，表面有旧灰尘，凹槽内没有当晚的新鲜纤维。"],
     e_dna: ["1102 内的旧 DNA", "实验室·背景", "林知秋曾长期在 1102 办公，多处 DNA 无法证明他当晚在此活动。"],
     e_stream: ["论坛直播母带", "公开记录·独立来源", "19:40 开场至 22:20 结束，许遥多次连续出镜，没有可供往返的空档。"],
@@ -45,9 +46,13 @@
     e_window: ["照片窗外视角", "影像·空间定位", "死者手机照片可越过对岸楼顶设备层；从 11 层无法形成该俯角。"],
     e_cardlog: ["A047 卡片流转原始日志", "系统·原始记录", "21:19:04，应急卡柜，A047 取出；操作账号 OPS-04。原始日志不记录自然人姓名。"],
     e_pipe: ["垂直排水管图", "工程·结构记录", "1402 与 1102 共用竖向管井。14 层撞击与拖动可在 11 层管井旁被放大听见。"],
-    e_permission: ["物业权限审计", "系统·权限记录", "OPS-04 权限组可开启隐蔽档案室、调用搬运车，并访问应急卡柜；其余受查人员均不在物业权限名单中。"],
+    e_permission: ["物业权限审计", "系统·权限记录", "14F 服务门、搬运车架与应急卡柜均需工牌加个人口令；单人闸机无尾随、强开或备用机械钥匙记录。其余受查人员均不在授权名单中。"],
     e_accountmap: ["后台账号对应表", "系统·账号记录", "OPS-04 对应“物业运营负责人”岗位账号；该岗位培训含历史楼层图，账号与岗位相连，仍需当班记录确认实际使用人。"],
     e_shift: ["当班人员表", "物业·人员记录", "9 月 17 日 18:00—23:00，物业运营负责人岗位由周岚单人值守并签名交接。"],
+    e_cardauth: ["应急卡柜活体认证", "卡柜·身份原始记录", "21:18:58，OPS-04 与工牌 ZL-017 完成口令和活体人脸双重认证；留存帧与周岚人事照匹配，21:19:04 A047 随后取出。"],
+    e_route: ["服务区通行原始记录", "门控·路径记录", "ZL-017 于 19:08—19:27 进出 14F 服务区；20:43—20:50 进出 11F 管井走廊；21:24 再入 14F，21:37 服务梯下行，21:49 从 11F 管井走廊离开。门控顶置帧与卡柜活体帧为同一人，各门无尾随报警。"],
+    e_hatch: ["浴室检修口痕迹", "1102·现场物证", "浴室镜柜后的 58×82 厘米检修口通向管井走廊；内沿有新鲜鞋擦、搬运毯蓝灰纤维与当晚未干的清洁剂印迹。"],
+    e_chaintrial: ["门链与检修通道复原", "实验·现场复原", "复原组从正门推入同重量模型，在室内挂上门链后，可经浴室检修口离开并让管井防火门自动闭合；其他顺序无法同时保留门链和走廊门控记录。"],
     e_watch: ["死者智能手表记录", "设备·独立时间锚点", "19:16:21 检测到剧烈冲击，心率随后急降；19:18 后没有有效活动记录。"],
     e_oldfile: ["2014 原始验收卷", "旧案·原始文件", "会议纪要、监理联系单、修改验收页与施工日志共同保存了降配责任链。"],
     e_casualty: ["2014 事故死亡名单", "旧案·人员记录", "遇难者：周屿，男，27 岁；另一名遇难者为施工班组成员。"],
@@ -67,7 +72,8 @@
     d_semantics: ["证据事实与解释分离", "卡片开启房门，不等于卡片登记人亲自进入。"],
     d_sound: ["结构传声", "沈曼听见了声音，但无法凭听觉确认楼层来源。"],
     d_cuff: ["袖扣的错误时间", "真实物证也可能在与案件无关的时间留下。"],
-    d_access: ["置换者的知识范围", "周岚同时具备知识、权限、时间与实际操作记录。"],
+    d_access: ["置换者的条件交集", "知识、受控权限、19 点实际通行窗口与 A047 身份链分别获得来源后，唯一交集才指向周岚。"],
+    d_reconstruction: ["锁闭现场复原", "约 20:46 先经检修通道放水；21:19 取卡，21:41 从正门运入尸体；室内挂链后于 21:49 经检修通道离开。"],
     d_oldcase: ["旧案责任链", "旧案是置换现场的深层目的，且责任不止一个人。"],
     d_private: ["周岚与旧案的私人联系", "死亡名单与人事档案独立连接：遇难者周屿是周岚的哥哥。"]
   };
@@ -101,23 +107,17 @@
     d_dimension: ["e_shelf","e_plan1102","e_fixed"], d_1402: ["e_plan2012","e_plan2019"],
     d_mirror: ["e_impact","e_floor","e_watch"], d_semantics: ["e_access","e_cardlog"],
     d_sound: ["e_pipe"], d_cuff: ["e_cufflink","e_cuffphoto"],
-    d_access: ["e_permission","e_cardlog","e_accountmap","e_shift"],
+    d_access: ["e_permission","e_cardlog","e_accountmap","e_shift","e_cardauth","e_route"],
+    d_reconstruction: ["e_waterlab","e_lock","e_hatch","e_chaintrial","e_route"],
     d_oldcase: ["e_oldfile"], d_private: ["e_casualty","e_hr"]
   };
 
   const ORIGIN_BADGES = {
     e_checkin: "独立来源 · 会场", e_stream: "独立来源 · 公开影像", e_location: "独立来源 · 运营商",
     e_watch: "独立来源 · 设备", e_body: "独立来源 · 法医", e_impact: "独立来源 · 现场",
-    e_cardlog: "卡柜数据库", e_accountmap: "账号目录", e_shift: "人事排班",
+    e_cardlog: "卡柜数据库", e_accountmap: "账号目录", e_shift: "人事排班", e_cardauth: "卡柜活体认证",
+    e_route: "门控独立记录", e_hatch: "现场痕迹", e_chaintrial: "独立复原实验", e_remote_sweep: "技术排除调查",
     e_casualty: "旧案名册", e_hr: "人事档案", e_waterlab: "独立来源 · 复现实验"
-  };
-
-  const CONFRONTATION_EXPLANATIONS = {
-    q1: "尸表/手表固定伤情与时间，1402 撞击痕固定地点；独立来源共同指向致命冲突现场。",
-    q2: "地板拖擦痕说明尸体离开房间，搬运车轮距、轮宽和磨损缺口把路径连接到货梯。",
-    q3: "原始卡柜日志只给出 OPS-04；账号目录给出岗位；当班表才把当晚实际使用人锁定为周岚。",
-    q4: "权限审计证明隐蔽房间、卡柜与搬运车处在同一操作权限内，置换行为具备可执行条件。",
-    q5: "原始卷宗建立事故责任，死亡名单与人事档案以两个来源连接周屿和周岚。"
   };
 
   let state = loadState();
@@ -138,10 +138,17 @@
 
   function saveState(silent) {
     state.updatedAt = new Date().toISOString();
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-    localStorage.setItem(META_KEY, JSON.stringify(state.meta));
-    if (!silent) toast("案件进度已保存在本机");
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      localStorage.setItem(META_KEY, JSON.stringify(state.meta));
+      if (!silent) toast("案件进度已保存在本机");
+    } catch (_) {
+      toast("本机存储写入失败；本页内进度仍保留，请勿刷新");
+      updateHeader();
+      return false;
+    }
     updateHeader();
+    return true;
   }
 
   function resetRun() {
@@ -209,7 +216,7 @@
         <div class="landing-copy">
           <div class="eyebrow">澄江市刑侦支队 · 案件分析终端</div>
           <h1 class="display">错层</h1>
-          <div class="landing-deck">WRONG FLOOR · V3.1 · 2026/09/17</div>
+          <div class="landing-deck">WRONG FLOOR · V3.2 · 2026/09/17</div>
           <p class="landing-quote">“如果所有证据都是真的，为什么结论会是假的？”</p>
           <div class="landing-actions">
             <button class="btn primary" data-action="${hasSave ? "continue-game" : "new-game"}">${hasSave ? "继续调查" : "接受委托"}</button>
@@ -277,6 +284,20 @@
     app.focus({ preventScroll: true });
   }
 
+  function renderChapterPreserving(selector) {
+    const anchor = selector ? document.querySelector(selector) : null;
+    const previousTop = anchor ? anchor.getBoundingClientRect().top : null;
+    const previousScroll = window.scrollY;
+    renderChapter(state.chapter);
+    requestAnimationFrame(() => {
+      const next = selector ? document.querySelector(selector) : null;
+      if (next && previousTop !== null) {
+        window.scrollBy(0, next.getBoundingClientRect().top - previousTop);
+        next.focus({ preventScroll: true });
+      } else window.scrollTo(0, previousScroll);
+    });
+  }
+
   function chapterRenderer(no) {
     if (no === 8 && !state.interludeSeen) return `<section class="interlude"><div class="eyebrow">00:48 · 询问室外</div><p>14 层走廊的灯隔着监控屏亮着。周岚抱着一叠物业表格停在门口。</p><blockquote>“你们还要查多久？”</blockquote><p>你合上案件簿：“查到问题变成正确的问题为止。”</p><button class="btn primary" data-action="continue-interlude">继续调查权限关系</button></section>`;
     return [null, chapter1, chapter2, chapter3, chapter4, chapter5, chapter6, chapter7, chapter8, chapter9][no]();
@@ -295,6 +316,7 @@
       ${investigationCard("bath", "持续溢水的浴室", "水量经过计算，像一枚粗糙的定时器。", ["e_water"])}
       ${investigationCard("shelf", "书柜底部", "一枚刻有 X.Y. 的袖扣落在积灰中。", ["e_cufflink"])}
       ${investigationCard("access", "1102 使用痕迹", "死者曾把这里当临时办公室，旧痕迹很多。", ["e_dna"])}
+      ${investigationCard("remote-sweep", "无线与机械触发排查", "排除远程通信、定时器与牵引装置；这是可选的排除性调查。", ["e_remote_sweep"])}
     </div>
     <section class="puzzle" id="p01"><div class="puzzle-tag">P01 · 证据强度</div><h2>现阶段，哪一项结论的证据强度最低？</h2>
       <p class="muted">只判断“是否已经被独立材料证明”，不要推测新的现场。</p>
@@ -335,15 +357,18 @@
     const photo = Number(state.factAnswers.photoMeasure ?? 60), plan = Number(state.factAnswers.planMeasure ?? 50);
     const phase = Number(state.factAnswers.p03Phase || 1);
     const explanation = state.factAnswers.p03Explanation;
-    return `${state.solved.includes("p03") ? '<div class="deduction-banner"><strong>推理成立 · P03 十三厘米</strong><span>尺寸异常排除了家具移动；第二固定结构排除了摄影透视，形成【十三厘米矛盾】。</span></div>' : ""}<div class="measure-stage">
+    const hypothesisNames = { furniture:"家具移动", perspective:"摄影透视", room:"房间并非 1102" };
+    const adjusters = kind => `<span class="measure-adjust" role="group" aria-label="${kind === "photo" ? "现场照片" : "图纸"}读数微调"><button type="button" data-action="adjust-measure" data-kind="${kind}" data-delta="-1" ${phase > 1 ? "disabled" : ""}>−1</button><button type="button" data-action="adjust-measure" data-kind="${kind}" data-delta="1" ${phase > 1 ? "disabled" : ""}>+1</button></span>`;
+    return `${state.solved.includes("p03") ? '<div class="deduction-banner"><strong>推理成立 · P03 十三厘米</strong><span>测量只建立异常；固定结构复核排除了家具与透视，最终才裁决房间身份。</span></div>' : ""}<div class="measure-stage">
       <div>${investigationCard("measure-photo", "现场比例照片", "地砖边长 60 厘米。用图上标尺估算书柜右缘与固定墙之间的距离。", [])}</div>
       <div>${investigationCard("measure-plan", "1102 竣工户型图", "用图纸刻度复核固定墙体与书柜定位线，不要直接相信家具摆位。", [])}</div>
     </div>
-    <div class="measure-stage" aria-label="尺寸复核示意"><div class="plan-box photo-measure"><div class="tile-grid"></div><div class="plan-shelf"></div><span class="measure-note">每格地砖 60 cm</span><label class="ruler-control"><span>拖动 A—B 测量点对齐书柜边缘刻线</span><output id="photo-output">${photo} cm</output><span class="measure-slider"><i class="target-notch" style="left:69.17%" aria-hidden="true"></i><input type="range" min="0" max="120" value="${photo}" data-measure="photo" ${phase > 1 ? "disabled" : ""}></span><span class="range-labels"><b>0</b><b>60</b><b>120 cm</b></span></label></div><div class="plan-box plan-measure"><div class="plan-room"><div class="plan-shelf"></div><div class="scale-line"><span>0</span><span>50</span><span>100cm</span></div><span class="measure-note">图纸比例 1:50 · 尺寸线可读</span><label class="ruler-control"><span>拖动图纸标尺到定位线</span><output id="plan-output">${plan} cm</output><span class="measure-slider"><i class="target-notch" style="left:87.27%" aria-hidden="true"></i><input type="range" min="0" max="110" value="${plan}" data-measure="plan" ${phase > 1 ? "disabled" : ""}></span><span class="range-labels"><b>0</b><b>50</b><b>100 cm</b></span></label></div></div>
-    <section class="puzzle staged-puzzle"><div class="puzzle-tag">P03 · 十三厘米 · ${phase}/3</div><h2>${phase === 1 ? "第一步：固定两次测量结果" : phase === 2 ? "第二步：尺寸异常意味着什么？" : "第三步：选择独立固定结构复核"}</h2><div class="measurement-result">现场约 <strong id="result-photo">${photo}</strong> cm · 图纸 <strong id="result-plan">${plan}</strong> cm · 差值约 <strong id="result-diff">${Math.abs(plan-photo)}</strong> cm</div>
-      ${phase === 1 ? `<p class="muted">先只记录观察，不解释原因。</p><button class="btn primary" data-action="lock-p03-measure" ${ready ? "" : "disabled"}>记录尺寸异常</button>` : ""}
-      ${phase >= 2 ? `<div class="choices">${[["furniture","A · 家具被移动"],["perspective","B · 摄影透视造成误差"],["room","C · 房间不是 1102"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p03-explanation" value="${v}" ${explanation === v ? "checked" : ""} ${phase > 2 ? "disabled" : ""}><span>${t}</span></label>`).join("")}</div>${phase === 2 ? '<button class="btn primary" data-action="lock-p03-explanation">检验解释</button>' : ""}` : ""}
-      ${phase >= 3 ? `<p class="muted">家具移动不能改变固定结构；再用一项不会随家具移动的关系排除透视。</p><div class="choices">${[["curtain","窗帘角度"],["window","窗框中线与暖气管距离"],["table","桌上杯子位置"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p03-fixed" value="${v}"><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="solve-p03">形成空间推论</button>` : ""}<div class="feedback" id="feedback-p03"></div>
+    <div class="measure-stage" aria-label="尺寸复核示意"><div class="plan-box photo-measure"><div class="tile-grid"></div><div class="plan-shelf"></div><span class="measure-note">每格地砖 60 cm</span><label class="ruler-control"><span>拖动 A—B 测量点对齐书柜边缘刻线</span><output id="photo-output">${photo} cm</output><span class="measure-slider"><i class="target-notch" style="left:69.17%" aria-hidden="true"></i><input type="range" min="0" max="120" step="1" value="${photo}" data-measure="photo" ${phase > 1 ? "disabled" : ""}></span>${adjusters("photo")}<span class="range-labels"><b>0</b><b>60</b><b>120 cm</b></span></label></div><div class="plan-box plan-measure"><div class="plan-room"><div class="plan-shelf"></div><div class="scale-line"><span>0</span><span>50</span><span>100cm</span></div><span class="measure-note">图纸比例 1:50 · 尺寸线可读</span><label class="ruler-control"><span>拖动图纸标尺到定位线</span><output id="plan-output">${plan} cm</output><span class="measure-slider"><i class="target-notch" style="left:87.27%" aria-hidden="true"></i><input type="range" min="0" max="110" step="1" value="${plan}" data-measure="plan" ${phase > 1 ? "disabled" : ""}></span>${adjusters("plan")}<span class="range-labels"><b>0</b><b>50</b><b>100 cm</b></span></label></div></div>
+    <section class="puzzle staged-puzzle"><div class="puzzle-tag">P03 · 十三厘米 · ${Math.min(phase,4)}/4</div><h2>${phase === 1 ? "第一步：记录带容差的测量结果" : phase === 2 ? "第二步：暂存一个解释假说" : phase === 3 ? "第三步：选择独立固定结构复核" : "第四步：根据复核结果裁决假说"}</h2><div class="measurement-result">现场约 <strong id="result-photo">${photo}</strong> cm · 图纸 <strong id="result-plan">${plan}</strong> cm · 差值约 <strong id="result-diff">${Math.abs(plan-photo)}</strong> cm</div>
+      ${phase === 1 ? `<p class="muted">允许每项 ±2 cm 的读数误差；最终判断看约 13 cm 的差值，而不是要求手指停在唯一像素。</p><button class="btn primary" data-action="lock-p03-measure" ${ready ? "" : "disabled"}>记录尺寸异常</button>` : ""}
+      ${phase === 2 ? `<p class="muted">这里不判对错。先留下工作假说，再让下一份固定结构材料决定它能否成立。</p><div class="choices">${[["furniture","A · 家具被移动"],["perspective","B · 摄影透视造成误差"],["room","C · 房间不是 1102"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p03-explanation" value="${v}" ${explanation === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="lock-p03-explanation">暂存假说并继续复核</button>` : ""}
+      ${phase === 3 ? `<p class="muted">当前暂存：${hypothesisNames[explanation] || "未选择"}。选择一项不会随家具移动、又能检验透视误差的来源。</p><div class="choices">${[["curtain","窗帘角度"],["window","窗框中线与暖气管距离"],["table","桌上杯子位置"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p03-fixed" value="${v}"><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="run-p03-fixed">执行固定结构复核</button>` : ""}
+      ${phase >= 4 ? `<div class="document"><h3>固定结构复核结果</h3><p>窗框中线与暖气管的相对位置同样偏离 1102 竣工图。移动家具不能改变两者；单纯透视也应保留两套固定结构的比例关系。</p><p>先前假说：<strong>${hypothesisNames[explanation] || "未记录"}</strong></p></div><div class="choices">${[["furniture","家具移动仍能解释全部异常"],["perspective","摄影透视仍能解释全部异常"],["room","照片中的房间不是 1102"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p03-conclusion" value="${v}"><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="solve-p03">形成空间推论</button>` : ""}<div class="feedback" id="feedback-p03"></div>
     </section>`;
   }
 
@@ -410,24 +435,29 @@
 
   function chapter8() {
     const people = [["xuyoa","许遥"],["guxue","顾雪"],["liangwen","梁闻"],["chengyi","程逸"],["shenman","沈曼"],["zhoulan","周岚"]];
-    const fields = [["know","知道隐蔽房间历史"],["permission","有物业权限"],["blank","19点行程有空白"],["card","接触 A047"]];
+    const fields = [["know","知道隐蔽房间历史"],["permission","具备受控物业权限"],["blank","19点存在实施窗口"],["card","A047 当晚行为链"]];
     const marks = { yes:["✓","已证实"], no:["×","已排除"], unknown:["?","证据不足"] };
-    const statusCell = (id,field) => { const audited=state.evidence.includes("e_permission"), value=(id === "xuyoa" && field === "blank" && state.solved.includes("p02")) ? "no" : audited ? Logic.MATRIX_ANSWERS[`${id}_${field}`] : "unknown", m=marks[value]; return `<td><span class="matrix-status ${value}"><b>${m[0]}</b><small>${m[1]}</small></span></td>`; };
-    const reasons = [["","选择主要排除理由"],["alibi","关键时段连续在场"],["permission","不在物业权限名单"],["knowledge","无隐蔽房间知识"],["time","19 点行程没有空白"]];
+    const statusBadge = (id,field) => { const value=Logic.candidateStatus(state,id,field), m=marks[value]; return `<span class="matrix-status ${value}" data-status="${id}-${field}"><b>${m[0]}</b><small>${m[1]}</small></span>`; };
+    const statusCell = (id,field) => `<td>${statusBadge(id,field)}</td>`;
+    const reasons = [["","选择主要排除理由"],["alibi","关键时段连续在场"],["permission","不在受控权限名单"],["knowledge","无隐蔽房间知识"],["time","19 点行程没有空白"]];
     const rationale = {
-      xuyoa:"论坛直播、位置和签到记录连续覆盖关键时段；即使有动机，也没有往返窗口。",
-      guxue:"复制日志补全了 19:03，但权限审计明确排除她使用隐蔽档案室、卡柜和搬运车。",
-      liangwen:"通信记录只能证明他收到资料；权限审计排除物业系统与 A047 操作条件。",
-      chengyi:"债务只能构成动机推测；保险草稿与权限审计都没有给出实施行为。",
-      shenman:"她的证词解释声音来源；权限审计排除进入、取卡和搬运条件。",
-      zhoulan:"岗位培训支持历史知识，权限审计支持工具，19 点当班记录留下时间窗口，A047 链条支持实际行为。"
+      xuyoa:"论坛直播、位置和签到记录连续覆盖关键时段；这能排除他的实施窗口，也能排除他在 21:41 操作 A047。",
+      guxue:"复制日志补全了 19:03。权限审计只能排除她通过受控门、卡柜与搬运车架完成整套置换；不能据此声称她从未接触 A047。",
+      liangwen:"通信记录只能证明他收到资料。权限记录可以排除受控实施条件，但不会自动生成一条“未接触 A047”的事实。",
+      chengyi:"债务只能构成动机推测。权限记录可以排除受控实施条件；其余知识、行程和卡片接触仍应保持证据不足。",
+      shenman:"她的证词解释声音来源。权限记录可以排除受控实施条件，但不能把未调查的卡片接触写成已排除。",
+      zhoulan:"四格分别取证：岗位培训对应历史知识；权限审计对应受控能力；当班表与 19:08 通行记录共同固定实施窗口；卡柜日志、活体认证和连续路径共同固定 A047 行为链。"
     };
+    const reasonSelect = id => `<select data-exclusion-input="${id}" aria-label="${people.find(([pid])=>pid===id)[1]}主要排除理由">${reasons.map(([v,t]) => `<option value="${v}" ${state.exclusionAnswers[id] === v ? "selected" : ""}>${t}</option>`).join("")}</select>`;
+    const rationaleButton = id => `<button class="text-button" data-action="toggle-matrix-rationale" data-person="${id}">${state.matrixExpanded.includes(id) ? "收起依据" : "为什么？"}</button>`;
+    const mobileCards = people.map(([id,name]) => `<article class="exclusion-card" data-person-card="${id}"><header><h3>${name}</h3>${id === "zhoulan" ? '<strong class="intersection-label">四项交集候选</strong>' : ""}</header><div class="candidate-status-list">${fields.map(([field,label]) => `<div><span>${label}</span>${statusBadge(id,field)}</div>`).join("")}</div><div class="candidate-decision">${id === "zhoulan" ? '<strong class="intersection-label">需证明四项同时成立</strong>' : reasonSelect(id)}${rationaleButton(id)}</div>${state.matrixExpanded.includes(id) ? `<div class="candidate-rationale"><strong>当前证据说明</strong><p>${rationale[id]}</p></div>` : ""}</article>`).join("");
     const fileLabels={"file-a":"A · 开发商会议纪要","file-b":"B · 监理联系单","file-c":"C · 验收修改页","file-d":"D · 施工日志"};
     const actionLabels={lower:"提出结构降配",approve:"批准继续施工",sign:"签署修改验收页",execute:"现场执行变更"};
-    return `<section class="free-investigation"><div class="eyebrow">OPEN INVESTIGATION · 自由调查时间</div><h2>在形成排除结论前，自行选择需要核验的地点</h2><div class="grid">${investigationCard("permission-audit", "物业 · 权限与账号链", "核验权限组、账号岗位、当班签名与搬运车；账号不是自然人姓名。", ["e_permission","e_accountmap","e_shift","e_cart"])}${investigationCard("water-reenactment", "1102 · 浴室渗漏复现", "按现场阀门开度和排水状态复现，检验 22:36 的发现时间是否被人为安排。", ["e_waterlab"])}${investigationCard("old-case-file", "旧案档案 · 2014 原始验收卷", "可选深度调查；决定能否查清十二年前责任与周岚的私人联系。", ["e_oldfile","e_casualty","e_hr"])}</div></section>
-    ${state.solved.includes("p10") ? `<div class="deduction-banner"><strong>${state.evidence.includes("e_waterlab") ? "主案报告已开放" : "置换者已锁定，还缺发现时间实验"}</strong><span>${state.evidence.includes("e_waterlab") ? "你可以进入终章完成主案；继续 P11 将查清旧案责任。" : "复现浴室渗漏，确认 1102 如何被制造成晚间死亡现场。"}</span></div>` : ""}
-    <section class="puzzle"><div class="puzzle-tag">P10 · 排除表</div><h2>知道还不够：逐人记录为什么不能完成置换</h2><p class="muted">✓ 已证实 · × 已排除 · ? 证据不足。表格状态来自现有材料；你的任务是给出每名候选人的主要排除理由，再证明唯一交集。</p><div class="matrix-wrap"><table class="matrix exclusion-matrix"><thead><tr><th>人物</th>${fields.map(([,label]) => `<th>${label}</th>`).join("")}<th>主要判断</th></tr></thead><tbody>${people.map(([id,name]) => `<tr><td>${name}</td>${fields.map(([field]) => statusCell(id,field)).join("")}<td>${id === "zhoulan" ? '<strong class="intersection-label">四项交集</strong>' : `<select data-exclusion="${id}">${reasons.map(([v,t]) => `<option value="${v}" ${state.exclusionAnswers[id] === v ? "selected" : ""}>${t}</option>`).join("")}</select>`}<button class="text-button" data-action="toggle-matrix-rationale" data-person="${id}">${state.matrixExpanded.includes(id) ? "收起依据" : "为什么？"}</button></td></tr>${state.matrixExpanded.includes(id) ? `<tr class="matrix-rationale"><td colspan="6"><strong>${name} · 证据说明</strong><p>${rationale[id]}</p></td></tr>` : ""}`).join("")}</tbody></table></div>
-      <div class="condition-proof"><h3>周岚为什么没有被排除？选择必须同时成立的四个条件</h3>${fields.map(([id,label]) => `<label><input type="checkbox" name="zhou-condition" value="${id}" ${state.zhouConditions.includes(id) ? "checked" : ""}><span><b>${label}</b><small>${id === "know" ? "岗位培训与历史图权限" : id === "permission" ? "隐蔽室、卡柜和搬运车权限" : id === "blank" ? "当班时段存在实施窗口" : "A047 → OPS-04 → 岗位 → 当班人"}</small></span></label>`).join("")}</div><button class="btn primary" data-action="solve-p10">提交排除链与唯一交集</button><div class="feedback" id="feedback-p10"></div></section>
+    const reconstructionReady=["e_waterlab","e_cardauth","e_route","e_hatch","e_chaintrial"].every(id=>state.evidence.includes(id));
+    return `<section class="free-investigation"><div class="eyebrow">OPEN INVESTIGATION · 自由调查时间</div><h2>分别核验权限、身份、时间与锁闭路径</h2><div class="grid">${investigationCard("permission-audit", "物业 · 权限与岗位", "核验受控门点、岗位账号与当班签名；权限不等于实际操作。", ["e_permission","e_accountmap","e_shift"])}${investigationCard("operation-audit", "卡柜与服务区 · 身份路径", "调取 A047 活体认证、工牌连续通行与搬运车轮迹，把账号落实到自然人和实际路线。", ["e_cardauth","e_route","e_cart"])}${investigationCard("water-reenactment", "1102 · 浴室渗漏复现", "按现场阀门开度和排水状态复现，检验 22:36 的发现时间是否被人为安排。", ["e_waterlab"])}${investigationCard("chain-reconstruction", "1102 · 门链离场复原", "检查浴室检修口，并验证从室内挂链后是否存在不经过正门的离场路径。", ["e_hatch","e_chaintrial"])}${investigationCard("old-case-file", "旧案档案 · 2014 原始验收卷", "可选深度调查；决定能否查清十二年前责任与周岚的私人联系。", ["e_oldfile","e_casualty","e_hr"])}</div></section>
+    ${state.solved.includes("p10") ? `<div class="deduction-banner"><strong>${reconstructionReady ? "现场复原材料齐备 · 主案报告已开放" : "置换者条件交集成立 · 现场复原尚未闭合"}</strong><span>${reconstructionReady ? "20:46 放水、21:19 取卡、21:41 正门开启与挂链后离场均已有可追溯来源。" : "继续取得渗漏实验、身份路径和门链离场材料；仅锁定人不能替代复原方法。"}</span></div>` : ""}
+    <section class="puzzle"><div class="puzzle-tag">P10 · 条件交集</div><h2>知道还不够：逐人记录为什么不能完成置换</h2><p class="muted">✓ 已证实 · × 已排除 · ? 证据不足。每个状态分别读取自己的来源；权限记录不会自动点亮 A047 行为。</p><div class="matrix-wrap desktop-exclusion"><table class="matrix exclusion-matrix"><thead><tr><th>人物</th>${fields.map(([,label]) => `<th>${label}</th>`).join("")}<th>主要判断</th></tr></thead><tbody>${people.map(([id,name]) => `<tr data-person-row="${id}"><td>${name}</td>${fields.map(([field]) => statusCell(id,field)).join("")}<td>${id === "zhoulan" ? '<strong class="intersection-label">四项交集候选</strong>' : reasonSelect(id)}${rationaleButton(id)}</td></tr>${state.matrixExpanded.includes(id) ? `<tr class="matrix-rationale"><td colspan="6"><strong>${name} · 证据说明</strong><p>${rationale[id]}</p></td></tr>` : ""}`).join("")}</tbody></table></div><div class="mobile-exclusion-cards">${mobileCards}</div>
+      <div class="condition-proof"><h3>周岚为什么没有被排除？选择必须同时成立且分别有来源的四个条件</h3>${fields.map(([id,label]) => `<label><input type="checkbox" name="zhou-condition" value="${id}" ${state.zhouConditions.includes(id) ? "checked" : ""}><span><b>${label}</b><small>${id === "know" ? "账号岗位培训 → 历史图知识" : id === "permission" ? "权限审计 → 受控门与工具" : id === "blank" ? "当班表 + 19:08 通行 → 实施窗口" : "卡柜日志 + 活体认证 + 连续路径"}</small></span></label>`).join("")}</div><button class="btn primary" data-action="solve-p10">提交排除链与唯一交集</button><div class="feedback" id="feedback-p10"></div></section>
     <section class="puzzle">${state.solved.includes("p11") ? '<div class="deduction-banner"><strong>推理成立 · P11 旧案责任链</strong><span>四份原始文件分别固定提案、批准、签署与执行；两份人员记录独立连接周屿和周岚。</span></div>' : ""}<div class="puzzle-tag">P11 · 可选深度调查</div><h2>选择卷宗卡，再把它连接到责任主体与行为</h2><p class="muted">先点击一张档案卡，再点击主体槽位；随后为该主体选择文件实际记载的行为。手机端同样使用点击连接。</p><div class="file-fragments interactive-files">${[["file-a","A · 开发商会议纪要","“结构方案调整为 B 案，控制本季度成本。”"],["file-b","B · 监理联系单","“同意按 B 案继续施工，不停工复核。”"],["file-c","C · 验收修改页","林知秋、监理代表、工程总监签字。"],["file-d","D · 施工日志","“班组按 B 方案完成地下结构施工。”"]].map(([id,label,text]) => `<button class="file-card ${state.factAnswers.selectedChainFile === id ? "selected" : ""}" data-action="select-chain-file" data-file="${id}"><b>${label}</b><span>${text}</span></button>`).join("")}</div><div class="responsibility-board">${[["developer","开发商"],["supervisor","监理方"],["design","设计团队"],["contractor","施工方"]].map(([id,label]) => `<article class="responsibility-slot"><h3>${label}</h3><button class="attach-file" data-action="assign-chain-file" data-actor="${id}" ${state.factAnswers.selectedChainFile ? "" : "disabled"}>${state.chainFiles[id] ? `已连接：${fileLabels[state.chainFiles[id]]}` : "连接当前档案卡"}</button><div class="action-chips">${Object.entries(actionLabels).map(([value,text]) => `<button class="${state.chainAnswers[id] === value ? "selected" : ""}" data-action="choose-chain-action" data-actor="${id}" data-value="${value}">${text}</button>`).join("")}</div></article>`).join("")}</div><h3>哪两份人员记录能证明周岚与旧案的私人联系？</h3><div class="choices"><label class="choice"><input type="checkbox" name="p11-private" value="e_casualty"><span>2014 事故死亡名单</span></label><label class="choice"><input type="checkbox" name="p11-private" value="e_hr"><span>物业人事历史档案</span></label><label class="choice"><input type="checkbox" name="p11-private" value="e_debt"><span>程逸债务记录</span></label></div><button class="btn primary" data-action="solve-p11" ${state.evidence.includes("e_oldfile") ? "" : "disabled"}>形成责任链与私人联系</button><div class="feedback" id="feedback-p11">${state.evidence.includes("e_oldfile") ? "" : "先调查原始验收卷。"}</div></section>`;
   }
 
@@ -437,8 +467,9 @@
 
   function chapter9() {
     const reportPassed = state.solved.includes("report");
-    return `<div class="document"><h3>案件重构报告 · CJ-0917</h3><p>报告不是材料数量检查。地点、时间、行为人与动机必须互相兼容。</p></div>
-    <section class="puzzle"><div class="puzzle-tag">P12 · 完整案件重构</div><h2>填写八项关键事实</h2><div class="report-grid">
+    return `<div class="document"><h3>案件重构报告 · CJ-0917</h3><p>报告不是材料数量检查。每一步必须能回到直接记录、实验估算或由二者形成的推论。</p></div>
+    <section class="reconstruction-strip" aria-label="现场复原步骤"><article><b>19:08—19:27</b><span>工牌进入 14F 服务区</span><small>直接记录 · 服务区门控</small></article><article><b>19:16</b><span>1402 发生致命撞击</span><small>设备记录 + 现场推论</small></article><article><b>20:43 / 约20:46</b><span>经管井进入 1102 并开始放水</span><small>直接记录 + 实验估算</small></article><article><b>21:19—21:41</b><span>取出 A047、搬运尸体、开启正门</span><small>身份与路径记录</small></article><article><b>21:49</b><span>室内挂链后经检修口离开</span><small>现场痕迹 + 复原实验</small></article></section>
+    <section class="puzzle"><div class="puzzle-tag">P12 · 完整案件重构</div><h2>填写十项关键事实</h2><div class="report-grid">
       ${reportSelect("deathPlace","死亡地点",["1102","1402","消防楼梯"])}
       ${reportSelect("deathTime","死亡时间",["18:34","19:16","21:41","22:36"])}
       ${reportSelect("foundPlace","尸体发现地点",["1102","1402","物业档案室"])}
@@ -446,9 +477,11 @@
       ${reportSelect("cufflink","袖扣来源",["当晚搏斗掉落","两周前遗留","周岚伪造"])}
       ${reportSelect("sound","沈曼听见的声音",["1102 内的搏斗","14层管道结构传声","直播音频"])}
       ${reportSelect("transferReason","现场置换的直接作用",["陷害许遥","制造密室奇观","伪造1102内晚间死亡"])}
+      ${reportSelect("waterStart","浴室开始放水",["约19:16","约20:46","21:41","无法估算"])}
+      ${reportSelect("chainMethod","门链形成与离场",["从门缝复位门链","室内挂链后经浴室检修通道离开","一直藏在1102直到破门","无法解释"])}
       ${reportSelect("culprit","导致死亡并置换现场的人",["许遥","顾雪","梁闻","周岚"])}
       </div><button class="btn primary" data-action="validate-report">封存报告</button><div class="feedback" id="feedback-report">${reportPassed ? "报告已通过一致性校验。继续完成最终举证。" : ""}</div></section>
-      ${reportPassed ? confrontationHtml() : ""}`;
+      ${reportPassed && !state.solved.includes("p12") ? confrontationHtml() : state.solved.includes("p12") ? '<div class="deduction-banner"><strong>本周目已完成最终举证</strong><span>旧版本已结案记录会保留；重新开案可体验新增的门链与完整时间顺序复原。</span></div>' : ""}`;
   }
 
   function confrontationHtml() {
@@ -457,21 +490,22 @@
       "墙上的痕迹只能证明撞击。你怎么证明尸体被搬走？",
       "21:41 的记录属于林知秋。你凭什么说是我？",
       "就算卡在我手里，你怎么证明我能完成整个置换？",
+      "门链是从里面挂上的。人离开后，它怎么还会保持锁闭？",
       "你已经证明本案。为什么还要翻十二年前的资料？"
     ];
-    const responses = ["周岚看向桌面：“……林知秋确实是在那面墙前倒下的。”","她停了很久：“那辆车把他从 14 层送到了 11 层。”","“OPS-04 不是名字。”你推过当班表。她不再反驳。","“钥匙、卡柜、搬运车——那晚都在我的权限里。”","“周屿是我哥哥。十二年了，文件里却只写他违规。”"];
-    const total = state.solved.includes("p11") ? 5 : 4;
+    const responses = ["周岚看向桌面：“……林知秋确实是在那面墙前倒下的。”","她停了很久：“那辆车把他从 14 层送到了 11 层。”","活体认证帧停在屏幕上。她没有再说 OPS-04 只是一个账号。","“权限只能说明我能做到。”你把实际通行与轮迹并排放下。","她望向浴室方向：“检修口本来不该有人知道。”","“周屿是我哥哥。十二年了，文件里却只写他违规。”"];
+    const total = state.solved.includes("p11") ? 6 : 5;
     const step = Math.min(state.confrontationStep, total - 1);
-    const transcript = Object.keys(state.confrontation).sort().map((key,index) => `<div class="dialogue-line"><span>第 ${index + 1} 轮闭环</span><strong>${state.confrontation[key].map(id => EVIDENCE[id][0]).join(" + ")}</strong><p>${CONFRONTATION_EXPLANATIONS[key]}</p><blockquote>${responses[index]}</blockquote></div>`).join("");
+    const transcript = Object.keys(state.confrontation).sort().map((key,index) => { const proof=Logic.validateConfrontationAnswer(Number(key.slice(1)),state.confrontation[key]); return `<div class="dialogue-line"><span>第 ${index + 1} 轮闭环</span><strong>${state.confrontation[key].map(id => EVIDENCE[id][0]).join(" + ")}</strong><p>${proof.explanation || "该轮证据组合已通过校验。"}</p><blockquote>${responses[index]}</blockquote></div>`; }).join("");
     const orderedEvidence = [...state.pinnedEvidence, ...state.evidence.filter(id => !state.pinnedEvidence.includes(id))];
-    return `<section class="puzzle confrontation"><div class="puzzle-tag">FINAL CONFRONTATION · ${state.confrontationStep + 1}/${total}</div><h2>周岚：“${questions[step]}”</h2>${transcript}<p class="muted">从实际收集的材料中选择 1—3 条组成证明。存在等价路线，但无关材料会削弱提交。</p><div class="confrontation-evidence">${orderedEvidence.map(id => `<label class="evidence-choice ${state.pinnedEvidence.includes(id) ? "pinned" : ""}"><input type="checkbox" name="confrontation-evidence" value="${id}"><span class="source">${EVIDENCE[id][1]}</span><strong>${EVIDENCE[id][0]}</strong></label>`).join("")}</div><button class="btn primary" data-action="validate-confrontation">出示所选材料</button><div class="feedback" id="feedback-confrontation"></div></section>`;
+    return `<section class="puzzle confrontation"><div class="puzzle-tag">FINAL CONFRONTATION · ${state.confrontationStep + 1}/${total}</div><h2>周岚：“${questions[step]}”</h2>${transcript}<p class="muted">从实际收集的材料中选择 1—3 条组成证明。可展开摘要；失败后选择会保留，反馈只指出缺失的连接类型。</p><div class="confrontation-evidence">${orderedEvidence.map(id => `<article class="evidence-choice-card ${state.pinnedEvidence.includes(id) ? "pinned" : ""}"><label class="evidence-choice"><input type="checkbox" name="confrontation-evidence" value="${id}"><span class="source">${EVIDENCE[id][1]}</span><strong>${EVIDENCE[id][0]}</strong></label><button type="button" class="evidence-summary-toggle" data-action="toggle-proof-summary">展开摘要</button><p class="evidence-choice-summary" hidden>${EVIDENCE[id][2]}</p></article>`).join("")}</div><button class="btn primary" data-action="validate-confrontation">出示所选材料</button><div class="feedback" id="feedback-confrontation"></div></section>`;
   }
 
   function evidenceMatches(id) {
     const personMap = {
       xu: ["e_cufflink","e_cuffphoto","e_stream","e_location","e_checkin"],
-      zhou: ["e_permission","e_accountmap","e_shift","e_cart","e_oldfile","e_casualty","e_hr"],
-      lin: ["e_body","e_dna","e_water","e_waterlab","e_shelf","e_plan1102","e_fixed","e_impact","e_floor","e_watch","e_oldfile"],
+      zhou: ["e_permission","e_accountmap","e_shift","e_cardauth","e_route","e_cart","e_oldfile","e_casualty","e_hr"],
+      lin: ["e_body","e_dna","e_water","e_waterlab","e_shelf","e_plan1102","e_fixed","e_impact","e_floor","e_watch","e_hatch","e_chaintrial","e_oldfile"],
       gu: ["e_copy"], liang: ["e_message"], shen: ["e_pipe"]
     };
     const source = EVIDENCE[id][1];
@@ -501,17 +535,25 @@
     topbar.hidden = false;
     state.screen = "timeline";
     const solved = id => state.solved.includes(id);
+    const has = id => state.evidence.includes(id);
     const events = [
-      ["17:32","许遥与林知秋在公司争吵","公开监控",true], ["18:34","林知秋抵达临江壹号","停车场记录",true],
-      ["18:51", solved("p10") ? "周岚进入 1402" : solved("p04") ? "有人进入未编号空间" : "???", solved("p10") ? "权限与行为记录" : "尚未确认", solved("p04")],
-      ["19:03", Number(state.interviews.guxue || 0) >= 3 ? "顾雪在停车场再次见到林知秋" : "???", "复制日志", Number(state.interviews.guxue || 0) >= 3],
-      [state.evidence.includes("e_watch") ? "19:16" : "19:00—20:00", solved("p10") ? "周岚与林知秋在 1402 冲突，发生致命撞击" : solved("p05") ? "隐蔽第一现场发生致命撞击" : "法医推定死亡区间", state.evidence.includes("e_watch") ? "手表冲击与心率记录" : "法医初检", state.evidence.includes("e_watch")],
-      ["19:31—22:31", solved("p02") ? "许遥连续处于建筑论坛会场" : "许遥的会场记录待核验", "三种独立来源", solved("p02")],
-      ["21:41", solved("p10") ? "周岚使用 A047 开启 1102" : solved("p07") ? "持卡人使用 A047 开启 1102" : "A047 开启 1102", solved("p07") ? "卡片流转" : "门禁原始记录", solved("p07")],
-      [state.evidence.includes("e_waterlab") ? "约20:46" : "???",state.evidence.includes("e_waterlab") ? "1102 浴室开始按实验流量放水" : "浴室放水开始时间待复现","浴室渗漏复现实验",state.evidence.includes("e_waterlab")],
-      ["22:36","楼下报告渗水","物业工单",true], ["22:47","破门发现尸体","出警记录",true]
+      { time:"17:32", text:"许遥与林知秋在公司争吵", source:"公开监控", type:"direct", known:true },
+      { time:"18:34", text:"林知秋抵达临江壹号", source:"停车场记录", type:"direct", known:true },
+      { time:"19:03", text:Number(state.interviews.guxue || 0) >= 3 ? "顾雪在停车场再次见到林知秋" : "该时段尚待外查", source:"顾雪复制日志", type:"direct", known:Number(state.interviews.guxue || 0) >= 3 },
+      { time:"19:08—19:27", text:has("e_route") ? "ZL-017 工牌进出 14F 服务区" : "14F 服务区通行待核验", source:"服务区门控原始记录", type:"direct", known:has("e_route") },
+      { time:has("e_watch") ? "19:16" : "19:00—20:00", text:solved("p05") ? "致命撞击发生在 1402" : "记录到剧烈冲击与心率急降", source:solved("p05") ? "手表记录 + 1402 撞击痕" : "手表 / 法医初检", type:solved("p05") ? "inference" : "direct", known:has("e_watch") },
+      { time:"19:31—22:31", text:solved("p02") ? "许遥连续处于建筑论坛会场" : "许遥的会场记录待核验", source:"直播、位置与会场三种来源", type:"direct", known:solved("p02") },
+      { time:"20:43—20:50", text:has("e_route") ? "ZL-017 工牌进出 11F 管井走廊" : "11F 管井走廊通行待核验", source:"服务区门控原始记录", type:"direct", known:has("e_route") },
+      { time:has("e_waterlab") ? "约20:46" : "约?", text:has("e_waterlab") ? "1102 浴室开始按现场流量放水" : "浴室放水开始时间待复现", source:"浴室渗漏复现实验", type:"estimate", known:has("e_waterlab") },
+      { time:"21:19", text:has("e_cardauth") ? "活体认证确认周岚取出 A047" : has("e_cardlog") ? "OPS-04 账号取出 A047，身份待核验" : "A047 取出记录待核验", source:has("e_cardauth") ? "卡柜日志 + 活体认证" : "卡柜原始日志", type:"direct", known:has("e_cardlog") },
+      { time:"21:37", text:has("e_route") ? "服务梯从 14F 下行至 11F" : "搬运路径待核验", source:"服务梯控制记录", type:"direct", known:has("e_route") },
+      { time:"21:41", text:"A047 开启 1102", source:"1102 门禁原始记录", type:"direct", known:has("e_access") },
+      { time:"21:49", text:has("e_route") ? "ZL-017 工牌从 11F 管井走廊离开" : "离场路径待核验", source:"服务区门控原始记录", type:"direct", known:has("e_route") },
+      { time:"22:36", text:"楼下报告渗水", source:"物业工单", type:"direct", known:true },
+      { time:"22:47", text:"破门发现尸体与室内门链", source:"出警记录", type:"direct", known:true }
     ];
-    app.innerHTML = `<section class="screen"><div class="eyebrow">VERIFIED TIMELINE</div><h1 class="chapter-title">案件时间线</h1><p class="lead">未确认事件保持灰色与匿名；每完成一条推理，时间线才写入更精确的地点、行为人与时间。</p><div class="timeline-list dynamic-timeline">${events.map(([time,text,source,known]) => `<div class="timeline-item ${known ? "known" : "unknown"}"><span><strong>${time}</strong> · ${text}<br><small class="muted">${source}</small></span></div>`).join("")}</div></section>`;
+    const labels={direct:"直接记录",estimate:"实验估算",inference:"证据推论"};
+    app.innerHTML = `<section class="screen"><div class="eyebrow">VERIFIED TIMELINE</div><h1 class="chapter-title">案件时间线</h1><p class="lead">每条事件都标明证据层级；直接记录、实验估算和推论不会混写。未确认项目保持灰色，不补入精确行为人。</p><div class="timeline-list dynamic-timeline">${events.map(event => `<div class="timeline-item ${event.known ? "known" : "unknown"} timeline-${event.type}"><span><strong>${event.time}</strong> · ${event.known ? event.text : "??? · " + event.text}<br><small class="timeline-kind ${event.type}">${labels[event.type]}</small><small class="muted">${event.source}</small></span></div>`).join("")}</div></section>`;
     updateHeader();
   }
 
@@ -604,7 +646,7 @@
       const id = target.dataset.id;
       if (!state.examined.includes(id)) state.examined.push(id);
       addEvidence(...target.dataset.evidence.split(","));
-      saveState(true); renderChapter(state.chapter);
+      saveState(true); renderChapterPreserving(`[data-action="examine"][data-id="${id}"]`);
     }
     if (action === "solve-p01") {
       if (chosen("p01") === "death") { solve("p01","d_lock"); setFeedback("feedback-p01","正确。发现地点、门禁和反锁都有直接记录；死亡地点目前只有默认前提，仍需独立物证。",true); }
@@ -624,19 +666,28 @@
       node.innerHTML = `<section class="theory-state conflict"><strong>● 与证据矛盾</strong>${result.conflicts.length ? `<ul>${result.conflicts.map(x=>`<li>${x}</li>`).join("")}</ul>` : "<p>暂未发现直接冲突。</p>"}</section><section class="theory-state support"><strong>● 已有证据支持</strong>${result.support.length ? `<ul>${result.support.map(x=>`<li>${x}</li>`).join("")}</ul>` : "<p>当前还没有正面支持。</p>"}</section><section class="theory-state missing"><strong>● 尚未得到证明</strong>${result.missing.length ? `<ul>${result.missing.map(x=>`<li>${x}</li>`).join("")}</ul>` : "<p>没有未补足的关键项。</p>"}</section>${result.canSubmitFailure ? '<div class="card-actions"><button class="btn danger-btn" data-action="ending-b">无视冲突并提交内部不足报告</button></div>' : ""}`;
     }
     if (action === "ending-b") { closeModal(); state = Logic.recordEnding(state,"B"); saveState(true); renderEnding("B"); }
+    if (action === "adjust-measure") {
+      const input=document.querySelector(`[data-measure="${target.dataset.kind}"]`), delta=Number(target.dataset.delta || 0);
+      if (input) { input.value=String(Math.max(Number(input.min),Math.min(Number(input.max),Number(input.value)+delta))); input.dispatchEvent(new Event("input",{bubbles:true})); target.focus({preventScroll:true}); }
+    }
     if (action === "lock-p03-measure") {
       const photo = Number(document.querySelector('[data-measure="photo"]').value), plan = Number(document.querySelector('[data-measure="plan"]').value);
-      if (photo === 83 && plan === 96) { state.factAnswers.p03Phase = 2; saveState(true); renderChapter(3); }
-      else wrong("feedback-p03","把两个测量点分别对齐 B 刻线：现场读数约 83 厘米，图纸定位线可直接读取。 ");
+      const difference = plan - photo;
+      if (Math.abs(photo - 83) <= 2 && Math.abs(plan - 96) <= 2 && Math.abs(difference - 13) <= 2) { addEvidence("e_shelf","e_plan1102"); state.factAnswers.p03Phase = 2; saveState(true); renderChapter(3); }
+      else wrong("feedback-p03","允许单项 ±2 cm，但两次读数仍应形成约 13 cm 的稳定差值。可用滑块旁的 ±1 按钮微调。 ");
     }
     if (action === "lock-p03-explanation") {
       const value = chosen("p03-explanation");
-      if (value === "room") { state.factAnswers.p03Explanation = value; state.factAnswers.p03Phase = 3; saveState(true); renderChapter(3); }
-      else wrong("feedback-p03",value === "furniture" ? "移动家具可以改变书柜距离，却不能解释窗框与暖气管的固定关系。" : "单纯透视应同时保持固定结构的比例关系；需要再找一个不可移动的复核点。 ");
+      if (["furniture","perspective","room"].includes(value)) { state.factAnswers.p03Explanation = value; state.factAnswers.p03Phase = 3; saveState(true); renderChapter(3); }
+      else wrong("feedback-p03","先暂存一个解释。此处不会判对错，下一份固定结构材料才负责裁决。 ");
+    }
+    if (action === "run-p03-fixed") {
+      if (chosen("p03-fixed") === "window") { addEvidence("e_fixed"); state.factAnswers.p03Phase = 4; saveState(true); renderChapter(3); }
+      else wrong("feedback-p03","复核点必须不可移动，并且能同时在现场照片和竣工图中定位。 ");
     }
     if (action === "solve-p03") {
-      if (chosen("p03-fixed") === "window" && state.factAnswers.p03Explanation === "room") { addEvidence("e_shelf","e_plan1102","e_fixed"); solve("p03","d_dimension"); renderChapter(3); }
-      else wrong("feedback-p03","第二来源必须是不会随家具移动、也能在图纸与照片中共同定位的固定结构。 ");
+      if (chosen("p03-conclusion") === "room" && state.evidence.includes("e_fixed")) { solve("p03","d_dimension"); renderChapter(3); }
+      else wrong("feedback-p03","固定结构复核已经排除家具移动与单纯透视；请让最终结论服从新取得的材料。 ");
     }
     if (action === "select-blueprint") {
       if (target.dataset.stage === "1") state.factAnswers.p04First = target.dataset.id;
@@ -721,17 +772,16 @@
       if (result.ok) { solve("p09","d_cuff"); setFeedback("feedback-p09","灰尘说明遗留已久，带日期的照片提供独立时间锚点。",true); }
       else wrong("feedback-p09",result.reason);
     }
-    if (action === "toggle-matrix-rationale") { const id=target.dataset.person; state.matrixExpanded = state.matrixExpanded.includes(id) ? state.matrixExpanded.filter(x=>x!==id) : [...state.matrixExpanded,id]; saveState(true); renderChapter(8); }
+    if (action === "toggle-matrix-rationale") { const id=target.dataset.person; state.matrixExpanded = state.matrixExpanded.includes(id) ? state.matrixExpanded.filter(x=>x!==id) : [...state.matrixExpanded,id]; saveState(true); const selector=window.matchMedia("(max-width: 700px)").matches ? `[data-person-card="${id}"]` : `[data-person-row="${id}"]`; renderChapterPreserving(selector); }
     if (action === "solve-p10") {
-      document.querySelectorAll("[data-exclusion]").forEach(node => state.exclusionAnswers[node.dataset.exclusion] = node.value);
       state.zhouConditions = checked("zhou-condition");
-      const result = Logic.validateExclusionMatrix(state.exclusionAnswers,state.zhouConditions);
-      if (result.ok && state.evidence.includes("e_permission")) { solve("p10","d_access"); renderChapter(8); }
-      else wrong("feedback-p10",!state.evidence.includes("e_permission") ? "先调查物业权限与账号链；没有完整名单就不能排除其他人。" : result.wrongPeople.length ? `仍有 ${result.wrongPeople.length} 人的主要排除理由没有对应现有证据。点击“为什么？”复核。` : `周岚一行还缺 ${result.missingConditions.length} 个必须同时成立的条件。`);
+      const result = Logic.validateExclusionMatrix(state.exclusionAnswers,state.zhouConditions,state);
+      if (result.ok) { solve("p10","d_access"); renderChapter(8); }
+      else wrong("feedback-p10",result.unsupportedPeople.length ? `有 ${result.unsupportedPeople.length} 名候选人的排除理由尚未获得对应来源；权限、行程和卡片接触不能互相替代。` : result.unsupportedConditions.length ? `周岚的四项条件中仍有 ${result.unsupportedConditions.length} 项处于“证据不足”；继续核验岗位、权限、通行窗口或 A047 身份链。` : result.wrongPeople.length ? `仍有 ${result.wrongPeople.length} 人的主要排除理由与现有材料不匹配。点击“为什么？”复核。` : `还缺 ${result.missingConditions.length} 个必须同时成立的条件。`);
     }
-    if (action === "select-chain-file") { state.factAnswers.selectedChainFile = target.dataset.file; saveState(true); renderChapter(8); }
-    if (action === "assign-chain-file") { if (state.factAnswers.selectedChainFile) state.chainFiles[target.dataset.actor] = state.factAnswers.selectedChainFile; saveState(true); renderChapter(8); }
-    if (action === "choose-chain-action") { state.chainAnswers[target.dataset.actor] = target.dataset.value; saveState(true); renderChapter(8); }
+    if (action === "select-chain-file") { state.factAnswers.selectedChainFile = target.dataset.file; saveState(true); renderChapterPreserving(`[data-action="select-chain-file"][data-file="${target.dataset.file}"]`); }
+    if (action === "assign-chain-file") { if (state.factAnswers.selectedChainFile) state.chainFiles[target.dataset.actor] = state.factAnswers.selectedChainFile; saveState(true); renderChapterPreserving(`[data-action="assign-chain-file"][data-actor="${target.dataset.actor}"]`); }
+    if (action === "choose-chain-action") { state.chainAnswers[target.dataset.actor] = target.dataset.value; saveState(true); renderChapterPreserving(`[data-action="choose-chain-action"][data-actor="${target.dataset.actor}"][data-value="${target.dataset.value}"]`); }
     if (action === "solve-p11") {
       const result = Logic.validateResponsibilityPuzzle(state.chainFiles,state.chainAnswers);
       const privateProof = Logic.validateEvidenceSet(checked("p11-private"), ["e_casualty","e_hr"], [{ all:["e_casualty","e_hr"], exact:true }]);
@@ -740,18 +790,26 @@
     }
     if (action === "validate-report") {
       document.querySelectorAll("[data-report]").forEach(node => state.report[node.dataset.report] = node.value);
-      const result = Logic.validateReport(state.report);
-      if (result.ok) { if (!state.solved.includes("report")) state.solved.push("report"); saveState(true); renderChapter(9); setFeedback("feedback-report","八项事实互相兼容。报告通过一致性校验。",true); }
-      else wrong("feedback-report",`有 ${result.wrong.length} 项与已形成的证据链冲突。检查地点、时间和行为人是否属于同一个故事。`);
+      const result = Logic.validateReport(state.report,state);
+      if (result.ok) { if (!state.solved.includes("report")) state.solved.push("report"); addDeduction("d_reconstruction"); saveState(true); renderChapter(9); setFeedback("feedback-report","十项事实均有来源且互相兼容。现场复原通过一致性校验。",true); }
+      else wrong("feedback-report",`报告尚未闭合：${result.categories.length ? result.categories.join("、") : "存在未完成项目"}。请回看对应材料的来源与证据层级，不必逐项盲猜。`);
+    }
+    if (action === "toggle-proof-summary") {
+      const card = target.closest(".evidence-choice-card"), summary = card && card.querySelector(".evidence-choice-summary");
+      if (summary) { summary.hidden = !summary.hidden; target.textContent = summary.hidden ? "展开摘要" : "收起摘要"; }
     }
     if (action === "validate-confrontation") {
       const evidence = checked("confrontation-evidence"), step = state.confrontationStep + 1;
-      const result = Logic.validateConfrontationAnswer(step,evidence), total = state.solved.includes("p11") ? 5 : 4;
+      const result = Logic.validateConfrontationAnswer(step,evidence), total = state.solved.includes("p11") ? 6 : 5;
       if (result.ok) {
         state.confrontation[`q${step}`] = evidence; state.confrontationStep += 1; saveState(true);
-        if (state.confrontationStep >= total) { solve("p12"); openModal(`<div class="eyebrow">JUDGMENT · 证据闭环完成</div><h2>最后，哪些事实写入公开报告？</h2><div class="final-proof-summary">${Object.keys(state.confrontation).sort().map(key => `<p><strong>${state.confrontation[key].map(id=>EVIDENCE[id][0]).join(" + ")}</strong><span>${CONFRONTATION_EXPLANATIONS[key]}</span></p>`).join("")}</div><p>${state.solved.includes("p11") ? "主案与旧案责任链都已成立。" : "主案已经成立，但旧案责任链仍不完整。"}</p><div class="card-actions"><button class="btn primary" data-action="choose-disclosure" data-choice="full">提交现有全部调查</button>${state.solved.includes("p11") ? '<button class="btn ghost" data-action="choose-disclosure" data-choice="culprit-only">只报告本案刑事事实</button>' : ""}</div>`); }
+        if (state.confrontationStep >= total) { solve("p12"); openModal(`<div class="eyebrow">JUDGMENT · 证据闭环完成</div><h2>最后，哪些事实写入公开报告？</h2><div class="final-proof-summary">${Object.keys(state.confrontation).sort().map(key => { const proof=Logic.validateConfrontationAnswer(Number(key.slice(1)),state.confrontation[key]); return `<p><strong>${state.confrontation[key].map(id=>EVIDENCE[id][0]).join(" + ")}</strong><span>${proof.explanation || "该轮证据组合已通过校验。"}</span></p>`; }).join("")}</div><p>${state.solved.includes("p11") ? "主案与旧案责任链都已成立。" : "主案已经成立，但旧案责任链仍不完整。"}</p><div class="card-actions"><button class="btn primary" data-action="choose-disclosure" data-choice="full">提交现有全部调查</button>${state.solved.includes("p11") ? '<button class="btn ghost" data-action="choose-disclosure" data-choice="culprit-only">只报告本案刑事事实</button>' : ""}</div>`); }
         else renderChapter(9);
-      } else wrong("feedback-confrontation",result.reason || "这组材料不能直接回答当前质疑。 ");
+      } else {
+        wrong("feedback-confrontation",result.reason || "这组材料不能直接回答当前质疑。 ");
+        const feedback=document.querySelector("#feedback-confrontation");
+        if (feedback) feedback.insertAdjacentHTML("beforeend",'<div><button class="text-button" data-action="show-notebook">打开案件簿核对现有材料</button></div>');
+      }
     }
     if (action === "choose-disclosure") {
       const ending = Logic.determineEnding(state,target.dataset.choice);
@@ -768,6 +826,13 @@
   document.addEventListener("change", event => {
     if (event.target.id === "notebook-person") { notebookView.person = event.target.value; renderNotebook(); }
     if (event.target.id === "notebook-source") { notebookView.source = event.target.value; renderNotebook(); }
+    if (event.target.dataset.exclusionInput) {
+      const id=event.target.dataset.exclusionInput;
+      state.exclusionAnswers[id]=event.target.value;
+      document.querySelectorAll(`[data-exclusion-input="${id}"]`).forEach(node => { node.value=event.target.value; });
+      saveState(true);
+    }
+    if (event.target.name === "zhou-condition") { state.zhouConditions=checked("zhou-condition"); saveState(true); }
   });
 
   document.addEventListener("input", event => {

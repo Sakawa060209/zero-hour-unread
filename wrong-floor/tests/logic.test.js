@@ -15,7 +15,7 @@ test("fresh state starts with only chapter one open", () => {
   assert.equal(Logic.highestUnlockedChapter(state), 1);
 });
 
-test("chapter gates follow solved deductions rather than stored flags", () => {
+test("chapter gates require the complete reconstruction rather than P10 alone", () => {
   const state = Logic.freshState();
   state.solved.push("p01", "p02", "p03");
   assert.equal(Logic.highestUnlockedChapter(state), 4);
@@ -25,9 +25,11 @@ test("chapter gates follow solved deductions rather than stored flags", () => {
   assert.equal(Logic.chapterUnlocked(state, 8), false, "one key interview is insufficient");
   state.interviews.liangwen = 3;
   assert.equal(Logic.chapterUnlocked(state, 8), true, "two key interviews open the permission investigation");
-  assert.equal(Logic.chapterUnlocked(state, 9), false, "P10 alone cannot explain the staged discovery time");
-  state.evidence.push("e_waterlab");
-  assert.equal(Logic.chapterUnlocked(state, 9), true, "P10 plus the water reenactment opens the report without optional P11");
+  assert.equal(Logic.chapterUnlocked(state, 9), false, "P10 alone cannot explain the staged discovery or locked door");
+  state.evidence.push("e_waterlab", "e_cardauth", "e_route", "e_hatch");
+  assert.equal(Logic.chapterUnlocked(state, 9), false, "missing the chain reenactment keeps the report locked");
+  state.evidence.push("e_chaintrial");
+  assert.equal(Logic.chapterUnlocked(state, 9), true, "identity, timing and locked-exit reconstruction open the report without optional P11");
 });
 
 test("evidence validation rejects unrelated padding", () => {
@@ -44,9 +46,30 @@ test("alibi coverage requires three independent overlapping sources", () => {
   assert.match(Logic.validateAlibiCoverage(["e_checkin", "e_stream", "e_location", "e_cuffphoto"]).reason, /无关/);
 });
 
-test("exclusion table separates evidence status from player-authored reasons", () => {
+test("candidate cells derive from their own evidence and permission never proves card contact", () => {
+  const state = Logic.freshState();
+  state.solved.push("p02");
+  state.evidence.push("e_permission");
+  assert.equal(Logic.candidateStatus(state, "guxue", "permission"), "no");
+  assert.equal(Logic.candidateStatus(state, "guxue", "card"), "unknown");
+  assert.equal(Logic.candidateStatus(state, "zhoulan", "permission"), "yes");
+  assert.equal(Logic.candidateStatus(state, "zhoulan", "know"), "unknown");
+  assert.equal(Logic.candidateStatus(state, "zhoulan", "blank"), "unknown");
+  assert.equal(Logic.candidateStatus(state, "zhoulan", "card"), "unknown");
+
+  state.evidence.push("e_accountmap", "e_shift", "e_cardlog", "e_cardauth", "e_route");
+  for (const field of Logic.ZHOU_CONDITIONS) assert.equal(Logic.candidateStatus(state, "zhoulan", field), "yes", field);
+  assert.equal(Logic.validateExclusionMatrix(Logic.EXCLUSION_ANSWERS, Logic.ZHOU_CONDITIONS, state).ok, true);
+
+  for (const [removed, field] of [["e_permission","permission"],["e_accountmap","know"],["e_shift","blank"],["e_cardauth","card"]]) {
+    const reduced = Logic.normalizeState({ ...state, version: Logic.SAVE_VERSION, evidence: state.evidence.filter(id => id !== removed) });
+    assert.equal(Logic.candidateStatus(reduced, "zhoulan", field), "unknown", `${removed} must downgrade ${field}`);
+    assert.equal(Logic.validateExclusionMatrix(Logic.EXCLUSION_ANSWERS, Logic.ZHOU_CONDITIONS, reduced).ok, false);
+  }
+});
+
+test("exclusion table still checks player-authored reasons and selected conditions", () => {
   assert.equal(Logic.validateExclusionMatrix({}, []).ok, false);
-  assert.equal(Logic.validateExclusionMatrix(Logic.EXCLUSION_ANSWERS, Logic.ZHOU_CONDITIONS).ok, true);
   const wrongReason = { ...Logic.EXCLUSION_ANSWERS, guxue: "time" };
   assert.deepEqual(Logic.validateExclusionMatrix(wrongReason, Logic.ZHOU_CONDITIONS).wrongPeople, ["guxue"]);
   assert.deepEqual(Logic.validateExclusionMatrix(Logic.EXCLUSION_ANSWERS, ["know", "permission"]).missingConditions, ["blank", "card"]);
@@ -59,10 +82,17 @@ test("old-case puzzle checks both document-to-actor and actor-to-action links", 
   assert.equal(Logic.validateResponsibilityPuzzle(Logic.CHAIN_FILE_ANSWERS, { ...Logic.CHAIN_ANSWERS, design: "approve" }).actionWrong, 1);
 });
 
-test("report rejects a correct culprit paired with a contradictory room", () => {
-  assert.equal(Logic.validateReport(Logic.REPORT_ANSWERS).ok, true);
+test("report rejects contradictions and correct answers without reconstruction evidence", () => {
+  const state = Logic.freshState();
+  state.solved.push("p05", "p08", "p09", "p10");
+  state.evidence.push("e_impact","e_watch","e_lock","e_cardlog","e_cardauth","e_route","e_cufflink","e_cuffphoto","e_pipe","e_floor","e_waterlab","e_hatch","e_chaintrial");
+  assert.equal(Logic.validateReport(Logic.REPORT_ANSWERS, state).ok, true);
   const contradiction = { ...Logic.REPORT_ANSWERS, deathPlace: "1102" };
-  assert.deepEqual(Logic.validateReport(contradiction).wrong, ["deathPlace"]);
+  assert.deepEqual(Logic.validateReport(contradiction, state).wrong, ["deathPlace"]);
+  const missingChain = Logic.normalizeState({ ...state, version: Logic.SAVE_VERSION, evidence: state.evidence.filter(id => id !== "e_chaintrial") });
+  const unsupported = Logic.validateReport(Logic.REPORT_ANSWERS, missingChain);
+  assert.equal(unsupported.ok, false);
+  assert.ok(unsupported.categories.includes("锁闭复原"));
 });
 
 test("A, C and D endings are all reachable through natural completion states", () => {
@@ -80,28 +110,58 @@ test("A, C and D endings are all reachable through natural completion states", (
   assert.equal(Logic.determineEnding(state, "culprit-only"), "C");
 });
 
-test("final confrontation accepts supported combinations and rejects padding", () => {
-  assert.equal(Logic.validateConfrontationAnswer(1, ["e_impact", "e_body"]).ok, true);
-  assert.equal(Logic.validateConfrontationAnswer(1, ["e_impact", "e_watch"]).ok, true);
-  assert.equal(Logic.validateConfrontationAnswer(3, ["e_cardlog", "e_accountmap", "e_shift"]).ok, true);
-  assert.equal(Logic.validateConfrontationAnswer(4, ["e_permission"]).ok, true);
-  assert.equal(Logic.validateConfrontationAnswer(4, ["e_cardlog", "e_cart"]).ok, true);
-  assert.match(Logic.validateConfrontationAnswer(2, ["e_floor", "e_stream"]).reason, /无关/);
+test("final confrontation reports categories and explains the route actually submitted", () => {
+  const autopsy = Logic.validateConfrontationAnswer(1, ["e_impact", "e_body"]);
+  const watch = Logic.validateConfrontationAnswer(1, ["e_impact", "e_watch"]);
+  assert.equal(autopsy.ok, true);
+  assert.equal(watch.ok, true);
+  assert.match(autopsy.explanation, /尸表/);
+  assert.doesNotMatch(autopsy.explanation, /手表/);
+  assert.match(watch.explanation, /手表/);
+  assert.equal(Logic.validateConfrontationAnswer(1,["e_impact","e_body","e_watch"]).issue,"excess");
+  assert.equal(Logic.validateConfrontationAnswer(2, ["e_floor", "e_cart"]).ok, true);
+  assert.equal(Logic.validateConfrontationAnswer(3, ["e_cardlog", "e_cardauth", "e_route"]).ok, true);
+  assert.equal(Logic.validateConfrontationAnswer(4, ["e_permission", "e_cart", "e_route"]).ok, true);
+  assert.equal(Logic.validateConfrontationAnswer(5, ["e_lock", "e_hatch", "e_chaintrial"]).ok, true);
+  assert.equal(Logic.validateConfrontationAnswer(6, ["e_oldfile", "e_casualty", "e_hr"]).ok, true);
+  const legacyQ4 = Logic.validateConfrontationAnswer(4, ["e_cardlog", "e_cart"]);
+  assert.equal(legacyQ4.ok, false);
+  assert.equal(legacyQ4.category, "实施条件");
+  const padded = Logic.validateConfrontationAnswer(2, ["e_floor", "e_stream"]);
+  assert.equal(padded.issue, "irrelevant");
+  assert.match(padded.reason, /搬运连接/);
+});
+
+test("every confrontation route rejects each missing item", () => {
+  for (const [key, rule] of Object.entries(Logic.CONFRONTATION_ROUTES)) {
+    const step=Number(key.slice(1));
+    for (const route of rule.routes) {
+      for (const missing of route.all) {
+        const result=Logic.validateConfrontationAnswer(step,route.all.filter(id=>id!==missing));
+        assert.equal(result.ok,false,`${key}/${route.id} should require ${missing}`);
+        assert.equal(result.category,rule.category);
+      }
+    }
+  }
 });
 
 test("theory checker distinguishes conflicts, missing support and existing support", () => {
   const state = Logic.freshState();
   state.solved.push("p02");
   const result = Logic.evaluateTheory({ culprit: "许遥", place: "1102", method: "远程装置" }, state);
-  assert.equal(result.conflicts.length, 2);
-  assert.equal(result.missing.length, 1);
+  assert.equal(result.conflicts.length, 1, "remote device is not disproved before an exclusionary sweep");
+  assert.equal(result.missing.length, 2);
   assert.equal(result.canSubmitFailure, true);
+  state.evidence.push("e_remote_sweep");
+  const swept = Logic.evaluateTheory({ culprit: "许遥", place: "1102", method: "远程装置" }, state);
+  assert.equal(swept.conflicts.length, 2);
   const unfinished = Logic.evaluateTheory({ culprit: "周岚", place: "其他地点", method: "未知" }, state);
   assert.equal(unfinished.conflicts.length, 0);
   assert.equal(unfinished.missing.length, 3);
   state.solved.push("p05", "p10");
+  state.evidence.push("e_hatch", "e_chaintrial");
   const supported = Logic.evaluateTheory({ culprit: "周岚", place: "其他地点", method: "密室后逃离" }, state);
-  assert.equal(supported.support.length, 2);
+  assert.equal(supported.support.length, 3);
 });
 
 test("normalization preserves meta records and repairs malformed collections", () => {
@@ -115,14 +175,18 @@ test("normalization preserves meta records and repairs malformed collections", (
   assert.deepEqual(state.matrixAnswers, {});
 });
 
-test("v2/v3 saves migrate confrontation and completed matrix work into v4", () => {
+test("v2/v3 saves migrate matrix work and v4 in-progress finals reopen new reconstruction", () => {
   const state = Logic.normalizeState({ version: 3, matrixAnswers: Logic.MATRIX_ANSWERS, confrontation: { q1: "e_impact", q2: ["e_floor", "e_floor"] } });
-  assert.equal(state.version, 4);
+  assert.equal(state.version, 5);
   assert.deepEqual(state.confrontation.q1, ["e_impact"]);
   assert.deepEqual(state.confrontation.q2, ["e_floor"]);
   assert.deepEqual(state.exclusionAnswers, Logic.EXCLUSION_ANSWERS);
   assert.deepEqual(state.zhouConditions, Logic.ZHOU_CONDITIONS);
   assert.equal(state.interludeSeen, false);
+  const v4 = Logic.normalizeState({ version:4, solved:["p10","report"], confrontationStep:4, confrontation:{ q1:["e_impact","e_watch"],q2:["e_floor","e_cart"],q3:["e_cardlog","e_accountmap","e_shift"],q4:["e_permission"] } });
+  assert.equal(v4.solved.includes("report"),false);
+  assert.equal(v4.confrontationStep,2);
+  assert.deepEqual(Object.keys(v4.confrontation),["q1","q2"]);
 });
 
 if (process.exitCode) process.exit(process.exitCode);
