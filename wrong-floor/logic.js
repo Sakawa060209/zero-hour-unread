@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const SAVE_VERSION = 6;
+  const SAVE_VERSION = 7;
   const CORE_INTERVIEWS = ["guxue", "liangwen", "shenman", "zhoulan"];
   const CHAPTER_REQUIREMENTS = {
     2: ["p01"], 3: ["p02"], 4: ["p03"], 5: ["p04"],
@@ -17,7 +17,7 @@
     "e_stream", "e_location", "e_checkin", "e_shelf", "e_plan1102", "e_fixed",
     "e_plan2012", "e_plan2019", "e_impact", "e_floor", "e_window",
     "e_pipe", "e_cardlog", "e_cuffphoto", "e_permission", "e_oldfile", "e_watch", "e_waterlab",
-    "e_cardauth", "e_route", "e_hatch", "e_chaintrial", "e_remote_sweep", "e_trainingaccess"
+    "e_cardauth", "e_route", "e_hatch", "e_chain_tests", "e_chaintrial", "e_remote_sweep", "e_trainingaccess", "e_body_review"
   ];
 
   const MATRIX_ANSWERS = {
@@ -44,7 +44,21 @@
 
   const RECONSTRUCTION_ORDER = ["water", "card", "transfer", "chain", "leave"];
   const RECONSTRUCTION_SOURCES = {
-    water: "e_waterlab", card: "e_cardauth", transfer: "e_cart", chain: "e_lock", leave: "e_hatch"
+    water: "e_waterlab", card: "e_cardlog", transfer: "e_cart", chain: "e_lock", leave: "e_hatch"
+  };
+  const RECONSTRUCTION_SUPPORT = {
+    water: { value:"water-route", evidence:["e_route"], label:"20:43 管井通行记录" },
+    card: { value:"card-identity", evidence:["e_cardauth"], label:"口令与活体身份认证" },
+    transfer: { value:"transfer-route", evidence:["e_route", "e_access"], label:"服务区路径＋1102 正门记录" },
+    chain: { value:"chain-constraints", evidence:["e_chain_tests"], label:"门链替代顺序测试" },
+    leave: { value:"exit-route", evidence:["e_route", "e_chain_tests"], label:"21:49 离场记录＋替代顺序测试" }
+  };
+  const EVIDENCE_PROVENANCE = {
+    e_body: { stage:"raw", origins:["autopsy-initial"], supports:["injury", "broad-time"] },
+    e_watch: { stage:"raw", origins:["watch-device"], supports:["impact-time", "physiology"] },
+    e_impact: { stage:"raw", origins:["hidden-scene"], supports:["place", "injury-shape"] },
+    e_body_review: { stage:"derived", derivedFrom:["e_body", "e_watch", "e_impact"], supports:["death-window", "injury-place-link"] },
+    e_chaintrial: { stage:"derived", derivedFrom:["e_lock", "e_hatch", "e_route", "e_chain_tests"], supports:["locked-exit"] }
   };
 
   function freshState() {
@@ -55,9 +69,9 @@
       factAnswers: {}, testimonyAnswers: {}, matrixAnswers: {}, chainAnswers: {}, chainFiles: {},
       exclusionAnswers: {}, zhouConditions: [], matrixExpanded: [],
       report: {}, confrontation: {}, confrontationStep: 0,
-      confrontationDraft: {}, confrontationExpanded: {},
-      reconstructionOrder: ["transfer", "water", "leave", "card", "chain"], reconstructionSources: {},
-      notebookReturnChapter: null, legacyCaseRecord: null,
+      confrontationDraft: {}, confrontationExpanded: {}, confrontationOnlySelected: false,
+      reconstructionOrder: ["transfer", "water", "leave", "card", "chain"], reconstructionSources: {}, reconstructionSupport: {},
+      notebookReturn: null, legacyCaseRecord: null, legacyReconstruction: false,
       pinnedEvidence: [], currentTheory: {}, interludeSeen: false, hints: [], mistakes: 0, ending: null,
       meta: { endings: [], bestEvidence: 0 }, updatedAt: null
     };
@@ -79,18 +93,28 @@
       state[key] = uniqueStrings(state[key]);
     });
     state.pinnedEvidence = state.pinnedEvidence.filter(id => state.evidence.includes(id)).slice(0, 3);
-    ["interviews", "interviewData", "factAnswers", "testimonyAnswers", "matrixAnswers", "chainAnswers", "chainFiles", "exclusionAnswers", "report", "confrontation", "confrontationDraft", "confrontationExpanded", "reconstructionSources", "currentTheory"].forEach(key => {
+    ["interviews", "interviewData", "factAnswers", "testimonyAnswers", "matrixAnswers", "chainAnswers", "chainFiles", "exclusionAnswers", "report", "confrontation", "confrontationDraft", "confrontationExpanded", "reconstructionSources", "reconstructionSupport", "currentTheory"].forEach(key => {
       state[key] = safeObject(state[key]);
     });
     Object.keys(state.interviews).forEach(id => state.interviews[id] = Math.max(0, Math.min(3, Number(state.interviews[id]) || 0)));
-    state.confrontationStep = Math.max(0, Math.min(5, Number(state.confrontationStep) || 0));
+    state.confrontationStep = Math.max(0, Math.min(hasSolved(state,"p11") ? 6 : 5, Number(state.confrontationStep) || 0));
     Object.keys(state.confrontation).forEach(key => state.confrontation[key] = uniqueStrings(Array.isArray(state.confrontation[key]) ? state.confrontation[key] : [state.confrontation[key]]));
     Object.keys(state.confrontationDraft).forEach(key => state.confrontationDraft[key] = uniqueStrings(state.confrontationDraft[key]).slice(0, 3));
     Object.keys(state.confrontationExpanded).forEach(key => state.confrontationExpanded[key] = uniqueStrings(state.confrontationExpanded[key]));
     const order = uniqueStrings(state.reconstructionOrder);
     state.reconstructionOrder = order.length === RECONSTRUCTION_ORDER.length && RECONSTRUCTION_ORDER.every(id => order.includes(id)) ? order : [...base.reconstructionOrder];
-    state.notebookReturnChapter = Number.isInteger(Number(state.notebookReturnChapter)) && Number(state.notebookReturnChapter) >= 1 && Number(state.notebookReturnChapter) <= 9 ? Number(state.notebookReturnChapter) : null;
+    const oldReturnChapter = Number(raw.notebookReturnChapter);
+    const returnValue = safeObject(state.notebookReturn);
+    const returnChapter = Number(returnValue.chapter || (Number.isInteger(oldReturnChapter) ? oldReturnChapter : 0));
+    state.notebookReturn = returnChapter >= 1 && returnChapter <= 9 ? {
+      chapter:returnChapter,
+      anchor:typeof returnValue.anchor === "string" ? returnValue.anchor.slice(0,160) : "",
+      focus:typeof returnValue.focus === "string" ? returnValue.focus.slice(0,160) : "",
+      scrollY:Math.max(0,Number(returnValue.scrollY) || 0)
+    } : null;
     state.legacyCaseRecord = state.legacyCaseRecord && typeof state.legacyCaseRecord === "object" && !Array.isArray(state.legacyCaseRecord) ? state.legacyCaseRecord : null;
+    state.legacyReconstruction = Boolean(state.legacyReconstruction);
+    state.confrontationOnlySelected = Boolean(state.confrontationOnlySelected);
     state.interludeSeen = Boolean(state.interludeSeen);
     if (Number(raw.version || 0) < 4 && !hasSolved(state, "p10") && validateMatrix(state.matrixAnswers).ok) {
       state.exclusionAnswers = { ...EXCLUSION_ANSWERS };
@@ -108,8 +132,17 @@
       state.report.chainMethod = state.report.chainMethod || REPORT_ANSWERS.chainMethod;
     }
     if (Number(raw.version || 0) < 6 && state.evidence.includes("e_chaintrial") && !state.solved.includes("p10r")) state.solved.push("p10r");
+    if (Number(raw.version || 0) < 7) {
+      if (["e_body", "e_watch", "e_impact"].every(id => state.evidence.includes(id)) && hasSolved(state,"p05")) {
+        if (!state.evidence.includes("e_body_review")) state.evidence.push("e_body_review");
+        if (!state.solved.includes("p05r")) state.solved.push("p05r");
+      }
+      if (state.evidence.includes("e_chaintrial")) state.legacyReconstruction = true;
+      state.solved = state.solved.filter(id => id !== "p10r");
+    }
     if (hasSolved(state, "p12") && state.ending) {
-      const currentProofValid = [1,2,3,4,5].every(step => validateConfrontationAnswer(step, state.confrontation[`q${step}`] || []).ok);
+      const proofTotal = hasSolved(state,"p11") ? 6 : 5;
+      const currentProofValid = Array.from({length:proofTotal},(_,index)=>index+1).every(step => validateConfrontationAnswer(step, state.confrontation[`q${step}`] || []).ok);
       if (Number(raw.version || 0) < 5 || !currentProofValid) {
         if (!state.legacyCaseRecord) state.legacyCaseRecord = {
           saveVersion: Number(raw.version || 0),
@@ -136,9 +169,18 @@
   function chapterUnlocked(state, chapter) {
     if (chapter <= 1) return true;
     if (chapter === 8) return hasSolved(state, "p09") && keyInterviewCount(state) >= 2;
-    if (chapter === 9) return chapterUnlocked(state, 8) && (hasSolved(state, "p12") || (hasSolved(state, "p10") && hasSolved(state, "p10r") &&
-      ["e_waterlab", "e_cardauth", "e_route", "e_hatch", "e_chaintrial"].every(id => state.evidence.includes(id))));
+    if (chapter === 9) return chapterUnlocked(state, 8) && (hasSolved(state, "p12") || (hasSolved(state, "p10") && hasSolved(state,"p05r") &&
+      (hasSolved(state, "p10r") || state.legacyReconstruction) &&
+      ["e_body_review", "e_waterlab", "e_cardauth", "e_route", "e_hatch", "e_chaintrial"].every(id => state.evidence.includes(id))));
     return (CHAPTER_REQUIREMENTS[chapter] || []).every(id => hasSolved(state, id));
+  }
+
+  function chapterLockReason(state, chapter) {
+    if (chapter !== 9 || !chapterUnlocked(state,8)) return "完成前一阶段的关键推理后开放。";
+    if (!hasSolved(state,"p10")) return "条件交集尚未完成。";
+    if (!hasSolved(state,"p05r") || !state.evidence.includes("e_body_review")) return "伤情与设备联合复核尚未完成。";
+    if (!hasSolved(state,"p10r") && !state.legacyReconstruction) return "现场复原尚未完成。";
+    return "终章所需的路径或复原材料仍有缺项。";
   }
 
   function highestUnlockedChapter(state) {
@@ -214,19 +256,41 @@
     return { ok: fileWrong.length === 0 && actionResult.ok, fileWrong, actionWrong: actionResult.wrongCount };
   }
 
-  function validateSceneReconstruction(order, sources, state) {
+  function validateSceneReconstruction(order, sources, support, state) {
     const arranged = uniqueStrings(order);
     const safeSources = safeObject(sources);
-    const missingEvidence = Object.values(RECONSTRUCTION_SOURCES).filter(id => !state || !state.evidence.includes(id));
-    if (missingEvidence.length) return { ok:false, issue:"evidence", reason:"现场复原仍缺直接记录或痕迹来源，先完成对应调查。", missingEvidence };
+    const safeSupport = safeObject(support);
+    const requiredEvidence = [...new Set([...Object.values(RECONSTRUCTION_SOURCES), ...Object.values(RECONSTRUCTION_SUPPORT).flatMap(rule => rule.evidence)])];
+    const missingEvidence = requiredEvidence.filter(id => !state || !state.evidence.includes(id));
+    if (missingEvidence.length) {
+      const reason = missingEvidence.includes("e_route") ? "缺少服务区路径记录：当前只能确认工具或另一出口存在，不能形成带精确时刻的完整复原。" :
+        missingEvidence.includes("e_access") ? "缺少 1102 正门原始记录：搬运痕迹不能单独证明尸体在 21:41 经正门进入。" :
+        missingEvidence.includes("e_chain_tests") ? "门链替代顺序尚未实测：检修口痕迹不能单独证明挂链后如何离开。" :
+        "现场复原仍缺直接记录或痕迹来源，先完成对应调查。";
+      return { ok:false, issue:"evidence", reason, missingEvidence };
+    }
     const position = Object.fromEntries(arranged.map((id,index) => [id,index]));
     if (position.leave < position.chain) return { ok:false, issue:"order", reason:"离开后无法再从室内挂上门链；这条顺序不能保留锁闭状态。" };
-    if (position.transfer < position.card) return { ok:false, issue:"order", reason:"A047 尚未取出，尸体无法经 1102 正门完成这次搬运。" };
+    if (position.transfer < position.card) return { ok:false, issue:"order", reason:"你把正门搬运放在取卡之前，现有记录尚不能解释这次开门。" };
+    if (position.card < position.water) return { ok:false, issue:"order", reason:"渗漏实验把放水约束在 20:46，早于 21:19 取卡；当前顺序与时间记录冲突。" };
+    if (position.chain < position.transfer) return { ok:false, issue:"order", reason:"门链若在搬运前形成，尸体便无法再经 1102 正门进入。" };
     const firstWrong = RECONSTRUCTION_ORDER.find((id,index) => arranged[index] !== id);
-    if (firstWrong) return { ok:false, issue:"order", reason:"现有时间记录仍发生冲突：放水、取卡与正门搬运的先后关系需要重新核对。" };
+    if (firstWrong) return { ok:false, issue:"order", reason:"现有时间记录仍发生冲突：放水、取卡、搬运与锁闭离场的先后关系需要重新核对。" };
     const wrongSources = RECONSTRUCTION_ORDER.filter(id => safeSources[id] !== RECONSTRUCTION_SOURCES[id]);
-    if (wrongSources.length) return { ok:false, issue:"source", wrongSources, reason:`有 ${wrongSources.length} 个步骤尚未连接到能直接支持它的来源；行为、时间与物理状态不能互相替代。` };
-    return { ok:true, issue:null, reason:"五个步骤的顺序与来源均闭合。" };
+    if (wrongSources.length) return { ok:false, issue:"source", wrongSources, reason:`有 ${wrongSources.length} 个步骤尚未连接到能直接支持该行为的主要依据；权限、工具、时间与路径不能互相代替。` };
+    const wrongSupport = RECONSTRUCTION_ORDER.filter(id => safeSupport[id] !== RECONSTRUCTION_SUPPORT[id].value);
+    if (wrongSupport.length) {
+      const step=wrongSupport[0];
+      const reasons={
+        water:"渗漏实验支持约 20:46 放水，但还需同时段管井记录说明进入路径。",
+        card:"取卡日志固定时间与卡号，仍需活体认证落实是谁操作。",
+        transfer:"搬运车痕迹支持使用了搬运工具，但不能单独支持 21:41 经正门进入。",
+        chain:"原始门链状态要求人在室内挂链，仍需替代顺序测试排除门缝复位和前门离场。",
+        leave:"这条材料支持使用了检修口，但不能确定离开时间；还需 21:49 路径记录与替代顺序测试。"
+      };
+      return { ok:false, issue:"support", wrongSupport, reason:reasons[step] };
+    }
+    return { ok:true, issue:null, reason:"五个步骤的顺序、主要依据与时间/路径补充均闭合。" };
   }
 
   const REPORT_ANSWERS = {
@@ -238,7 +302,7 @@
 
   const REPORT_REQUIREMENTS = {
     deathPlace: { category: "地点连接", solved: ["p05"], evidence: ["e_impact", "e_body"] },
-    deathTime: { category: "死亡区间", evidence: ["e_watch", "e_body"] },
+    deathTime: { category: "死亡区间", solved:["p05r"], evidence: ["e_body_review"] },
     foundPlace: { category: "发现现场", evidence: ["e_lock"] },
     cardUser: { category: "身份归属", evidence: ["e_cardlog", "e_cardauth", "e_route"] },
     cufflink: { category: "物证时间", solved: ["p09"], evidence: ["e_cufflink", "e_cuffphoto"] },
@@ -259,10 +323,9 @@
   }
 
   const CONFRONTATION_ROUTES = {
-    q1: { category: "地点连接", relevant: ["e_impact", "e_body", "e_watch"], routes: [
-      { id: "autopsy", all: ["e_impact", "e_body"], explanation: "尸表固定伤情范围，1402 撞击痕固定碰撞位置；两处形态相互吻合。" },
-      { id: "watch", all: ["e_impact", "e_watch", "e_body"], explanation: "手表固定 19:16 的冲击与心率急降，法医把死亡判断缩至 19:16—19:18，1402 撞击痕再固定冲突地点。" }
-    ] },
+    q1: { category: "地点连接", relevant: ["e_impact", "e_body_review", "e_body", "e_watch"], routes: [
+      { id: "review", all: ["e_impact", "e_body_review"], explanation: "1402 撞击痕固定现场形态，联合复核把该形态与后枕伤相连，因此死亡地点连接成立。" }
+    ], supplements:{ e_body:"补强初检伤情基础", e_watch:"补强 19:16 冲击时间" } },
     q2: { category: "搬运连接", relevant: ["e_floor", "e_cart"], routes: [{ id: "cart", all: ["e_floor", "e_cart"], explanation: "地板拖痕证明尸体离开 1402，轮距、轮宽与磨损缺口把拖痕连接到物业搬运车。" }] },
     q3: { category: "身份归属", relevant: ["e_cardlog", "e_cardauth", "e_route"], routes: [{ id: "identity", all: ["e_cardlog", "e_cardauth", "e_route"], explanation: "原始日志固定 A047 的取用，活体认证落实取卡人，连续服务区记录把卡的后续路线连接到周岚。" }] },
     q4: { category: "实施条件", relevant: ["e_permission", "e_cart", "e_route"], routes: [{ id: "capability", all: ["e_permission", "e_cart", "e_route"], explanation: "权限审计证明可进入受控区域，搬运车痕迹证明工具被使用，服务区记录固定了实际通行窗口。" }] },
@@ -276,10 +339,21 @@
     const picks = uniqueStrings(evidenceIds);
     const irrelevant = picks.filter(id => !rule.relevant.includes(id));
     if (irrelevant.length) return { ok: false, category: rule.category, issue: "irrelevant", reason: `【${rule.category}】中含有不能直接回答当前质疑的材料；已保留选择，请展开摘要复核。` };
-    const route = rule.routes.find(candidate => candidate.all.length === picks.length && candidate.all.every(id => picks.includes(id)));
-    if (route) return { ok: true, category: rule.category, routeId: route.id, explanation: route.explanation };
+    const route = [...rule.routes].sort((a,b)=>b.all.length-a.all.length).find(candidate => candidate.all.every(id => picks.includes(id)));
+    if (route) {
+      const supplements=picks.filter(id=>!route.all.includes(id));
+      const supplementText=supplements.map(id=>rule.supplements && rule.supplements[id]).filter(Boolean);
+      const dependencyNotes=[];
+      picks.forEach(id=>{
+        const model=EVIDENCE_PROVENANCE[id];
+        if (model && model.stage === "derived" && (model.derivedFrom || []).some(source=>picks.includes(source))) {
+          dependencyNotes.push(id === "e_body_review" ? "联合复核已经引用初检、手表与现场比对；这些材料构成一条派生链，不重复计算为额外独立来源。" : "复原结论引用了所选原始材料，不重复计算为额外独立来源。");
+        }
+      });
+      const explanation=[route.explanation,supplementText.length ? `相关补强：${supplementText.join("；")}。` : "",...new Set(dependencyNotes)].filter(Boolean).join(" ");
+      return { ok:true, category:rule.category, routeId:route.id, supplements, dependencyNotes:[...new Set(dependencyNotes)], explanation };
+    }
     const closest = rule.routes.map(candidate => ({ ...candidate, missing: candidate.all.filter(id => !picks.includes(id)), matched: candidate.all.filter(id => picks.includes(id)).length })).sort((a,b) => b.matched - a.matched)[0];
-    if (closest && closest.missing.length === 0 && picks.length > closest.all.length) return { ok:false, category:rule.category, issue:"excess", reason:`【${rule.category}】混入了另一条等价路线的材料；保留一组能独立闭合的最小证据即可。` };
     return { ok: false, category: rule.category, issue: "missing", missing: closest ? closest.missing : [], reason: `【${rule.category}】还缺能完成这一连接的关键来源；已保留选择，可展开现有材料摘要继续判断。` };
   }
 
@@ -337,9 +411,9 @@
 
   return {
     SAVE_VERSION, CORE_EVIDENCE, CORE_INTERVIEWS, MATRIX_ANSWERS, MATRIX_AUTO, EXCLUSION_ANSWERS, ZHOU_CONDITIONS,
-    CHAIN_ANSWERS, CHAIN_FILE_ANSWERS, RECONSTRUCTION_ORDER, RECONSTRUCTION_SOURCES,
+    CHAIN_ANSWERS, CHAIN_FILE_ANSWERS, RECONSTRUCTION_ORDER, RECONSTRUCTION_SOURCES, RECONSTRUCTION_SUPPORT, EVIDENCE_PROVENANCE,
     REPORT_ANSWERS, REPORT_REQUIREMENTS, CONFRONTATION_ROUTES,
-    freshState, normalizeState, coreInterviewsComplete, keyInterviewCount, chapterUnlocked, highestUnlockedChapter,
+    freshState, normalizeState, coreInterviewsComplete, keyInterviewCount, chapterUnlocked, chapterLockReason, highestUnlockedChapter,
     evidenceProgress, validateEvidenceSet, validateAlibiCoverage, validateMatrix, candidateStatus, validateExclusionMatrix,
     validateResponsibilityChain, validateResponsibilityPuzzle, validateSceneReconstruction, validateReport, validateConfrontationAnswer,
     knowledgeComplete, determineEnding, caseResolutionState, evaluateTheory, recordEnding

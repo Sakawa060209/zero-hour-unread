@@ -57,6 +57,16 @@ async function solveThroughChapter6(page, checkSpoilers = false, touchMeasuremen
   }
 
   await solveChapter1(page);
+  if (checkSpoilers) {
+    await clickAction(page, "show-notebook");
+    const chapterOneNotebook=await page.locator("#app").innerText();
+    assert.equal(chapterOneNotebook.includes("1402 墙内结构件"),false,"chapter-one autopsy must not reveal the hidden scene");
+    assert.equal(chapterOneNotebook.includes("19:16—19:18"),false,"chapter-one autopsy must not reveal the precise death interval");
+    await clickAction(page,"show-timeline");
+    const chapterOneTimeline=await page.locator("#app").innerText();
+    assert.equal(chapterOneTimeline.includes("19:16—19:18"),false,"timeline must stay broad before the joint review");
+    assert.ok(chapterOneTimeline.includes("19:00—20:00"),"initial autopsy should expose only the broad interval");
+  }
   await goChapter(page, 2);
   await solveChapter2(page);
   await goChapter(page, 3);
@@ -112,6 +122,17 @@ async function solveThroughChapter6(page, checkSpoilers = false, touchMeasuremen
   await page.locator('input[name="p05-proof"][value="drag"]').check();
   await clickAction(page, "solve-p05");
   await assertText(page, "推论形成：1402 为第一现场");
+  if (checkSpoilers) {
+    await clickAction(page,"show-timeline");
+    const beforeReview=await page.locator("#app").innerText();
+    assert.equal(beforeReview.includes("19:16—19:18"),false,"scene discovery alone must not create the precise death interval");
+    await goChapter(page,5);
+  }
+  await clickAction(page,"run-body-review");
+  await assertText(page,"联合复核完成");
+  const reviewed=await page.evaluate(() => JSON.parse(localStorage.getItem("wrong-floor-save-v1")));
+  assert.equal(reviewed.evidence.includes("e_body_review"),true);
+  assert.equal(reviewed.solved.includes("p05r"),true);
   for (const floor of [11,12,14]) await page.locator(`[data-action="set-view-floor"][data-floor="${floor}"]`).click();
   await clickAction(page, "solve-p06");
 
@@ -196,15 +217,45 @@ async function solveReconstruction(page, touch = false) {
       if (current <= targetIndex) break;
       const control=page.locator(`[data-reconstruction-step="${wanted[targetIndex]}"] [data-action="move-reconstruction"][data-delta="-1"]`);
       if (touch) await control.tap(); else await control.click();
+      const movedFocus=await page.locator(`[data-reconstruction-step="${wanted[targetIndex]}"]`).evaluate(node=>node.contains(document.activeElement));
+      assert.equal(movedFocus,true,"sorting redraw must return focus to the moved step");
     }
   }
-  const sources={water:"e_waterlab",card:"e_cardauth",transfer:"e_cart",chain:"e_lock",leave:"e_hatch"};
+  await assertText(page,"已移至第");
+  const returnButton=page.locator('[data-reconstruction-step="water"] [data-action="show-notebook"]');
+  await returnButton.click();
+  await assertText(page,"返回第八章原位置");
+  await clickAction(page,"return-from-notebook");
+  await page.waitForFunction(() => document.activeElement?.matches('[data-reconstruction-step="water"] [data-action="show-notebook"]'));
+  assert.equal(await returnButton.evaluate(node=>document.activeElement===node),true,"notebook return should restore the reconstruction control");
+
+  const sources={water:"e_waterlab",card:"e_cardlog",transfer:"e_cart",chain:"e_lock",leave:"e_hatch"};
   for (const [step,evidence] of Object.entries(sources)) await page.locator(`[data-reconstruction-source="${step}"]`).selectOption(evidence);
+  const support={water:"water-route",card:"card-identity",transfer:"transfer-route",chain:"chain-constraints",leave:"exit-route"};
+  for (const [step,value] of Object.entries(support)) {
+    if (step !== "transfer") await page.locator(`[data-reconstruction-support="${step}"]`).selectOption(value);
+  }
+  await page.locator('[data-reconstruction-step="transfer"] [data-action="show-notebook"]').click();
+  await assertText(page,"搬运车轮迹");
+  await page.waitForFunction(() => document.activeElement?.matches('[data-notebook-evidence="e_cart"]'));
+  assert.equal(await page.locator('[data-notebook-evidence="e_cart"]').evaluate(node=>document.activeElement===node),true,"a reconstruction lookup should focus its selected primary source");
+  await clickAction(page,"return-from-notebook");
+  assert.equal(await page.locator('[data-reconstruction-source="transfer"]').inputValue(),"e_cart");
   await clickAction(page,"validate-reconstruction");
-  await assertText(page,"五个步骤的顺序与来源均闭合");
+  await assertText(page,"不能单独支持 21:41");
+  await page.locator('[data-reconstruction-support="transfer"]').selectOption("transfer-route");
+  await page.reload();
+  await clickAction(page,"continue-game");
+  await page.locator('[data-action="go-chapter"][data-chapter="8"]').click();
+  assert.equal(await page.locator('[data-reconstruction-source="card"]').inputValue(),"e_cardlog","reconstruction source draft must survive refresh");
+  assert.equal(await page.locator('[data-reconstruction-support="transfer"]').inputValue(),"transfer-route","reconstruction support draft must survive refresh");
+  await clickAction(page,"validate-reconstruction");
+  const reconstructionFeedback=await page.locator("#feedback-reconstruction").innerText();
+  assert.match(reconstructionFeedback,/顺序、主要依据与时间／路径补充/,`reconstruction feedback: ${reconstructionFeedback}`);
   const saved=await page.evaluate(() => JSON.parse(localStorage.getItem("wrong-floor-save-v1")));
   assert.equal(saved.solved.includes("p10r"),true);
   assert.equal(saved.evidence.includes("e_chaintrial"),true);
+  assert.equal(saved.reconstructionSupport.leave,"exit-route");
 }
 
 async function fillReport(page) {
@@ -219,7 +270,7 @@ async function confront(page, routes) {
   for (const route of routes) {
     for (const evidence of route) await page.locator(`input[name="confrontation-evidence"][value="${evidence}"]`).check();
     await clickAction(page, "validate-confrontation");
-    if (route.includes("e_watch")) await assertText(page, "死亡判断缩至 19:16—19:18");
+    if (route.includes("e_watch")) await assertText(page, "相关补强");
   }
 }
 
@@ -250,6 +301,12 @@ async function confront(page, routes) {
   await page.locator('[data-action="notebook-tab"][data-tab="deductions"]').click();
   await assertText(page, "DEDUCTION");
   await assertText(page, "关联证据");
+  const firstRelated=page.locator('[data-action="open-related-evidence"]').first();
+  const relatedTitle=await firstRelated.innerText();
+  await firstRelated.click();
+  await assertText(page,relatedTitle);
+  await assertText(page,"返回原推论");
+  await clickAction(page,"return-to-deduction");
   await page.locator('[data-action="notebook-tab"][data-tab="evidence"]').click();
   await page.locator("#notebook-person").selectOption("all");
   await assertText(page, "独立来源");
@@ -271,7 +328,7 @@ async function confront(page, routes) {
   await page.locator('[data-action="examine"][data-id="water-reenactment"]').click();
   await page.locator('[data-action="examine"][data-id="chain-reconstruction"]').click();
   await solveReconstruction(page);
-  await assertText(page,"现场复原材料齐备");
+  await assertText(page,"新版完成");
   await page.locator('[data-action="examine"][data-id="old-case-file"]').click();
   await solveOldCase(page);
 
@@ -297,9 +354,9 @@ async function confront(page, routes) {
   assert.equal(await page.locator('[data-report="deathPlace"]').inputValue(),"1402","report draft must survive notebook navigation and reload");
   assert.equal(await page.locator('[data-report="cardUser"]').inputValue(),"周岚");
   await fillReport(page);
-  await page.locator('input[name="confrontation-evidence"][value="e_body"]').locator("xpath=../..").locator('[data-action="toggle-proof-summary"]').click();
-  await assertText(page,"后枕部钝器样撞击");
-  await confront(page, [["e_impact", "e_watch", "e_body"], ["e_floor", "e_cart"]]);
+  await page.locator('input[name="confrontation-evidence"][value="e_body_review"]').locator("xpath=../..").locator('[data-action="toggle-proof-summary"]').click();
+  await assertText(page,"伤口形态与墙内结构件吻合");
+  await confront(page, [["e_impact", "e_body_review", "e_watch"], ["e_floor", "e_cart"]]);
   await page.locator('input[name="confrontation-evidence"][value="e_cardlog"]').check();
   await page.locator('input[name="confrontation-evidence"][value="e_cardauth"]').check();
   await page.locator('[data-proof-id="e_cardlog"] [data-action="toggle-proof-summary"]').click();
@@ -354,7 +411,7 @@ async function confront(page, routes) {
   await assertText(page, "正确的问题");
 
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("wrong-floor-save-v1")));
-  assert.equal(saved.version, 6);
+  assert.equal(saved.version, 7);
   assert.equal(saved.ending, "D");
   assert.equal(saved.interviews.xuyoa, undefined);
   assert.deepEqual(errors, []);
@@ -411,7 +468,7 @@ async function confront(page, routes) {
   await solveReconstruction(aPage,true);
   await goChapter(aPage, 9);
   await fillReport(aPage);
-  const summaryButton=aPage.locator('[data-proof-id="e_body"] [data-action="toggle-proof-summary"]');
+  const summaryButton=aPage.locator('[data-proof-id="e_body_review"] [data-action="toggle-proof-summary"]');
   await summaryButton.scrollIntoViewIfNeeded();
   const beforeSummaryScroll=await aPage.evaluate(()=>window.scrollY);
   await summaryButton.focus();
@@ -421,7 +478,11 @@ async function confront(page, routes) {
   assert.equal(await summaryButton.evaluate(node=>document.activeElement===node),true,"summary toggle must retain keyboard focus");
   assert.ok(Math.abs(afterSummaryScroll-beforeSummaryScroll)<8,"expanding a mobile evidence card must preserve scroll position");
   await aPage.locator('label:has(input[name="confrontation-evidence"][value="e_impact"])').tap();
-  await aPage.locator('label:has(input[name="confrontation-evidence"][value="e_body"])').tap();
+  await aPage.locator('label:has(input[name="confrontation-evidence"][value="e_body_review"])').tap();
+  await assertText(aPage,"已选 2/3");
+  await aPage.locator('[data-action="toggle-selected-proofs"]').tap();
+  assert.equal(await aPage.locator('[data-proof-id]').count(),2,"selected-only mode should shorten mobile proof review");
+  await aPage.locator('[data-action="toggle-selected-proofs"]').tap();
   await aPage.locator('[data-action="validate-confrontation"]').tap();
   await confront(aPage, [
     ["e_floor", "e_cart"],
@@ -434,6 +495,28 @@ async function confront(page, routes) {
   assert.equal(aSaved.ending, "A");
   assert.equal(aSaved.solved.includes("p11"), false);
 
+  const legacyContext=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
+  const legacyPage=await legacyContext.newPage();
+  await legacyPage.goto(baseURL);
+  await legacyPage.evaluate(() => {
+    localStorage.setItem("wrong-floor-save-v1",JSON.stringify({
+      version:6,started:true,chapter:8,screen:"home",interludeSeen:true,
+      solved:["p01","p02","p03","p04","p05","p06","p07","p08","p09","p10","p10r"],
+      evidence:["e_chaintrial"],interviews:{guxue:3,liangwen:3},
+      reconstructionOrder:["leave","chain","card","water","transfer"]
+    }));
+  });
+  await legacyPage.reload();
+  await clickAction(legacyPage,"continue-game");
+  await legacyPage.locator('[data-action="go-chapter"][data-chapter="8"]').click();
+  await assertText(legacyPage,"旧版复原记录已保留");
+  const legacyPreview=await legacyPage.locator(".reconstruction-preview").innerText();
+  assert.ok(legacyPreview.indexOf("离开") < legacyPreview.indexOf("放水"),"legacy UI should preserve its saved order rather than pretending the new task was completed");
+  assert.equal(await legacyPage.locator('[data-action="move-reconstruction"]:not([disabled])').count()>0,true,"legacy reconstruction should remain voluntarily playable");
+  const legacySaved=await legacyPage.evaluate(() => JSON.parse(localStorage.getItem("wrong-floor-save-v1")));
+  assert.equal(legacySaved.legacyReconstruction,true);
+  assert.equal(legacySaved.solved.includes("p10r"),false);
+
   const storageContext=await browser.newContext({viewport:{width:390,height:844}});
   await storageContext.addInitScript(() => { Storage.prototype.setItem=function(){ throw new DOMException("quota","QuotaExceededError"); }; });
   const storagePage=await storageContext.newPage();
@@ -445,6 +528,6 @@ async function confront(page, routes) {
   await assertText(storagePage,"P01");
   assert.deepEqual(storageErrors,[]);
 
-  await storageContext.close(); await aContext.close(); await failureContext.close(); await cContext.close(); await context.close(); await browser.close();
-  process.stdout.write("✓ v3.3 resumable disclosure, persistent drafts, player reconstruction, legacy saves and 320px touch flow\n");
+  await storageContext.close(); await legacyContext.close(); await aContext.close(); await failureContext.close(); await cContext.close(); await context.close(); await browser.close();
+  process.stdout.write("✓ v3.4 staged disclosure, constrained reconstruction, proof strengthening, migration and 320px focus flow\n");
 })().catch(error => { console.error(error); process.exit(1); });
