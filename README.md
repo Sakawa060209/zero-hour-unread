@@ -8,7 +8,7 @@
 | --- | --- | --- | --- |
 | 零点未读 | 根目录版 · 存档 v2 | [开始调查](https://sakawa060209.github.io/zero-hour-unread/) | 台风夜档案室密室、延迟消息与五人证词 |
 | 塞壬号：第七幕没有掌声 | v2.7.0 | [登上塞壬号](https://sakawa060209.github.io/zero-hour-unread/siren-seventh-act/) | 海上密室、证词污染、风暴压力与多路线举证 |
-| 错层 | v3.5 | [进入临江壹号](https://sakawa060209.github.io/zero-hour-unread/wrong-floor/) | 浅色界面、报告快照、门磁复原与分离行为人举证 |
+| 错层 | v3.6 | [进入临江壹号](https://sakawa060209.github.io/zero-hour-unread/wrong-floor/) | 现场勘查、渐进建筑图、犯罪时间轴与三段核心举证 |
 
 GitHub Pages 地址分别为仓库根路径、`/siren-seventh-act/` 与 `/wrong-floor/`，三款游戏互不覆盖存档。
 
