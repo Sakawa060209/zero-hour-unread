@@ -5,9 +5,9 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const SAVE_VERSION = 9;
-  const REPORT_RULE_VERSION = 9;
-  const PROOF_RULE_VERSION = 9;
+  const SAVE_VERSION = 10;
+  const REPORT_RULE_VERSION = 10;
+  const PROOF_RULE_VERSION = 10;
   const CORE_INTERVIEWS = ["guxue", "liangwen", "shenman", "zhoulan"];
   const CHAPTER_REQUIREMENTS = {
     2: ["p01"], 3: ["p02"], 4: ["p03"], 5: ["p04"],
@@ -40,6 +40,7 @@
     chengyi: "permission", shenman: "permission"
   };
   const ZHOU_CONDITIONS = ["know", "permission", "blank", "card"];
+  const CANDIDATE_IDS = ["xuyoa", "guxue", "liangwen", "chengyi", "shenman", "zhoulan"];
 
   const CHAIN_ANSWERS = {
     developer: "lower", supervisor: "approve", design: "sign", contractor: "execute"
@@ -47,6 +48,7 @@
   const CHAIN_FILE_ANSWERS = {
     developer: "file-a", supervisor: "file-b", design: "file-c", contractor: "file-d"
   };
+  const CHAIN_FILE_ORDER = ["file-a", "file-b", "file-c", "file-d"];
 
   const RECONSTRUCTION_ORDER = ["water", "card", "transfer", "chain", "leave"];
   const RECONSTRUCTION_SOURCES = {
@@ -68,8 +70,9 @@
   };
   const DIFFERENCE_CLASS_ANSWERS = {
     socket:"fixed", drag:"night", frame:"fixed", nail:"history", pipe:"fixed",
-    impact:"night", cup:"movable", curtain:"movable", lamp:"history", painting:"history"
+    impact:"night", cup:"movable", curtain:"movable", lamp:"unknown", painting:"unknown"
   };
+  const SCENE_CORE_EXAMINATIONS = ["door", "body-injury", "living-carpet", "bath"];
   const FACT_MARK_ANSWERS = {
     card:["person","entry"], door:["person","direction","carry"], sound:["room","fight"],
     dna:["night","alive"], cuff:["night","actor"], water:["opened","present"],
@@ -92,11 +95,12 @@
       evidence: [], examined: [], solved: [], deductions: [],
       interviews: {}, interviewData: {}, mirrorFound: [], mirrorProof: [], differenceClasses: {},
       factAnswers: {}, factMarks: {}, testimonyAnswers: {}, matrixAnswers: {}, chainAnswers: {}, chainFiles: {},
-      exclusionAnswers: {}, zhouConditions: [], matrixExpanded: [], matrixHintLevels: {},
+      exclusionAnswers: {}, zhouConditions: [], primaryCandidate: "", matrixExpanded: [], matrixHintLevels: {},
       report: {}, reportAdopted: [], reportRevision: 0, verifiedReport: null, caseArchive: null,
       confrontation: {}, confrontationVersions: {}, legacyProofRecords: {}, confrontationStep: 0,
       confrontationDraft: {}, confrontationExpanded: {}, confrontationOnlySelected: false,
       reconstructionOrder: ["transfer", "water", "leave", "card", "chain"], reconstructionSources: {}, reconstructionSupport: {}, reconstructionEvidence: {},
+      responsibilityOrder: ["file-c", "file-a", "file-d", "file-b"], oldCaseDiscovered: false,
       notebookReturn: null, legacyCaseRecord: null, legacyReconstruction: false,
       pinnedEvidence: [], currentTheory: {}, interludeSeen: false, hints: [], mistakes: 0, ending: null,
       meta: { endings: [], bestEvidence: 0 }, updatedAt: null
@@ -129,6 +133,10 @@
     state.factAnswers.viewedFloors = uniqueStrings(state.factAnswers.viewedFloors).filter(value => ["11","12","13","14","15"].includes(value));
     Object.keys(state.matrixHintLevels).forEach(key => state.matrixHintLevels[key] = Math.max(0,Math.min(3,Math.floor(Number(state.matrixHintLevels[key]) || 0))));
     Object.keys(state.reconstructionEvidence).forEach(key => state.reconstructionEvidence[key] = uniqueStrings(state.reconstructionEvidence[key]));
+    state.primaryCandidate = CANDIDATE_IDS.includes(state.primaryCandidate) ? state.primaryCandidate : "";
+    const responsibilityOrder = uniqueStrings(state.responsibilityOrder);
+    state.responsibilityOrder = responsibilityOrder.length === CHAIN_FILE_ORDER.length && CHAIN_FILE_ORDER.every(id => responsibilityOrder.includes(id)) ? responsibilityOrder : [...base.responsibilityOrder];
+    state.oldCaseDiscovered = Boolean(state.oldCaseDiscovered || OLD_CASE_EVIDENCE.some(id => state.evidence.includes(id)) || hasSolved(state,"p11") || state.ending === "D");
     state.reportRevision = Math.max(0, Math.floor(Number(state.reportRevision) || 0));
     state.verifiedReport = state.verifiedReport && typeof state.verifiedReport === "object" && !Array.isArray(state.verifiedReport) ? {
       answers: safeObject(state.verifiedReport.answers),
@@ -291,6 +299,25 @@
         state.solved = state.solved.filter(id => id !== "p12");
       }
     }
+    if (sourceVersion < 10) {
+      if (state.differenceClasses.lamp === "history") state.differenceClasses.lamp = "unknown";
+      if (state.differenceClasses.painting === "history") state.differenceClasses.painting = "unknown";
+      if (hasSolved(state,"p10")) state.primaryCandidate = "zhoulan";
+      if (hasSolved(state,"p11")) state.responsibilityOrder = [...CHAIN_FILE_ORDER];
+      if (!state.ending && state.verifiedReport && Number(state.verifiedReport.ruleVersion) === 9 &&
+        reportsEqual(state.verifiedReport.answers,state.report) && validateReport(state.verifiedReport.answers,state).ok) {
+        state.verifiedReport.ruleVersion = REPORT_RULE_VERSION;
+      }
+      if (!state.ending) {
+        Object.entries(state.confrontation).forEach(([key,picks]) => {
+          const step=Number(key.replace(/^q/,""));
+          if (Number(state.confrontationVersions[key]) === 9 && picks.length <= 3 &&
+            picks.every(id => state.evidence.includes(id)) && validateConfrontationAnswer(step,picks).ok) {
+            state.confrontationVersions[key] = PROOF_RULE_VERSION;
+          }
+        });
+      }
+    }
     if (hasSolved(state, "p11") && Object.keys(state.chainFiles).length === 0) state.chainFiles = { ...CHAIN_FILE_ANSWERS };
     state.meta = {
       endings: uniqueStrings(state.meta && state.meta.endings),
@@ -361,8 +388,17 @@
     return {
       found, total: MAIN_EVIDENCE.length, percent: Math.round(found / MAIN_EVIDENCE.length * 100),
       supplementalFound, supplementalTotal:SUPPLEMENTAL_EVIDENCE.length,
-      oldCaseFound, oldCaseTotal:OLD_CASE_EVIDENCE.length
+      oldCaseFound, oldCaseTotal:OLD_CASE_EVIDENCE.length,
+      oldCaseDiscovered:Boolean(state.oldCaseDiscovered)
     };
+  }
+
+  function sceneCoreReady(stateOrExamined) {
+    const state = stateOrExamined && !Array.isArray(stateOrExamined) ? stateOrExamined : null;
+    if (state && hasSolved(state,"p01")) return true;
+    const examined = new Set(uniqueStrings(state ? state.examined : stateOrExamined));
+    const bodyReady = examined.has("body") || (examined.has("body-injury") && examined.has("living-carpet"));
+    return examined.has("door") && examined.has("bath") && bodyReady;
   }
 
   function validateEvidenceSet(selected, relevant, routes) {
@@ -396,11 +432,13 @@
     return "unknown";
   }
 
-  function validateExclusionMatrix(exclusions, conditions, state) {
+  function validateExclusionMatrix(exclusions, conditions, state, candidate = state && state.primaryCandidate) {
     const wrongPeople = Object.keys(EXCLUSION_ANSWERS).filter(id => exclusions[id] !== EXCLUSION_ANSWERS[id]);
     const picked = uniqueStrings(conditions);
     const missingConditions = ZHOU_CONDITIONS.filter(id => !picked.includes(id));
     const extraConditions = picked.filter(id => !ZHOU_CONDITIONS.includes(id));
+    const selectedCandidate = CANDIDATE_IDS.includes(candidate) ? candidate : "";
+    const candidateError = !selectedCandidate ? "missing" : selectedCandidate === "zhoulan" ? null : "incorrect";
     const unsupportedPeople = state ? Object.entries(EXCLUSION_ANSWERS).filter(([id, reason]) => {
       if (reason === "alibi") return !hasSolved(state, "p02");
       if (reason === "permission") return candidateStatus(state, id, "permission") !== "no";
@@ -408,8 +446,8 @@
     }).map(([id]) => id) : [];
     const unsupportedConditions = state ? ZHOU_CONDITIONS.filter(field => candidateStatus(state, "zhoulan", field) !== "yes") : [];
     return {
-      ok: wrongPeople.length === 0 && missingConditions.length === 0 && extraConditions.length === 0 && unsupportedPeople.length === 0 && unsupportedConditions.length === 0,
-      wrongPeople, missingConditions, unsupportedPeople, unsupportedConditions
+      ok: !candidateError && wrongPeople.length === 0 && missingConditions.length === 0 && extraConditions.length === 0 && unsupportedPeople.length === 0 && unsupportedConditions.length === 0,
+      selectedCandidate, candidateError, wrongPeople, missingConditions, unsupportedPeople, unsupportedConditions
     };
   }
 
@@ -418,10 +456,12 @@
     return { ok: wrong.length === 0, wrongCount: wrong.length };
   }
 
-  function validateResponsibilityPuzzle(files, answers) {
+  function validateResponsibilityPuzzle(files, answers, order) {
     const fileWrong = Object.keys(CHAIN_FILE_ANSWERS).filter(key => files[key] !== CHAIN_FILE_ANSWERS[key]);
     const actionResult = validateResponsibilityChain(answers);
-    return { ok: fileWrong.length === 0 && actionResult.ok, fileWrong, actionWrong: actionResult.wrongCount };
+    const arranged = uniqueStrings(order);
+    const orderWrong = Array.isArray(order) ? CHAIN_FILE_ORDER.filter((id,index) => arranged[index] !== id) : [];
+    return { ok: fileWrong.length === 0 && actionResult.ok && orderWrong.length === 0, fileWrong, actionWrong: actionResult.wrongCount, orderWrong };
   }
 
   function validateDimensionReadings(photo,plan) {
@@ -436,7 +476,9 @@
     const classified=discovered.filter(id => typeof safe[id] === "string" && safe[id]);
     const wrong=classified.filter(id => safe[id] !== DIFFERENCE_CLASS_ANSWERS[id]);
     const correct=classified.filter(id => safe[id] === DIFFERENCE_CLASS_ANSWERS[id]);
-    return { ok:correct.length >= 6 && wrong.length === 0, discovered, classified, correct, wrong, missing:discovered.filter(id => !safe[id]) };
+    const unknownCorrect=correct.filter(id => DIFFERENCE_CLASS_ANSWERS[id] === "unknown");
+    const missingUncertain=unknownCorrect.length === 0;
+    return { ok:correct.length >= 6 && wrong.length === 0 && !missingUncertain, discovered, classified, correct, wrong, unknownCorrect, missingUncertain, missing:discovered.filter(id => !safe[id]) };
   }
 
   function validateFactCleanup(marks) {
@@ -693,8 +735,9 @@
   }
 
   function reasoningRating(state) {
+    if (state && state.ending === "B") return "错误结案";
     const revisions=Math.max(0,Number(state && state.mistakes) || 0);
-    return revisions <= 2 ? "S" : revisions <= 6 ? "A" : "B";
+    return revisions <= 2 ? "严谨" : revisions <= 6 ? "稳健" : "需复核";
   }
 
   function evaluateTheory(theory, state) {
@@ -747,11 +790,11 @@
   }
 
   return {
-    SAVE_VERSION, REPORT_RULE_VERSION, PROOF_RULE_VERSION, CORE_EVIDENCE, MAIN_EVIDENCE, SUPPLEMENTAL_EVIDENCE, OLD_CASE_EVIDENCE, CORE_INTERVIEWS, MATRIX_ANSWERS, MATRIX_AUTO, EXCLUSION_ANSWERS, ZHOU_CONDITIONS,
-    CHAIN_ANSWERS, CHAIN_FILE_ANSWERS, RECONSTRUCTION_ORDER, RECONSTRUCTION_SOURCES, RECONSTRUCTION_SUPPORT, RECONSTRUCTION_EVIDENCE, DIFFERENCE_CLASS_ANSWERS, FACT_MARK_ANSWERS, EVIDENCE_PROVENANCE,
+    SAVE_VERSION, REPORT_RULE_VERSION, PROOF_RULE_VERSION, CORE_EVIDENCE, MAIN_EVIDENCE, SUPPLEMENTAL_EVIDENCE, OLD_CASE_EVIDENCE, CORE_INTERVIEWS, MATRIX_ANSWERS, MATRIX_AUTO, EXCLUSION_ANSWERS, ZHOU_CONDITIONS, CANDIDATE_IDS,
+    CHAIN_ANSWERS, CHAIN_FILE_ANSWERS, CHAIN_FILE_ORDER, RECONSTRUCTION_ORDER, RECONSTRUCTION_SOURCES, RECONSTRUCTION_SUPPORT, RECONSTRUCTION_EVIDENCE, DIFFERENCE_CLASS_ANSWERS, SCENE_CORE_EXAMINATIONS, FACT_MARK_ANSWERS, EVIDENCE_PROVENANCE,
     REPORT_ANSWERS, REPORT_AUTO_KEYS, REPORT_REQUIREMENTS, CONFRONTATION_ROUTES,
     freshState, normalizeState, coreInterviewsComplete, keyInterviewCount, chapterUnlocked, chapterLockReason, highestUnlockedChapter,
-    evidenceProgress, validateEvidenceSet, validateAlibiCoverage, validateMatrix, candidateStatus, validateExclusionMatrix,
+    evidenceProgress, sceneCoreReady, validateEvidenceSet, validateAlibiCoverage, validateMatrix, candidateStatus, validateExclusionMatrix,
     validateResponsibilityChain, validateResponsibilityPuzzle, validateDimensionReadings, validateDifferenceClasses, validateFactCleanup, validateSceneReconstruction, canonicalReport, prefillReport, validateReport,
     reportStatus, markReportEdited, markReportAdopted, verifyReportSnapshot, isCurrentReportVerified, validateConfrontationAnswer,
     proofTotal, validateStoredProof, storedProofStatus, allCurrentProofsComplete, nextConfrontationStep, canSubmitDisclosure,

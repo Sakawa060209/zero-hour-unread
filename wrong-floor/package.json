@@ -1,6 +1,6 @@
 {
   "name": "wrong-floor-mystery",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "private": true,
   "description": "《错层》静态网页推理游戏的回归测试入口",
   "scripts": {

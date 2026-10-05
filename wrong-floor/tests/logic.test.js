@@ -64,16 +64,27 @@ function completeReconstructionState() {
   return { state, links };
 }
 
-test("v3.6 constants and fresh state use the ten-chapter schema", () => {
-  assert.equal(Logic.SAVE_VERSION, 9);
-  assert.equal(Logic.REPORT_RULE_VERSION, 9);
-  assert.equal(Logic.PROOF_RULE_VERSION, 9);
+test("v3.7 constants and fresh state use the ten-chapter schema", () => {
+  assert.equal(Logic.SAVE_VERSION, 10);
+  assert.equal(Logic.REPORT_RULE_VERSION, 10);
+  assert.equal(Logic.PROOF_RULE_VERSION, 10);
   const state = Logic.freshState();
   assert.equal(Logic.chapterUnlocked(state, 1), true);
   assert.equal(Logic.chapterUnlocked(state, 2), false);
   assert.equal(Logic.highestUnlockedChapter(state), 1);
   assert.deepEqual(state.reportAdopted, []);
   assert.deepEqual(state.reconstructionEvidence, {});
+  assert.equal(state.primaryCandidate, "");
+  assert.equal(state.oldCaseDiscovered, false);
+  assert.deepEqual(state.responsibilityOrder, ["file-c", "file-a", "file-d", "file-b"]);
+});
+
+test("P01 core gate requires the lock, injury and carpet observations, and bathroom", () => {
+  assert.equal(Logic.sceneCoreReady(["door", "body-injury", "living-carpet", "bath"]), true);
+  assert.equal(Logic.sceneCoreReady(["door", "body-injury", "bath"]), false);
+  assert.equal(Logic.sceneCoreReady(["door", "living-carpet", "bath"]), false);
+  assert.equal(Logic.sceneCoreReady(["access", "body-injury", "living-carpet", "bath"]), false);
+  assert.equal(Logic.sceneCoreReady(["door", "body", "bath"]), true, "legacy combined body observation remains compatible");
 });
 
 test("chapter eight, reconstruction chapter and final chapter have distinct gates", () => {
@@ -108,17 +119,23 @@ test("P03 accepts measurement tolerance but still requires an eleven-to-fifteen 
   assert.equal(Logic.validateDimensionReadings(85, 94).ok, false);
 });
 
-test("P05 requires six correctly classified discoveries and rejects a wrong class", () => {
-  const found = ["socket", "drag", "frame", "nail", "pipe", "impact", "cup"];
-  const sixCorrect = Object.fromEntries(found.slice(0, 6).map(id => [id, Logic.DIFFERENCE_CLASS_ANSWERS[id]]));
+test("P05 requires six correct classes including an explicit currently-unknown finding", () => {
+  const found = ["socket", "drag", "frame", "nail", "pipe", "impact", "lamp", "painting"];
+  const sixCorrect = Object.fromEntries(["socket", "drag", "frame", "nail", "pipe", "lamp"].map(id => [id, Logic.DIFFERENCE_CLASS_ANSWERS[id]]));
   assert.equal(Logic.validateDifferenceClasses(found, sixCorrect).ok, true);
-  const fiveCorrect = { ...sixCorrect };
-  delete fiveCorrect.impact;
+  assert.deepEqual(Logic.validateDifferenceClasses(found, sixCorrect).unknownCorrect, ["lamp"]);
+  const fiveCorrect = { ...sixCorrect }; delete fiveCorrect.pipe;
   assert.equal(Logic.validateDifferenceClasses(found, fiveCorrect).ok, false);
-  const wrong = { ...sixCorrect, cup: "fixed" };
+  const noUncertainty = Object.fromEntries(["socket", "drag", "frame", "nail", "pipe", "impact"].map(id => [id, Logic.DIFFERENCE_CLASS_ANSWERS[id]]));
+  const missingUncertain = Logic.validateDifferenceClasses(found, noUncertainty);
+  assert.equal(missingUncertain.ok, false);
+  assert.equal(missingUncertain.missingUncertain, true);
+  const wrong = { ...sixCorrect, painting: "history" };
   const result = Logic.validateDifferenceClasses(found, wrong);
   assert.equal(result.ok, false);
-  assert.deepEqual(result.wrong, ["cup"]);
+  assert.deepEqual(result.wrong, ["painting"]);
+  assert.equal(Logic.DIFFERENCE_CLASS_ANSWERS.lamp, "unknown");
+  assert.equal(Logic.DIFFERENCE_CLASS_ANSWERS.painting, "unknown");
 });
 
 test("P07 evidence cleanup checks every unsupported interpretation fragment", () => {
@@ -167,6 +184,8 @@ test("candidate cells derive from their own evidence and permission never proves
 
   state.evidence.push("e_accountmap", "e_trainingaccess", "e_shift", "e_cardlog", "e_cardauth", "e_route");
   for (const field of Logic.ZHOU_CONDITIONS) assert.equal(Logic.candidateStatus(state, "zhoulan", field), "yes", field);
+  assert.equal(Logic.validateExclusionMatrix(Logic.EXCLUSION_ANSWERS, Logic.ZHOU_CONDITIONS, state).candidateError, "missing");
+  state.primaryCandidate = "zhoulan";
   assert.equal(Logic.validateExclusionMatrix(Logic.EXCLUSION_ANSWERS, Logic.ZHOU_CONDITIONS, state).ok, true);
 
   for (const [removed, field] of [["e_permission", "permission"], ["e_accountmap", "know"], ["e_trainingaccess", "know"], ["e_shift", "blank"], ["e_cardauth", "card"]]) {
@@ -181,10 +200,16 @@ test("exclusion table checks player-authored reasons and all four selected condi
   const wrongReason = { ...Logic.EXCLUSION_ANSWERS, guxue: "time" };
   assert.deepEqual(Logic.validateExclusionMatrix(wrongReason, Logic.ZHOU_CONDITIONS).wrongPeople, ["guxue"]);
   assert.deepEqual(Logic.validateExclusionMatrix(Logic.EXCLUSION_ANSWERS, ["know", "permission"]).missingConditions, ["blank", "card"]);
+  const wrongCandidate = Logic.validateExclusionMatrix(Logic.EXCLUSION_ANSWERS, Logic.ZHOU_CONDITIONS, undefined, "xuyoa");
+  assert.equal(wrongCandidate.candidateError, "incorrect");
+  assert.equal(wrongCandidate.ok, false);
 });
 
 test("old-case puzzle checks both document-to-actor and actor-to-action links", () => {
   assert.equal(Logic.validateResponsibilityPuzzle(Logic.CHAIN_FILE_ANSWERS, Logic.CHAIN_ANSWERS).ok, true);
+  assert.equal(Logic.validateResponsibilityPuzzle(Logic.CHAIN_FILE_ANSWERS, Logic.CHAIN_ANSWERS, Logic.CHAIN_FILE_ORDER).ok, true);
+  const wrongOrder = ["file-b", "file-a", "file-c", "file-d"];
+  assert.deepEqual(Logic.validateResponsibilityPuzzle(Logic.CHAIN_FILE_ANSWERS, Logic.CHAIN_ANSWERS, wrongOrder).orderWrong, ["file-a", "file-b"]);
   const wrongFile = { ...Logic.CHAIN_FILE_ANSWERS, design: "file-d" };
   assert.deepEqual(Logic.validateResponsibilityPuzzle(wrongFile, Logic.CHAIN_ANSWERS).fileWrong, ["design"]);
   assert.equal(Logic.validateResponsibilityPuzzle(Logic.CHAIN_FILE_ANSWERS, { ...Logic.CHAIN_ANSWERS, design: "approve" }).actionWrong, 1);
@@ -204,6 +229,11 @@ test("P10-R checks chronology and all evidence attached beneath each action", ()
   assert.ok(supportResult.missing.includes("e_doorcontact"));
   const unrelated = { ...links, water: [...links.water, "e_stream"] };
   assert.equal(Logic.validateSceneReconstruction(Logic.RECONSTRUCTION_ORDER, unrelated, state).issue, "unrelated");
+  state.evidence.push("e_watch", "e_cufflink", "e_pipe", "e_struggle");
+  const temptingButWrong = { ...links, transfer: [...links.transfer, "e_watch"] };
+  const distractorResult = Logic.validateSceneReconstruction(Logic.RECONSTRUCTION_ORDER, temptingButWrong, state);
+  assert.equal(distractorResult.issue, "unrelated");
+  assert.deepEqual(distractorResult.unrelated, ["e_watch"]);
   const missingRouteState = { ...state, evidence: state.evidence.filter(id => id !== "e_route") };
   const missingRoute = Logic.validateSceneReconstruction(Logic.RECONSTRUCTION_ORDER, links, missingRouteState);
   assert.equal(missingRoute.issue, "evidence");
@@ -395,21 +425,55 @@ test("theory checker distinguishes conflicts, missing support and existing suppo
   assert.equal(Logic.evaluateTheory({ culprit: "周岚", place: "其他地点", method: "密室后逃离" }, state).support.length, 3);
 });
 
-test("reasoning revisions produce S, A and B ratings without changing endings", () => {
-  assert.equal(Logic.reasoningRating({ mistakes: 0 }), "S");
-  assert.equal(Logic.reasoningRating({ mistakes: 2 }), "S");
-  assert.equal(Logic.reasoningRating({ mistakes: 3 }), "A");
-  assert.equal(Logic.reasoningRating({ mistakes: 7 }), "B");
+test("reasoning revisions use Chinese judgments and Ending B is always an erroneous closure", () => {
+  assert.equal(Logic.reasoningRating({ mistakes: 0 }), "严谨");
+  assert.equal(Logic.reasoningRating({ mistakes: 2 }), "严谨");
+  assert.equal(Logic.reasoningRating({ mistakes: 3 }), "稳健");
+  assert.equal(Logic.reasoningRating({ mistakes: 7 }), "需复核");
+  assert.equal(Logic.reasoningRating({ mistakes: 0, ending: "B" }), "错误结案");
 });
 
 test("normalization repairs malformed collections and clamps to chapter ten", () => {
-  const state = Logic.normalizeState({ version: 9, chapter: 99, evidence: ["e_lock", "e_lock", 7], solved: null, reportAdopted: ["deathPlace", "deathPlace", 3], meta: { endings: ["B", "B"], bestEvidence: "12" } });
+  const state = Logic.normalizeState({ version: 10, chapter: 99, evidence: ["e_lock", "e_lock", 7], solved: null, reportAdopted: ["deathPlace", "deathPlace", 3], primaryCandidate:"nobody", responsibilityOrder:["file-a","file-a"], meta: { endings: ["B", "B"], bestEvidence: "12" } });
   assert.equal(state.chapter, 10);
   assert.deepEqual(state.evidence, ["e_lock"]);
   assert.deepEqual(state.solved, []);
   assert.deepEqual(state.reportAdopted, ["deathPlace"]);
   assert.deepEqual(state.meta.endings, ["B"]);
   assert.equal(state.meta.bestEvidence, 12);
+  assert.equal(state.primaryCandidate, "");
+  assert.deepEqual(state.responsibilityOrder, ["file-c", "file-a", "file-d", "file-b"]);
+});
+
+test("sealed-record discovery stays hidden in fresh saves and migrates from real legacy progress", () => {
+  assert.equal(Logic.normalizeState({ version:10 }).oldCaseDiscovered, false);
+  assert.equal(Logic.normalizeState({ version:9, evidence:["e_oldfile"] }).oldCaseDiscovered, true);
+  assert.equal(Logic.normalizeState({ version:9, solved:["p11"] }).oldCaseDiscovered, true);
+  assert.equal(Logic.normalizeState({ version:9, ending:"D" }).oldCaseDiscovered, true);
+  const explicit = Logic.normalizeState({ version:10, oldCaseDiscovered:true });
+  assert.equal(explicit.oldCaseDiscovered, true);
+  assert.equal(Logic.evidenceProgress(explicit).oldCaseDiscovered, true);
+});
+
+test("v3.6 progress migrates candidate, uncertainty classes, responsibility order and compatible snapshots", () => {
+  const raw = disclosureReadyState({ oldCase:true });
+  raw.version = 9;
+  raw.primaryCandidate = "";
+  raw.differenceClasses = { lamp:"history", painting:"history" };
+  raw.responsibilityOrder = ["file-c","file-a","file-d","file-b"];
+  raw.verifiedReport.ruleVersion = 9;
+  Object.keys(raw.confrontationVersions).forEach(key => raw.confrontationVersions[key] = 9);
+  const migrated = Logic.normalizeState(raw);
+  assert.equal(migrated.version, 10);
+  assert.equal(migrated.primaryCandidate, "zhoulan");
+  assert.equal(migrated.differenceClasses.lamp, "unknown");
+  assert.equal(migrated.differenceClasses.painting, "unknown");
+  assert.deepEqual(migrated.responsibilityOrder, Logic.CHAIN_FILE_ORDER);
+  assert.equal(migrated.verifiedReport.ruleVersion, 10);
+  assert.ok(Object.values(migrated.confrontationVersions).every(version => version === 10));
+  assert.equal(Logic.isCurrentReportVerified(migrated), true);
+  assert.equal(Logic.allCurrentProofsComplete(migrated), true);
+  assert.deepEqual(Logic.normalizeState(migrated), migrated);
 });
 
 test("v8 in-progress final saves move to chapter ten and archive every old proof", () => {
@@ -429,7 +493,7 @@ test("v8 in-progress final saves move to chapter ten and archive every old proof
     reconstructionEvidence: {}
   };
   const migrated = Logic.normalizeState(raw);
-  assert.equal(migrated.version, 9);
+  assert.equal(migrated.version, 10);
   assert.equal(migrated.chapter, 10);
   assert.equal(migrated.screen, "chapter-10");
   assert.equal(migrated.notebookReturn.chapter, 10);
@@ -438,7 +502,7 @@ test("v8 in-progress final saves move to chapter ten and archive every old proof
   assert.equal(migrated.solved.includes("p12"), false);
   for (let step = 1; step <= 6; step += 1) assert.deepEqual(migrated.legacyProofRecords[`v8-q${step}`].evidence, raw.confrontation[`q${step}`]);
   assert.deepEqual(migrated.reportAdopted, Logic.REPORT_AUTO_KEYS);
-  assert.equal(migrated.verifiedReport.ruleVersion, 9);
+  assert.equal(migrated.verifiedReport.ruleVersion, 10);
   assert.equal(Logic.isCurrentReportVerified(migrated), true);
   for (const step of Logic.RECONSTRUCTION_ORDER) assert.deepEqual(migrated.reconstructionEvidence[step], Logic.RECONSTRUCTION_EVIDENCE[step]);
   assert.deepEqual(Logic.normalizeState(migrated), migrated);
