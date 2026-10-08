@@ -1201,3 +1201,44 @@ summary:focus-visible,
   .scene-1102::before,.scene-1102::after,.scene-observation-panel::after,.blueprint-overlay::before,.overlay-sheet::before,.undiscovered-record::after,.device-return::before{display:none!important}
   .scene-zone:focus-visible,.scene-zone.is-examined,.blueprint.selected,.difference.found,.packet-file.reviewed,.candidate-choice .choice:has(input:checked),.responsibility-timeline .selected,.map-evidence-link:focus-visible{outline:3px solid Highlight!important;outline-offset:2px}
 }
+
+/* v3.8 · 玩家主动核验与移动端短路径 */
+.overlay-hotspots{position:absolute;inset:0;z-index:6;pointer-events:none}
+.overlay-hotspot{position:absolute;min-width:44px;min-height:38px;padding:6px 9px;color:var(--blue);border:1px solid var(--blue);background:#fff;box-shadow:0 4px 12px rgba(37,101,122,.16);pointer-events:auto;cursor:pointer;font-size:.7rem;font-weight:800}
+.overlay-hotspot.door{left:43%;top:59%}.overlay-hotspot.wall{left:45%;top:19%}.overlay-hotspot.shaft{right:8%;top:42%}
+.overlay-hotspot.marked{color:#fff;border-color:var(--accent-strong);background:var(--accent-strong)}
+.overlay-controls small{display:block;width:100%;margin-top:8px;color:var(--muted)}
+.mirror-view-controls{display:none;gap:6px;margin:12px 0}.mirror-view-controls .btn{flex:1;min-width:0;padding-inline:8px}
+.mirror-focus{display:flex;gap:12px;align-items:baseline;margin:10px 0;padding:11px 14px;border-left:4px solid var(--blue);background:var(--blue-soft)}
+.mirror-focus span{color:var(--muted);font-size:.84rem}
+.sight-records{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 18px}.sight-records span{padding:5px 8px;border:1px solid var(--accent-dim);background:var(--accent-soft);font-size:.72rem}
+.candidate-worksheet{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0}
+.candidate-worksheet>article{min-width:0;padding:15px;border:1px solid var(--line);border-top:4px solid var(--blue);background:#fff}
+.candidate-worksheet h3{margin:0 0 12px;font:700 1.1rem var(--serif)}
+.worksheet-row{display:grid;grid-template-columns:minmax(130px,1fr) minmax(112px,.7fr) minmax(180px,1.2fr);gap:7px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.worksheet-row span{font-size:.78rem}.worksheet-row select{width:100%;min-width:0;padding:8px;border:1px solid var(--control-line);background:#fff}
+.worksheet-verified{display:flex;justify-content:space-between;gap:12px;margin:18px 0;padding:12px 15px;border:1px solid var(--accent-dim);background:var(--accent-soft)}
+.worksheet-verified span{color:var(--muted);font-size:.8rem}
+.crime-reconstruction-map{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;margin:22px 0;padding:18px;border:1px solid #91a9a1;background:linear-gradient(90deg,#eef7f8,#fff 48%,#f4f8ee)}
+.map-floor{display:grid;gap:8px;min-height:140px;padding:16px;border:1px solid var(--line);background:#fff;box-shadow:0 6px 16px rgba(34,54,47,.08)}
+.map-floor strong{font-family:var(--serif);font-size:1.15rem}.map-floor span{padding:6px 8px;border-left:3px solid var(--blue);background:var(--blue-soft);font-size:.78rem}
+.map-route{display:grid;gap:5px;text-align:center;color:var(--muted)}.map-route b{color:var(--accent-strong)}
+.report-argument{grid-column:1/-1;margin-top:20px;padding:18px;border:1px solid #c7b276;border-top:5px solid #a38025;background:#fffaf0}
+.report-argument h3{font-family:var(--serif)}
+
+@media (max-width:700px){
+  .mirror-view-controls{display:flex}
+  .mirror-stage{position:relative;display:block;min-height:390px;overflow:hidden}
+  .mirror-stage .room-scene{position:absolute;inset:7px}
+  .mirror-mode-1102 .compare-right,.mirror-mode-1402 .compare-left{visibility:hidden;pointer-events:none}
+  .mirror-mode-blend .compare-left{opacity:.42;filter:saturate(.55)}
+  .mirror-mode-blend .compare-right{background-color:transparent;mix-blend-mode:multiply}
+  .candidate-worksheet{grid-template-columns:1fr}
+  .worksheet-row{grid-template-columns:1fr 1fr}.worksheet-row>span{grid-column:1/-1}
+  .crime-reconstruction-map{grid-template-columns:1fr}.map-route{transform:none}.worksheet-verified{display:grid}
+}
+
+@media (max-width:420px){
+  .overlay-hotspot.wall{left:34%}.overlay-hotspot.door{left:34%}.overlay-hotspot.shaft{right:4%}
+  .mirror-focus{display:grid;gap:4px}.worksheet-row{grid-template-columns:1fr}.worksheet-row>span{grid-column:auto}
+}

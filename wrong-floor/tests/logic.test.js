@@ -64,9 +64,9 @@ function completeReconstructionState() {
   return { state, links };
 }
 
-test("v3.7 constants and fresh state use the ten-chapter schema", () => {
-  assert.equal(Logic.SAVE_VERSION, 10);
-  assert.equal(Logic.REPORT_RULE_VERSION, 10);
+test("v3.8 constants and fresh state use the ten-chapter schema", () => {
+  assert.equal(Logic.SAVE_VERSION, 11);
+  assert.equal(Logic.REPORT_RULE_VERSION, 11);
   assert.equal(Logic.PROOF_RULE_VERSION, 10);
   const state = Logic.freshState();
   assert.equal(Logic.chapterUnlocked(state, 1), true);
@@ -117,9 +117,20 @@ test("P03 accepts measurement tolerance but still requires an eleven-to-fifteen 
   assert.equal(Logic.validateDimensionReadings(80, 96).ok, false);
   assert.equal(Logic.validateDimensionReadings(83, 99).ok, false);
   assert.equal(Logic.validateDimensionReadings(85, 94).ok, false);
+  assert.equal(Logic.validateDimensionEndpoints({ photoA:14, photoB:97, planA:9, planB:105 }).ok, true);
+  const shifted=Logic.validateDimensionEndpoints({ photoA:24, photoB:107, planA:19, planB:115 });
+  assert.equal(shifted.ok, false, "equal distances at the wrong locations must fail");
+  assert.equal(shifted.wrongPoints.length, 4);
 });
 
-test("P05 requires six correct classes including an explicit currently-unknown finding", () => {
+test("P04 requires all overlay modes and direct structure markings", () => {
+  const changes=["number","door","wall-kept","pipe"];
+  assert.equal(Logic.validateBlueprintComparison("2012","2019",["old","current","blend"],["door","wall","shaft"],changes).ok,true);
+  assert.equal(Logic.validateBlueprintComparison("2012","2019",["old","current"],["door","wall","shaft"],changes).ok,false);
+  assert.equal(Logic.validateBlueprintComparison("2012","2019",["old","current","blend"],["door"],changes).ok,false);
+});
+
+test("P05 accepts six certain correct classes and rewards explicit uncertainty separately", () => {
   const found = ["socket", "drag", "frame", "nail", "pipe", "impact", "lamp", "painting"];
   const sixCorrect = Object.fromEntries(["socket", "drag", "frame", "nail", "pipe", "lamp"].map(id => [id, Logic.DIFFERENCE_CLASS_ANSWERS[id]]));
   assert.equal(Logic.validateDifferenceClasses(found, sixCorrect).ok, true);
@@ -128,14 +139,22 @@ test("P05 requires six correct classes including an explicit currently-unknown f
   assert.equal(Logic.validateDifferenceClasses(found, fiveCorrect).ok, false);
   const noUncertainty = Object.fromEntries(["socket", "drag", "frame", "nail", "pipe", "impact"].map(id => [id, Logic.DIFFERENCE_CLASS_ANSWERS[id]]));
   const missingUncertain = Logic.validateDifferenceClasses(found, noUncertainty);
-  assert.equal(missingUncertain.ok, false);
+  assert.equal(missingUncertain.ok, true);
   assert.equal(missingUncertain.missingUncertain, true);
+  assert.equal(missingUncertain.uncertaintyBonus, false);
+  assert.equal(Logic.validateDifferenceClasses(found, sixCorrect).uncertaintyBonus, true);
   const wrong = { ...sixCorrect, painting: "history" };
   const result = Logic.validateDifferenceClasses(found, wrong);
   assert.equal(result.ok, false);
   assert.deepEqual(result.wrong, ["painting"]);
   assert.equal(Logic.DIFFERENCE_CLASS_ANSWERS.lamp, "unknown");
   assert.equal(Logic.DIFFERENCE_CLASS_ANSWERS.painting, "unknown");
+});
+
+test("P06 only counts explicitly recorded projections", () => {
+  assert.equal(Logic.validateSightComparison([],"14").ok,false);
+  assert.equal(Logic.validateSightComparison(["11","13","14"],"14").ok,true);
+  assert.equal(Logic.validateSightComparison(["11","13","15"],"14").ok,false);
 });
 
 test("P07 evidence cleanup checks every unsupported interpretation fragment", () => {
@@ -195,6 +214,18 @@ test("candidate cells derive from their own evidence and permission never proves
   }
 });
 
+test("candidate worksheet requires player judgments and cell-specific sources", () => {
+  const state=Logic.freshState();
+  state.solved.push("p02");
+  state.evidence.push("e_checkin","e_stream","e_location","e_permission","e_accountmap","e_trainingaccess","e_shift","e_cardlog","e_cardauth","e_route");
+  const answer=Logic.buildCandidateWorksheetAnswer(state);
+  assert.equal(Logic.validateCandidateWorksheet(answer.judgments,answer.sources,state).ok,true);
+  const permissionCannotProveCard={...answer.sources,guxue_card:"permission"};
+  assert.deepEqual(Logic.validateCandidateWorksheet(answer.judgments,permissionCannotProveCard,state).unsupportedSources,["guxue_card"]);
+  const forcedCertainty={...answer.judgments,guxue_card:"no"};
+  assert.deepEqual(Logic.validateCandidateWorksheet(forcedCertainty,answer.sources,state).wrongCells,["guxue_card"]);
+});
+
 test("exclusion table checks player-authored reasons and all four selected conditions", () => {
   assert.equal(Logic.validateExclusionMatrix({}, []).ok, false);
   const wrongReason = { ...Logic.EXCLUSION_ANSWERS, guxue: "time" };
@@ -215,7 +246,7 @@ test("old-case puzzle checks both document-to-actor and actor-to-action links", 
   assert.equal(Logic.validateResponsibilityPuzzle(Logic.CHAIN_FILE_ANSWERS, { ...Logic.CHAIN_ANSWERS, design: "approve" }).actionWrong, 1);
 });
 
-test("P10-R checks chronology and all evidence attached beneath each action", () => {
+test("P10-R checks chronology, core evidence and relevant supplements", () => {
   const { state, links } = completeReconstructionState();
   assert.equal(Logic.validateSceneReconstruction(Logic.RECONSTRUCTION_ORDER, links, state).ok, true);
   const leftBeforeChain = ["water", "card", "transfer", "leave", "chain"];
@@ -223,10 +254,13 @@ test("P10-R checks chronology and all evidence attached beneath each action", ()
   const transferBeforeCard = ["water", "transfer", "card", "chain", "leave"];
   assert.match(Logic.validateSceneReconstruction(transferBeforeCard, links, state).reason, /取卡之前/);
 
-  const missingLink = { ...links, transfer: links.transfer.filter(id => id !== "e_doorcontact") };
+  const missingLink = { ...links, transfer: links.transfer.filter(id => id !== "e_access") };
   const supportResult = Logic.validateSceneReconstruction(Logic.RECONSTRUCTION_ORDER, missingLink, state);
   assert.equal(supportResult.issue, "support");
-  assert.ok(supportResult.missing.includes("e_doorcontact"));
+  assert.ok(supportResult.missing.includes("e_access"));
+  const reinforced=Object.fromEntries(Object.keys(links).map(step=>[step,[...links[step],...(Logic.RECONSTRUCTION_SUPPLEMENTS[step]||[])]]));
+  state.evidence.push(...Object.values(Logic.RECONSTRUCTION_SUPPLEMENTS).flat());
+  assert.equal(Logic.validateSceneReconstruction(Logic.RECONSTRUCTION_ORDER,reinforced,state).completeness,"reinforced");
   const unrelated = { ...links, water: [...links.water, "e_stream"] };
   assert.equal(Logic.validateSceneReconstruction(Logic.RECONSTRUCTION_ORDER, unrelated, state).issue, "unrelated");
   state.evidence.push("e_watch", "e_cufflink", "e_pipe", "e_struggle");
@@ -237,7 +271,7 @@ test("P10-R checks chronology and all evidence attached beneath each action", ()
   const missingRouteState = { ...state, evidence: state.evidence.filter(id => id !== "e_route") };
   const missingRoute = Logic.validateSceneReconstruction(Logic.RECONSTRUCTION_ORDER, links, missingRouteState);
   assert.equal(missingRoute.issue, "evidence");
-  assert.match(missingRoute.reason, /不能形成带精确时刻/);
+  assert.match(missingRoute.reason, /直接记录|痕迹来源|路径/);
 });
 
 test("report requires players to adopt every supported automatic conclusion", () => {
@@ -464,12 +498,12 @@ test("v3.6 progress migrates candidate, uncertainty classes, responsibility orde
   raw.verifiedReport.ruleVersion = 9;
   Object.keys(raw.confrontationVersions).forEach(key => raw.confrontationVersions[key] = 9);
   const migrated = Logic.normalizeState(raw);
-  assert.equal(migrated.version, 10);
+  assert.equal(migrated.version, 11);
   assert.equal(migrated.primaryCandidate, "zhoulan");
   assert.equal(migrated.differenceClasses.lamp, "unknown");
   assert.equal(migrated.differenceClasses.painting, "unknown");
   assert.deepEqual(migrated.responsibilityOrder, Logic.CHAIN_FILE_ORDER);
-  assert.equal(migrated.verifiedReport.ruleVersion, 10);
+  assert.equal(migrated.verifiedReport.ruleVersion, 11);
   assert.ok(Object.values(migrated.confrontationVersions).every(version => version === 10));
   assert.equal(Logic.isCurrentReportVerified(migrated), true);
   assert.equal(Logic.allCurrentProofsComplete(migrated), true);
@@ -493,7 +527,7 @@ test("v8 in-progress final saves move to chapter ten and archive every old proof
     reconstructionEvidence: {}
   };
   const migrated = Logic.normalizeState(raw);
-  assert.equal(migrated.version, 10);
+  assert.equal(migrated.version, 11);
   assert.equal(migrated.chapter, 10);
   assert.equal(migrated.screen, "chapter-10");
   assert.equal(migrated.notebookReturn.chapter, 10);
@@ -502,7 +536,7 @@ test("v8 in-progress final saves move to chapter ten and archive every old proof
   assert.equal(migrated.solved.includes("p12"), false);
   for (let step = 1; step <= 6; step += 1) assert.deepEqual(migrated.legacyProofRecords[`v8-q${step}`].evidence, raw.confrontation[`q${step}`]);
   assert.deepEqual(migrated.reportAdopted, Logic.REPORT_AUTO_KEYS);
-  assert.equal(migrated.verifiedReport.ruleVersion, 10);
+  assert.equal(migrated.verifiedReport.ruleVersion, 11);
   assert.equal(Logic.isCurrentReportVerified(migrated), true);
   for (const step of Logic.RECONSTRUCTION_ORDER) assert.deepEqual(migrated.reconstructionEvidence[step], Logic.RECONSTRUCTION_EVIDENCE[step]);
   assert.deepEqual(Logic.normalizeState(migrated), migrated);

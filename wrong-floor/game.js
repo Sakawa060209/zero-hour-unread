@@ -14,8 +14,8 @@
     null,
     { title: "1102", subtitle: "所有门都锁着。但我们先别急着寻找出口。", objective: "完成现场勘查，判断“密室”问题是否成立。" },
     { title: "不可能的嫌疑人", subtitle: "最强的动机，最完整的不在场证明。两者都是真的。", objective: "用独立来源覆盖在场时段，检验是否存在往返窗口。" },
-    { title: "十三厘米", subtitle: "房间不会作证，尺寸会。", objective: "复核现场照片与 1102 户型图的空间关系。" },
-    { title: "不存在的房间", subtitle: "从一张图上消失，不等于从建筑里消失。", objective: "比对五版建筑档案，找出被注销的空间。" },
+    { title: "照片中的误差", subtitle: "房间不会作证，尺寸会。", objective: "复核现场照片与 1102 户型图的空间关系。" },
+    { title: "缺页的建筑图", subtitle: "图纸的删改与建筑本身并不是一回事。", objective: "比对五版建筑档案，核对被删去的内容。" },
     { title: "镜室", subtitle: "两个几乎相同的房间，只有一个记得那晚发生了什么。", objective: "对照 1102 与隐蔽房间，确认第一现场。" },
     { title: "21:41", subtitle: "记录从未说谎。说得太多的是我们。", objective: "剥离门禁与证言中的解释，重建可验证事实。" },
     { title: "所有人都说了真话", subtitle: "没有一句假话，却共同拼出了一个错误现场。", objective: "完成至少两名关键证人的“询问→外查→回审”闭环，并厘清袖扣时间。" },
@@ -226,7 +226,7 @@
         <div class="landing-copy">
           <div class="eyebrow">澄江市刑侦支队 · 案件分析终端</div>
           <h1 class="display">错层</h1>
-           <div class="landing-deck">WRONG FLOOR · V3.7 · 2026/10/05</div>
+           <div class="landing-deck">WRONG FLOOR · V3.8 · 2026/10/08</div>
           <p class="landing-quote">“如果所有证据都是真的，为什么结论会是假的？”</p>
           <div class="landing-actions">
             <button class="btn primary" data-action="${hasSave ? "continue-game" : "new-game"}">${hasSave ? "继续调查" : "接受委托"}</button>
@@ -270,14 +270,15 @@
       <div class="grid">
         ${CHAPTERS.slice(1).map((chapter, index) => {
           const no = index + 1;
+          const presented = chapterPresentation(no);
           const unlocked = Logic.chapterUnlocked(state, no);
            const solvedCount = state.solved.filter(id => ({1:["p01"],2:["p02"],3:["p03"],4:["p04"],5:["p05","p05r","p06"],6:["p07","p08"],7:["p09"],8:["p10"],9:["p10r"],10:["p11","report","p12"]}[no] || []).includes(id)).length;
            const requiredDone = Number(state.solved.includes("p10")) + Number(state.evidence.includes("e_struggle"));
            const progressText = no === 8 ? `主案归属 ${requiredDone}/2` : no === 9 ? `现场复原 ${state.solved.includes("p10r") ? "已完成" : state.legacyReconstruction ? "旧版记录" : "待完成"}` : no === 10 ? `报告与举证 ${solvedCount}/3${state.oldCaseDiscovered ? ` · 封存卷宗${state.solved.includes("p11") ? "已查" : "调查中"}` : ""}` : solvedCount ? `完成 ${solvedCount}` : "";
           return `<article class="card ${unlocked ? "chapter-reveal" : "locked"}">
              <small>${unlocked ? (no === 10 ? "FINAL" : `CHAPTER ${String(no).padStart(2,"0")}`) : `INVESTIGATION ${String(no).padStart(2,"0")}`}</small>
-            <h3>${unlocked ? escapeHtml(chapter.title) : `第${toChinese(no)}调查阶段 · 未解锁`}</h3>
-            <p>${unlocked ? escapeHtml(chapter.subtitle) : escapeHtml(Logic.chapterLockReason(state,no))}</p>
+            <h3>${unlocked ? escapeHtml(presented.title) : `第${toChinese(no)}调查阶段 · 未解锁`}</h3>
+            <p>${unlocked ? escapeHtml(presented.subtitle) : escapeHtml(Logic.chapterLockReason(state,no))}</p>
             <div class="card-actions"><button class="btn" data-action="go-chapter" data-chapter="${no}" ${unlocked ? "" : "disabled"}>${no < highest ? "重新查看" : no === highest ? "进入调查" : "未开放"}</button><span class="meta">${progressText}</span></div>
           </article>`;
         }).join("")}
@@ -292,12 +293,19 @@
     updateHeader();
   }
 
+  function chapterPresentation(no) {
+    const chapter=CHAPTERS[no];
+    if (no === 3 && state.solved.includes("p03")) return { ...chapter, title:"十三厘米" };
+    if (no === 4 && state.solved.includes("p04")) return { ...chapter, title:"不存在的房间", subtitle:"从图纸上消失，不等于从建筑里消失。" };
+    return chapter;
+  }
+
   function renderChapter(no) {
     if (!Logic.chapterUnlocked(state, no)) { toast("该阶段尚未开放"); return; }
     topbar.hidden = false;
     state.chapter = no;
     state.screen = `chapter-${no}`;
-    const chapter = CHAPTERS[no];
+    const chapter = chapterPresentation(no);
     app.innerHTML = `<section class="screen">
       <header class="chapter-hero">
          <div><div class="chapter-no">${no === 10 ? "FINAL REPORT" : `CHAPTER ${String(no).padStart(2,"0")}`}</div><h1 class="chapter-title">${escapeHtml(chapter.title)}</h1><p class="chapter-brief">${escapeHtml(chapter.subtitle)}</p></div>
@@ -404,15 +412,15 @@
     const phase = Number(state.factAnswers.p03Phase || 1);
     const explanation = state.factAnswers.p03Explanation;
     const hypothesisNames = { furniture:"家具移动", perspective:"摄影透视", room:"房间并非 1102" };
-    const adjusters = kind => `<span class="measure-adjust" role="group" aria-label="${kind === "photo" ? "现场照片" : "图纸"} B 点微调"><button type="button" data-action="adjust-measure" data-point="${kind}-b" data-delta="-1" ${phase > 1 ? "disabled" : ""}>B −1</button><button type="button" data-action="adjust-measure" data-point="${kind}-b" data-delta="1" ${phase > 1 ? "disabled" : ""}>B +1</button></span>`;
+    const adjusters = kind => `<span class="measure-adjust" role="group" aria-label="${kind === "photo" ? "现场照片" : "图纸"}端点微调">${[["a",-1],["a",1],["b",-1],["b",1]].map(([point,delta])=>`<button type="button" data-action="adjust-measure" data-point="${kind}-${point}" data-delta="${delta}" ${phase > 1 ? "disabled" : ""}>${point.toUpperCase()} ${delta<0?"−":"+"}1</button>`).join("")}</span>`;
     const endpoints = (kind,a,b,max) => `<div class="endpoint-ruler" data-endpoint-ruler="${kind}"><label><span><b>A</b> 固定墙边缘</span><input type="range" min="0" max="${max}" step="1" value="${a}" data-measure-point="${kind}-a" ${phase > 1 ? "disabled" : ""}></label><label><span><b>B</b> 书柜定位边缘</span><input type="range" min="0" max="${max}" step="1" value="${b}" data-measure-point="${kind}-b" ${phase > 1 ? "disabled" : ""}></label></div>`;
     return `${state.solved.includes("p03") ? '<div class="deduction-banner"><strong>推理成立 · P03 十三厘米</strong><span>测量只建立异常；固定结构复核排除了家具与透视，最终才裁决房间身份。</span></div>' : ""}<div class="measure-stage">
       <div>${investigationCard("measure-photo", "现场比例照片", "地砖边长 60 厘米。用图上标尺估算书柜右缘与固定墙之间的距离。", [])}</div>
       <div>${investigationCard("measure-plan", "1102 竣工户型图", "用图纸刻度复核固定墙体与书柜定位线，不要直接相信家具摆位。", [])}</div>
     </div>
     <div class="measure-stage" aria-label="尺寸复核示意"><div class="plan-box photo-measure"><div class="tile-grid"></div><div class="plan-shelf"></div><span class="measure-note">每格地砖 60 cm</span><div class="ruler-control"><span>分别拖动 A、B 到照片中的固定墙与书柜右缘</span><output id="photo-output">${photo} cm</output>${endpoints("photo",photoA,photoB,120)}${adjusters("photo")}<span class="range-labels"><b>0</b><b>60</b><b>120 cm</b></span></div></div><div class="plan-box plan-measure"><div class="plan-room"><div class="plan-shelf"></div><div class="scale-line"><span>0</span><span>50</span><span>100cm</span></div><span class="measure-note">图纸比例 1:50 · 尺寸线可读</span><div class="ruler-control"><span>分别拖动 A、B 到固定墙体与书柜定位线</span><output id="plan-output">${plan} cm</output>${endpoints("plan",planA,planB,110)}${adjusters("plan")}<span class="range-labels"><b>0</b><b>50</b><b>100 cm</b></span></div></div></div>
-    <section class="puzzle staged-puzzle"><div class="puzzle-tag">P03 · 十三厘米 · ${Math.min(phase,4)}/4</div><h2>${phase === 1 ? "第一步：记录带容差的测量结果" : phase === 2 ? "第二步：暂存一个解释假说" : phase === 3 ? "第三步：选择独立固定结构复核" : "第四步：根据复核结果裁决假说"}</h2><div class="measurement-result">现场约 <strong id="result-photo">${photo}</strong> cm · 图纸 <strong id="result-plan">${plan}</strong> cm · 差值约 <strong id="result-diff">${Math.abs(plan-photo)}</strong> cm</div>
-      ${phase === 1 ? `<p class="muted">允许每项 ±2 cm 的读数误差；最终判断看约 13 cm 的差值，而不是要求手指停在唯一像素。</p><button class="btn primary" data-action="lock-p03-measure" ${ready ? "" : "disabled"}>记录尺寸异常</button>` : ""}
+    <section class="puzzle staged-puzzle"><div class="puzzle-tag">P03 · ${state.solved.includes("p03")?"十三厘米":"双端点测量"} · ${Math.min(phase,4)}/4</div><h2>${phase === 1 ? "第一步：分别定位两端，再记录带容差的读数" : phase === 2 ? "第二步：暂存一个解释假说" : phase === 3 ? "第三步：选择独立固定结构复核" : "第四步：根据复核结果裁决假说"}</h2><div class="measurement-result">现场约 <strong id="result-photo">${photo}</strong> cm · 图纸 <strong id="result-plan">${plan}</strong> cm · 差值约 <strong id="result-diff">${Math.abs(plan-photo)}</strong> cm</div>
+      ${phase === 1 ? `<p class="muted">A、B 两端都需落在图中对应边缘，各允许 ±2 cm 的定位误差；只有差值正确、端点错误仍不能通过。</p><button class="btn primary" data-action="lock-p03-measure" ${ready ? "" : "disabled"}>记录尺寸异常</button>` : ""}
       ${phase === 2 ? `<p class="muted">这里不判对错。先留下工作假说，再让下一份固定结构材料决定它能否成立。</p><div class="choices">${[["furniture","A · 家具被移动"],["perspective","B · 摄影透视造成误差"],["room","C · 房间不是 1102"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p03-explanation" value="${v}" ${explanation === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="lock-p03-explanation">暂存假说并继续复核</button>` : ""}
       ${phase === 3 ? `<p class="muted">当前暂存：${hypothesisNames[explanation] || "未选择"}。选择一项不会随家具移动、又能检验透视误差的来源。</p><div class="choices">${[["curtain","窗帘角度"],["window","窗框中线与暖气管距离"],["table","桌上杯子位置"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p03-fixed" value="${v}"><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="run-p03-fixed">执行固定结构复核</button>` : ""}
       ${phase >= 4 ? `<div class="document"><h3>固定结构复核结果</h3><p>窗框中线与暖气管的相对位置同样偏离 1102 竣工图。移动家具不能改变两者；单纯透视也应保留两套固定结构的比例关系。</p><p>先前假说：<strong>${hypothesisNames[explanation] || "未记录"}</strong></p></div><div class="choices">${[["furniture","家具移动仍能解释全部异常"],["perspective","摄影透视仍能解释全部异常"],["room","照片中的房间不是 1102"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p03-conclusion" value="${v}"><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="solve-p03">形成空间推论</button>` : ""}<div class="feedback" id="feedback-p03"></div>
@@ -424,20 +432,22 @@
     return `<div class="mini-plan ${id >= "2019" ? "changed" : ""}"><span>1401</span><span class="middle">${middle}</span><span>1403</span><i class="door">门位</i><i class="shaft">管井</i></div>`;
   }
 
-  function blueprintOverlay(mode) {
-    return `<div class="blueprint-overlay mode-${mode}" aria-label="2012施工图与2019物业图叠合"><div class="overlay-sheet overlay-2012"><small>2012 · 施工图</small><span class="overlay-room left">1401</span><span class="overlay-room middle">1402</span><span class="overlay-room right">1403</span><i class="overlay-door">正式门位</i><i class="overlay-shaft">管井</i></div><div class="overlay-sheet overlay-2019"><small>2019 · 物业图</small><span class="overlay-room merged">1401 / 1403 合并</span><i class="overlay-seal">房号注销</i><i class="overlay-shaft">管井</i></div><div class="overlay-legend"><span>青线 · 固定结构</span><span>红章 · 被注销标注</span></div></div><div class="overlay-controls" role="group" aria-label="图纸叠合模式"><strong class="overlay-control-label">图纸叠合模式</strong>${[["old","只看 2012"],["blend","叠合比较"],["current","只看 2019"]].map(([id,label])=>`<button type="button" class="btn ${mode===id ? "primary" : ""}" data-action="set-blueprint-overlay" data-mode="${id}">${label}</button>`).join("")}</div>`;
+  function blueprintOverlay(mode, observations=[]) {
+    const marked=id=>observations.includes(id);
+    return `<div class="blueprint-overlay mode-${mode}" aria-label="2012施工图与2019物业图叠合"><div class="overlay-sheet overlay-2012"><small>2012 · 施工图</small><span class="overlay-room left">1401</span><span class="overlay-room middle">1402</span><span class="overlay-room right">1403</span><i class="overlay-door">正式门位</i><i class="overlay-shaft">管井</i></div><div class="overlay-sheet overlay-2019"><small>2019 · 物业图</small><span class="overlay-room merged">1401 / 1403 合并</span><i class="overlay-seal">房号注销</i><i class="overlay-shaft">管井</i></div>${mode==="blend"?`<div class="overlay-hotspots" aria-label="在叠合图上标记差异"><button class="overlay-hotspot door ${marked("door")?"marked":""}" data-action="observe-blueprint-feature" data-feature="door">${marked("door")?"✓ ":""}门位</button><button class="overlay-hotspot wall ${marked("wall")?"marked":""}" data-action="observe-blueprint-feature" data-feature="wall">${marked("wall")?"✓ ":""}承重边界</button><button class="overlay-hotspot shaft ${marked("shaft")?"marked":""}" data-action="observe-blueprint-feature" data-feature="shaft">${marked("shaft")?"✓ ":""}管井</button></div>`:""}<div class="overlay-legend"><span>青线 · 固定结构</span><span>红章 · 被注销标注</span></div></div><div class="overlay-controls" role="group" aria-label="图纸叠合模式"><strong class="overlay-control-label">图纸叠合模式</strong>${[["old","只看 2012"],["blend","叠合比较"],["current","只看 2019"]].map(([id,label])=>`<button type="button" class="btn ${mode===id ? "primary" : ""}" data-action="set-blueprint-overlay" data-mode="${id}">${label}</button>`).join("")}<small>已查看 ${(state.factAnswers.p04OverlayViews||[]).length}/3 种模式 · 已标记 ${observations.length}/3 处结构</small></div>`;
   }
 
   function chapter4() {
     const phase = Number(state.factAnswers.p04Phase || 1);
     const first = state.factAnswers.p04First, second = state.factAnswers.p04Second;
     const overlayMode=state.factAnswers.p04OverlayMode || "old";
-    return `<div class="grid">${investigationCard("archive-history", "房号变更申请", "2017 年改造申请写着“1401/1403 合并”，附件页码不连续。", ["e_plan2019"])}</div>
+    const observations=state.factAnswers.p04OverlayObservations || [];
+    return `<div class="grid">${investigationCard("archive-history", "房号变更申请", "2017 年改造申请写着“1401/1403 合并”，附件页码不连续。", ["e_plan2019"])}</div><div class="document foreshadow-note"><h3>档案袋边角</h3><p>目录中还列着一份“2014 地下结构修改验收页”，但当前建筑图卷里没有正文。它与本轮房号比对无直接证明关系，先记作未归档线索。</p></div>
     <section class="puzzle staged-puzzle"><div class="puzzle-tag">P04 · 五版建筑图 · ${phase}/3</div><h2>${phase === 1 ? "第一步：哪一版最早明确出现中部独立房间？" : phase === 2 ? "第二步：哪一版最早不再显示它的房号？" : "第三步：消失的是房号，还是建筑结构？"}</h2>
       <div class="blueprint-stack">${[["2012","施工图"],["2013","销售图"],["2016","消防图"],["2019","物业图"],["2026","电子地图"]].map(([id,label]) => `<button class="blueprint ${(phase === 1 && first === id) || (phase === 2 && second === id) ? "selected" : ""} ${phase === 3 && (first === id || second === id) ? "selected locked-choice" : ""}" data-action="select-blueprint" data-id="${id}" data-stage="${phase}" ${phase === 3 ? "disabled" : ""}><strong>${label}</strong>${blueprintDiagram(id)}</button>`).join("")}</div>
       ${phase === 1 ? '<button class="btn primary" data-action="confirm-p04-first">确认最早存在来源</button>' : ""}
       ${phase === 2 ? '<button class="btn primary" data-action="confirm-p04-second">确认最早注销来源</button>' : ""}
-      ${phase === 3 ? `${blueprintOverlay(overlayMode)}<h3>比较 ${first} 与 ${second}：哪些变化可从叠合图直接确认？</h3><div class="choices">${[["number","中部房号消失"],["door","正式门位消失"],["wall-kept","承重边界没有拆除标记"],["pipe","竖向管井仍然存在"],["wall-removed","中部承重墙已全部拆除"]].map(([v,t]) => `<label class="choice"><input type="checkbox" name="p04-change" value="${v}"><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="solve-p04">形成建筑档案推论</button>` : ""}<div class="feedback" id="feedback-p04"></div>
+      ${phase === 3 ? `${blueprintOverlay(overlayMode,observations)}<h3>比较 ${first} 与 ${second}：哪些变化可从叠合图直接确认？</h3><div class="choices">${[["number","中部房号消失"],["door","正式门位消失"],["wall-kept","承重边界没有拆除标记"],["pipe","竖向管井仍然存在"],["wall-removed","中部承重墙已全部拆除"]].map(([v,t]) => `<label class="choice"><input type="checkbox" name="p04-change" value="${v}"><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="solve-p04">形成建筑档案推论</button>` : ""}<div class="feedback" id="feedback-p04"></div>
     </section>`;
   }
 
@@ -445,6 +455,8 @@
     const differences = [["socket","插座高度","fixed","▭","▭"],["drag","平行拖痕","night","","≋"],["frame","窗框编号","fixed","F11","F14"],["nail","旧钉孔","history","⋰","⋱"],["pipe","暖气管位置","fixed","║","║"],["impact","擦拭撞击痕","night","","×"],["cup","杯子数量","movable","○","○○"],["curtain","窗帘角度","movable","╱","╲"],["lamp","灯罩颜色","unknown","◇","◆"],["painting","装饰画偏移","unknown","▱","▰"]];
     const detail = { socket:"两处插座中心的距地高度相差约 7 厘米。", drag:"清洁剂下有两道间距约 53 厘米的拖擦线，残留蓝灰纤维。", frame:"窗框批次刻码一处为 F11，一处为 F14。", nail:"墙纸下露出方向不同的旧钉孔。", pipe:"暖气管与窗框中线的距离不同。", impact:"结构件表面有新鲜凹痕与被擦拭的暗色残留。", cup:"桌面分别摆着一只和两只杯子。", curtain:"两处窗帘开合角度不同。", lamp:"两处灯罩颜色和批次不同。", painting:"装饰画位置与墙面旧印不重合。" };
     const classLabels={fixed:"固定结构",movable:"可移动陈设",history:"历史改造",night:"当晚异常",unknown:"当前材料无法判断"};
+    const mirrorView=state.factAnswers.mirrorMobileView || "1402";
+    const lastDiff=state.factAnswers.lastMirrorDiff;
     const observationsSaved = Boolean(state.factAnswers.p05ObservationsSaved);
     const ready = state.mirrorFound.length >= 6;
     const reviewReady = state.solved.includes("p05") && ["e_body","e_watch","e_impact"].every(id=>state.evidence.includes(id));
@@ -454,11 +466,11 @@
     const sightNotes={11:"已载入 11F 几何投影；请自行比较两条线。",12:"已载入 12F 几何投影；请自行比较两条线。",13:"已载入 13F 几何投影；请自行比较两条线。",14:"已载入 14F 几何投影；请自行比较两条线。",15:"已载入 15F 几何投影；请自行比较两条线。"};
     return `${state.solved.includes("p05") ? '<div class="deduction-banner"><strong>推论形成：1402 为第一现场</strong><span>墙面痕迹对应后枕部伤情；地板拖痕与搬运毯纤维对应尸体搬运。死亡精确区间仍待联合复核。</span></div>' : ""}<div class="document"><h3>现场准入记录</h3><p>14 层封闭档案室。门上没有房号，旧锁芯可由物业工程总钥匙开启。内部 B2 户型未随产权合并完全拆除。</p></div>
     <section class="puzzle"><div class="puzzle-tag">P05 · 双房调查 · ${observationsSaved ? "案件簿研判" : "现场观察"}</div><h2>${observationsSaved ? "从已保存观察中钉选两项案件关键证据" : "对照 1102 与未编号空间"}</h2>
-      ${!observationsSaved ? `<p class="muted">右侧有十处可见差异，没有发光提示。先记录至少六处，再判断它属于结构、陈设、历史、当晚异常，或仅凭当前材料还无法确定；“不知道”也是一种严格结论。</p><div class="mirror-stage"><div class="room-scene detailed-room compare-left"><span class="room-label">11F · 1102</span>${differences.filter(([, , ,left]) => left).map(([id,,,left]) => `<span class="scene-object diff-${id}">${left}</span>`).join("")}</div><div class="room-scene detailed-room compare-right"><span class="room-label">14F · 未编号空间</span>${differences.map(([id,label,,,right]) => `<button class="difference diff-${id} ${state.mirrorFound.includes(id) ? "found" : ""}" data-action="find-diff" data-diff="${id}" title="${label}" aria-label="调查${label}">${right}</button>`).join("")}</div></div><div class="found-differences observation-list">${state.mirrorFound.length ? differences.filter(([id]) => state.mirrorFound.includes(id)).map(([id,label]) => `<article class="difference-note" data-difference-note="${id}"><span><strong>${label}</strong><small>${detail[id]}</small></span><div class="difference-classifications" role="group" aria-label="${label}分类">${Object.entries(classLabels).map(([value,text])=>`<button type="button" class="${state.differenceClasses[id]===value ? "selected" : ""}" data-action="choose-difference-class" data-diff="${id}" data-class="${value}">${text}</button>`).join("")}</div></article>`).join("") : '<span class="muted">尚未记录差异</span>'}</div><p class="feedback ${ready ? "good" : ""}" id="feedback-p05">${ready ? "观察数量足够；完成至少六项有依据的分类后可保存。" : `已记录 ${state.mirrorFound.length}/10。`}</p><button class="btn primary" data-action="save-p05-observations" ${ready ? "" : "disabled"}>保存观察与分类</button>` : `<p class="muted">观察及其类别已经保存。现在只从“当晚异常”中选择能分别支持撞击与搬运的两项。</p><div class="found-differences">${differences.filter(([id]) => state.mirrorFound.includes(id)).map(([id,label]) => `<label class="difference-note"><input type="checkbox" name="p05-proof" value="${id}"><span><strong>${label}</strong><small>${detail[id]}</small><em>${classLabels[state.differenceClasses[id]] || "未分类"}</em></span></label>`).join("")}</div><div class="card-actions"><button class="btn primary" data-action="solve-p05">形成第一现场推论</button><button class="btn ghost" data-action="resume-p05-observation">返回现场补查</button></div><div class="feedback" id="feedback-p05"></div>`}
+      ${!observationsSaved ? `<p class="muted">右侧有十处可见差异，没有发光提示。先记录至少六处，再判断它属于结构、陈设、历史、当晚异常，或仅凭当前材料还无法确定；“不知道”可获得审慎观察加成，但不是通关暗门槛。</p><div class="mirror-view-controls" role="group" aria-label="手机双房查看模式">${[["1102","只看 1102"],["1402","只看 14F"],["blend","叠合对照"]].map(([id,label])=>`<button class="btn ${mirrorView===id?"primary":""}" data-action="set-mirror-view" data-view="${id}">${label}</button>`).join("")}</div><div class="mirror-stage mirror-mode-${mirrorView}"><div class="room-scene detailed-room compare-left"><span class="room-label">11F · 1102</span>${differences.filter(([, , ,left]) => left).map(([id,,,left]) => `<span class="scene-object diff-${id}">${left}</span>`).join("")}</div><div class="room-scene detailed-room compare-right"><span class="room-label">14F · 未编号空间</span>${differences.map(([id,label,,,right]) => `<button class="difference diff-${id} ${state.mirrorFound.includes(id) ? "found" : ""}" data-action="find-diff" data-diff="${id}" title="${label}" aria-label="调查${label}">${right}</button>`).join("")}</div></div>${lastDiff?`<div class="mirror-focus" role="status"><strong>${differences.find(([id])=>id===lastDiff)?.[1]||"当前观察"}</strong><span>${detail[lastDiff]||""}</span></div>`:""}<div class="found-differences observation-list">${state.mirrorFound.length ? differences.filter(([id]) => state.mirrorFound.includes(id)).map(([id,label]) => `<article class="difference-note" data-difference-note="${id}"><span><strong>${label}</strong><small>${detail[id]}</small></span><div class="difference-classifications" role="group" aria-label="${label}分类">${Object.entries(classLabels).map(([value,text])=>`<button type="button" class="${state.differenceClasses[id]===value ? "selected" : ""}" data-action="choose-difference-class" data-diff="${id}" data-class="${value}">${text}</button>`).join("")}</div></article>`).join("") : '<span class="muted">尚未记录差异</span>'}</div><p class="feedback ${ready ? "good" : ""}" id="feedback-p05">${ready ? "观察数量足够；六项正确分类即可保存，保留证据不足会记录审慎加成。" : `已记录 ${state.mirrorFound.length}/10。`}</p><button class="btn primary" data-action="save-p05-observations" ${ready ? "" : "disabled"}>保存观察与分类</button>` : `<p class="muted">观察及其类别已经保存。现在只从“当晚异常”中选择能分别支持撞击与搬运的两项。</p><div class="found-differences">${differences.filter(([id]) => state.mirrorFound.includes(id)).map(([id,label]) => `<label class="difference-note"><input type="checkbox" name="p05-proof" value="${id}"><span><strong>${label}</strong><small>${detail[id]}</small><em>${classLabels[state.differenceClasses[id]] || "未分类"}</em></span></label>`).join("")}</div><div class="card-actions"><button class="btn primary" data-action="solve-p05">形成第一现场推论</button><button class="btn ghost" data-action="resume-p05-observation">返回现场补查</button></div><div class="feedback" id="feedback-p05"></div>`}
     </section>
     ${state.solved.includes("p05") ? `<section class="puzzle device-return"><div class="puzzle-tag">DEVICE RETURN · 技术回传</div><h2>死者随身设备数据已经提取</h2><p class="muted">这份记录不随第一现场推论自动生成。先打开技术回传，确认设备究竟记录了什么，再决定是否送交联合复核。</p><button class="btn ${state.evidence.includes("e_watch") ? "ghost" : "primary"}" data-action="open-device-record">${state.evidence.includes("e_watch") ? "重新查看设备记录" : "查看设备记录"}</button><div class="feedback ${state.evidence.includes("e_watch") ? "good" : ""}" id="feedback-device-record">${state.evidence.includes("e_watch") ? "智能手表原始记录已纳入案件簿；它固定冲击与生理变化，不单独等同于死亡判断。" : "设备记录尚未纳入案件簿。"}</div></section>` : ""}
     <section class="puzzle body-review"><div class="puzzle-tag">P05-R · 联合复核</div><h2>把伤情、设备记录和现场痕迹送交同一轮复核</h2><p class="muted">这会生成派生材料，不会凭空增加一个独立来源。复核结果将明确列出所引用的三份原始材料。</p><div class="review-source-chain"><span>尸表初检</span><b>＋</b><span>智能手表</span><b>＋</b><span>1402 撞击痕</span><b>→</b><span>${reviewDone ? "联合复核完成" : "待复核"}</span></div><button class="btn primary" data-action="run-body-review" ${reviewReady && !reviewDone ? "" : "disabled"}>${reviewDone ? "联合复核已完成" : reviewReady ? "提交联合复核" : "先取得三份前置材料"}</button><div class="feedback ${reviewDone ? "good" : ""}" id="feedback-body-review">${reviewDone ? "复核已引用初检、手表与现场比对；精确死亡区间现可用于报告。" : ""}</div></section>
-    <section class="puzzle"><div class="puzzle-tag">P06 · 视线模拟</div><h2>拖动拍摄高度，再独立判断照片来自哪一层</h2><p class="muted">至少比较三个高度。提交前系统只绘制当前几何投影，不会用文字评价遮挡、接近或重合。</p><div class="sight-stage sight-simulator" style="--origin-top:${44-(viewHeight-11)*8}%;--line-top:${47-(viewHeight-11)*7}%;--line-rotate:${10-(viewHeight-11)*4}deg"><div class="tower source"><span>临江壹号</span><i class="sight-origin" id="sight-origin-label">${viewHeight}F</i></div><div class="photo-reference" aria-hidden="true"></div><div class="sight-line"></div><div class="tower opposite"><span>对面 12F</span><i class="platform">设备平台</i></div><div class="sight-verdict" id="sight-note">${sightNotes[viewHeight]}</div></div><label class="view-height-control"><span>模拟拍摄楼层 <output id="view-height-output">${viewHeight}F</output></span><input type="range" min="11" max="15" step="1" value="${viewHeight}" data-view-height aria-describedby="sight-note"><small>已比较：${viewedFloors.length ? viewedFloors.map(n=>`${n}F`).join("、") : "尚未移动标尺"}</small></label><div class="choices compact-height-choices">${[11,12,13,14,15].map(n=>`<label class="choice"><input type="radio" name="p06-height" value="${n}" ${String(state.factAnswers.p06Choice||"")===String(n)?"checked":""}><span>${n}F</span></label>`).join("")}</div><button class="btn primary" data-action="solve-p06" ${viewedFloors.length >= 3 ? "" : "disabled"}>记录照片拍摄高度</button><div class="feedback" id="feedback-p06"></div></section>`;
+    <section class="puzzle"><div class="puzzle-tag">P06 · 视线模拟</div><h2>拖动拍摄高度，明确记录观察，再独立判断照片来自哪一层</h2><p class="muted">滑块经过某层不算完成观察。停下后点击“记录当前投影”，至少保存三个高度。</p><div class="sight-stage sight-simulator" style="--origin-top:${44-(viewHeight-11)*8}%;--line-top:${47-(viewHeight-11)*7}%;--line-rotate:${10-(viewHeight-11)*4}deg"><div class="tower source"><span>临江壹号</span><i class="sight-origin" id="sight-origin-label">${viewHeight}F</i></div><div class="photo-reference" aria-hidden="true"></div><div class="sight-line"></div><div class="tower opposite"><span>对面 12F</span><i class="platform">设备平台</i></div><div class="sight-verdict" id="sight-note">${sightNotes[viewHeight]}</div></div><label class="view-height-control"><span>模拟拍摄楼层 <output id="view-height-output">${viewHeight}F</output></span><input type="range" min="11" max="15" step="1" value="${viewHeight}" data-view-height aria-describedby="sight-note"><small>已记录：${viewedFloors.length ? viewedFloors.map(n=>`${n}F`).join("、") : "尚未保存观察"}</small></label><button class="btn" data-action="record-p06-view">记录当前 ${viewHeight}F 投影</button><div class="sight-records">${viewedFloors.map(n=>`<span>${n}F · 已记录</span>`).join("")}</div><div class="choices compact-height-choices">${[11,12,13,14,15].map(n=>`<label class="choice"><input type="radio" name="p06-height" value="${n}" ${String(state.factAnswers.p06Choice||"")===String(n)?"checked":""}><span>${n}F</span></label>`).join("")}</div><button class="btn primary" data-action="solve-p06" ${viewedFloors.length >= 3 ? "" : "disabled"}>记录照片拍摄高度</button><div class="feedback" id="feedback-p06"></div></section>`;
   }
 
   function chapter6() {
@@ -474,7 +486,7 @@
     ];
     const cleanupComplete=state.solved.includes("p07");
     return `<div class="document"><h3>1102 门体系统 · 两条互补记录</h3><table><thead><tr><th>时间</th><th>记录流</th><th>事件</th><th>证明边界</th></tr></thead><tbody><tr><td>21:41:08</td><td>锁具认证</td><td>A047 认证通过</td><td>不证明门扇已打开或谁通过</td></tr><tr><td>21:41:10—32</td><td>门磁</td><td>打开后关闭</td><td>不证明身份、方向或携带物</td></tr></tbody></table><p>两条记录来自同一门体系统的不同传感流，是互补字段，不计作两份彼此独立的来源。</p></div>
-    <section class="puzzle"><div class="puzzle-tag">P07 · 证据净化</div><h2>在解释句中划去记录没有支持的词组</h2><p class="muted">划词时只记录“删除／保留”，不会逐卡提示正确与否。提交整组判断后，系统才会统一写出八条严格事实。</p><div class="fact-cleanup-board">${facts.map(fact => { const marks=state.factMarks[fact.id] || []; return `<article class="fact-cleanup-card" data-fact-cleanup="${fact.id}"><small>${cleanupComplete ? "严格事实" : "待净化解释"}</small><h3>${fact.claim}</h3><div class="fact-tokens">${fact.tokens.map(([id,text])=>`<button type="button" class="fact-token ${marks.includes(id)?"struck":""}" data-action="toggle-fact-mark" data-fact-card="${fact.id}" data-token="${id}" aria-pressed="${marks.includes(id)}" ${cleanupComplete ? "disabled" : ""}>${marks.includes(id)?`<s>${text}</s>`:text}</button>`).join("")}</div>${cleanupComplete ? `<p class="strict-fact"><b>保留事实：</b>${fact.strict}</p>` : '<p class="strict-fact pending">当前标记已保存；整组提交前不显示裁决。</p>'}</article>`; }).join("")}</div><button class="btn primary" data-action="solve-p07" ${cleanupComplete ? "disabled" : ""}>${cleanupComplete ? "严格事实已写入" : "写入严格事实"}</button><div class="feedback ${cleanupComplete ? "good" : ""}" id="feedback-p07">${cleanupComplete ? "八条净化后的严格事实已经统一写入案件簿。" : ""}</div></section>
+    <section class="puzzle"><div class="puzzle-tag">P07 · 证据净化</div><h2>在解释句中划去记录没有支持的词组</h2><p class="muted">划词时只记录“删除／保留”，不会逐卡提示正确与否。提交整组判断后，系统才会统一写出八条严格事实。</p><div class="fact-cleanup-board">${facts.map(fact => { const marks=state.factMarks[fact.id] || []; return `<article class="fact-cleanup-card" data-fact-cleanup="${fact.id}"><small>${cleanupComplete ? "严格事实" : "待净化解释"}</small><h3>${fact.claim}</h3><div class="fact-tokens">${fact.tokens.map(([id,text])=>`<button type="button" class="fact-token ${marks.includes(id)?"struck":""}" data-action="toggle-fact-mark" data-fact-card="${fact.id}" data-token="${id}" aria-pressed="${marks.includes(id)}" ${cleanupComplete ? "disabled" : ""}>${marks.includes(id)?`<s>${text}</s>`:text}</button>`).join("")}</div>${cleanupComplete ? `<p class="strict-fact"><b>保留事实：</b>${fact.strict}</p>` : '<p class="strict-fact pending">当前标记已保存；整组提交前不显示裁决。</p>'}</article>`; }).join("")}</div><div class="card-actions"><button class="btn primary" data-action="solve-p07" ${cleanupComplete ? "disabled" : ""}>${cleanupComplete ? "严格事实已写入" : "写入严格事实"}</button>${!cleanupComplete&&Number(state.factAnswers.p07Attempts||0)>=2?'<button class="btn ghost" data-action="show-p07-hint">查看边界提示</button>':""}</div><div class="feedback ${cleanupComplete ? "good" : ""}" id="feedback-p07">${cleanupComplete ? "八条净化后的严格事实已经统一写入案件簿。" : ""}</div></section>
     <section class="puzzle"><div class="puzzle-tag">P08 · 水管线路</div><h2>哪条结构路径能解释 11 层的声音？</h2><div class="choices">${[["hall","14层走廊 → 电梯井 → 11层客厅"],["pipe","1402管井 → 共用立管 → 1102管井旁"],["window","1402窗外 → 外墙反射 → 1102阳台"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p08" value="${v}"><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="solve-p08">检查结构图</button><div class="feedback" id="feedback-p08"></div></section>`;
   }
 
@@ -527,8 +539,9 @@
       leave:["离开","完成 1102 内最后操作后离场"]
     };
     const requiredEvidenceIds=[...new Set(Object.values(Logic.RECONSTRUCTION_EVIDENCE).flat())];
+    const supplementalEvidenceIds=[...new Set(Object.values(Logic.RECONSTRUCTION_SUPPLEMENTS).flat())];
     const distractorIds=["e_watch","e_cufflink","e_pipe","e_struggle"];
-    const evidenceIds=[...requiredEvidenceIds,...distractorIds.filter(id=>state.evidence.includes(id))];
+    const evidenceIds=[...new Set([...requiredEvidenceIds,...supplementalEvidenceIds,...distractorIds.filter(id=>state.evidence.includes(id))])];
     const ready=requiredEvidenceIds.every(id=>state.evidence.includes(id));
     const complete=state.solved.includes("p10r");
     const selected=state.factAnswers.reconstructionActiveEvidence || "";
@@ -538,7 +551,7 @@
     }).join("");
     const bank=evidenceIds.map(id=>`<button type="button" class="reconstruction-evidence-card ${selected===id?"selected":""}" data-action="select-reconstruction-evidence" data-reconstruction-evidence="${id}" draggable="${state.evidence.includes(id)&&!complete}" ${state.evidence.includes(id)&&!complete?"":"disabled"}><span>${EVIDENCE[id][1]}</span><strong>${EVIDENCE[id][0]}</strong></button>`).join("");
     const preview=state.reconstructionOrder.map((id,index)=>`<span><b>${index+1}</b>${labels[id][0]}</span>`).join("");
-    return `<section class="puzzle scene-reconstruction"><div class="puzzle-tag">P10-R · 犯罪时间轴</div><h2>排列行为，把材料连接到它真正能支持的步骤</h2><p class="muted">桌面可拖动行为与材料；触控和键盘可使用上下按钮及“连接当前材料”。同一原始记录可以被多个步骤引用。</p>${state.legacyReconstruction&&!complete?'<div class="legacy-reconstruction"><strong>旧版复原结论已保留</strong><span>你可以自愿完成新版时间轴；旧记录不会伪装成已经操作过的排序。</span></div>':""}<div class="reconstruction-preview">${preview}</div><div id="reconstruction-status" class="reconstruction-live-status" role="status" aria-live="polite">${escapeHtml(state.factAnswers.reconstructionAnnouncement||"调整顺序或选择材料后，操作结果会显示在这里。")}</div><div class="reconstruction-workbench"><div class="crime-timeline">${timeline}</div><aside class="reconstruction-evidence-bank" data-preserve-scroll><header><small>材料池</small><strong>${selected&&EVIDENCE[selected]?`当前：${EVIDENCE[selected][0]}`:"先选择一张材料"}</strong></header>${bank}</aside></div><button class="btn primary" data-action="validate-reconstruction" ${ready&&!complete?"":"disabled"}>${complete?"复原已通过":ready?"检验完整因果链":"先补齐复原材料"}</button><div class="feedback ${complete?"good":""}" id="feedback-reconstruction">${complete?"五个步骤的时间、路径与锁闭条件已经闭合。":ready?"":"仍缺渗漏、路径、认证、门磁或替代实验来源。"}</div>${complete?'<section class="reconstruction-strip compact"><article><b>约20:46</b><span>放水</span><small>实验＋管井路径</small></article><article><b>21:19</b><span>取卡</span><small>日志＋活体认证</small></article><article><b>21:41</b><span>搬运</span><small>轮迹＋路径＋正门</small></article><article><b>室内</b><span>挂链</span><small>门链＋替代测试</small></article><article><b>21:49</b><span>检修口离开</span><small>痕迹＋路径＋门磁</small></article></section>':""}</section>`;
+    return `<section class="puzzle scene-reconstruction"><div class="puzzle-tag">P10-R · 犯罪时间轴</div><h2>排列行为，把核心依据与相关补强连接到正确步骤</h2><p class="muted">每步只要求能证明其成立的核心依据；时间、路径或排除性记录可作为补强，不会被机械地重复计数。</p>${state.legacyReconstruction&&!complete?'<div class="legacy-reconstruction"><strong>旧版复原结论已保留</strong><span>你可以自愿完成新版时间轴；旧记录不会伪装成已经操作过的排序。</span></div>':""}<div class="reconstruction-preview">${preview}</div><div id="reconstruction-status" class="reconstruction-live-status" role="status" aria-live="polite">${escapeHtml(state.factAnswers.reconstructionAnnouncement||"调整顺序或选择材料后，操作结果会显示在这里。")}</div><div class="reconstruction-workbench"><div class="crime-timeline">${timeline}</div><aside class="reconstruction-evidence-bank" data-preserve-scroll><header><small>材料池 · 核心与补强</small><strong>${selected&&EVIDENCE[selected]?`当前：${EVIDENCE[selected][0]}`:"先选择一张材料"}</strong></header>${bank}</aside></div><button class="btn primary" data-action="validate-reconstruction" ${ready&&!complete?"":"disabled"}>${complete?"复原已通过":ready?"检验完整因果链":"先补齐复原材料"}</button><div class="feedback ${complete?"good":""}" id="feedback-reconstruction">${complete?"五个步骤的核心依据已经闭合；下图显示时间与空间如何相接。":ready?"":"仍缺渗漏实验、取卡身份、搬运入口、门链实验或离场路径来源。"}</div>${complete?'<section class="crime-reconstruction-map" aria-label="空间与时间复原图"><div class="map-floor floor-14"><strong>14F · 隐蔽现场</strong><span>19:16 冲突与撞击</span><span>21:24 搬运起点</span></div><div class="map-route"><b>服务梯 ↓</b><span>21:37 下行</span></div><div class="map-floor floor-11"><strong>11F · 1102</strong><span>约20:46 放水</span><span>21:41 正门搬入</span><span>室内挂链 → 21:49 检修口离开</span></div></section><section class="reconstruction-strip compact"><article><b>约20:46</b><span>放水</span><small>实验为核心 · 路径补强</small></article><article><b>21:19</b><span>取卡</span><small>日志＋活体认证</small></article><article><b>21:41</b><span>搬运</span><small>轮迹＋认证 · 门磁补强</small></article><article><b>室内</b><span>挂链</span><small>门链＋替代测试</small></article><article><b>21:49</b><span>检修口离开</span><small>痕迹＋路径 · 门磁补强</small></article></section>':""}</section>`;
   }
 
   function chapter8Legacy() {
@@ -609,10 +622,13 @@
     const nextOpen=Logic.chapterUnlocked(state,9);
     const candidateConfirmed=Boolean(state.solved.includes("p10") || (state.factAnswers.primaryCandidateConfirmed && state.primaryCandidate==="zhoulan"));
     const candidateOptions=people.map(([id,name])=>`<label class="choice"><input type="radio" name="primary-candidate" value="${id}" ${state.primaryCandidate===id?"checked":""}><span>${name}</span></label>`).join("");
+    const worksheetVerified=Boolean(state.factAnswers.candidateWorksheetVerified || state.solved.includes("p10"));
+    const sourceOptions=[["","— 选择来源 —"],...Object.entries(Logic.CANDIDATE_SOURCE_BUNDLES).map(([id,rule])=>[id,rule.label])];
+    const worksheetHtml=`<div class="candidate-worksheet">${people.map(([id,name])=>`<article><h3>${name}</h3>${fields.map(([field,label])=>{const key=Logic.candidateCellKey(id,field);return `<div class="worksheet-row"><span>${label}</span><select data-candidate-judgment="${key}" aria-label="${name}${label}判断"><option value="">未判断</option>${[["yes","已证实"],["no","已排除"],["unknown","证据不足"]].map(([value,text])=>`<option value="${value}" ${state.candidateJudgments[key]===value?"selected":""}>${text}</option>`).join("")}</select><select data-candidate-source="${key}" aria-label="${name}${label}来源">${sourceOptions.map(([value,text])=>`<option value="${value}" ${state.candidateSources[key]===value?"selected":""}>${text}</option>`).join("")}</select></div>`;}).join("")}</article>`).join("")}</div><button class="btn primary" data-action="validate-candidate-worksheet">核验逐格判断与来源</button>`;
     return `<section class="chapter-task-status" aria-label="第八章任务进度"><article class="${state.solved.includes("p10")?"done":""}"><b>条件交集</b><span>必做 · ${state.solved.includes("p10")?"已完成":"未完成"}</span></article><article class="${state.evidence.includes("e_struggle")?"done":""}"><b>冲突归属</b><span>必做 · ${state.evidence.includes("e_struggle")?"已核验":"未核验"}</span></article></section>
     <section class="free-investigation"><div class="eyebrow">OPEN INVESTIGATION · 行为归属</div><h2>逐份打开原始档案，再判断谁仍具备全部条件</h2><p class="muted">档案包本身不发放结论。只有打开其中的单份记录，它才会进入案件簿。</p><div class="grid">${investigationPacketHtml("property","物业审计包","权限、岗位、本人知情与当班记录分属不同材料，不能用其中一份替代其余三份。",[["e_permission","① 权限名单","谁具备受控门、卡柜与工具权限。"],["e_accountmap","② OPS-04 账号对应","岗位账号对应哪类职务。"],["e_trainingaccess","③ 培训签收与访问审计","谁本人接触过含 1402 的历史图。"],["e_shift","④ 当班表","案发时段由谁签名值守。"]])}${investigationPacketHtml("operation","卡柜与服务区档案包","把取卡账号、自然人身份、连续路线与工具痕迹逐段连接。",[["e_cardauth","① 卡柜活体认证","把 OPS-04 的取卡行为落实到自然人。"],["e_route","② 服务区通行记录","固定受监测位置与时间窗口。"],["e_cart","③ 搬运车架与轮迹复核","只证明工具痕迹，不单独证明载物内容。"]])}${investigationCard("conflict-review","法医 · 冲突接触复核","核对抓痕、指甲接触物与定向血液微滴，区分生前冲突和事后搬运。",["e_struggle"])}${returnZhou}</div></section>
     ${state.solved.includes("p10")?`<div class="deduction-banner"><strong>${nextOpen?"行为归属闭合 · 现场复原已开放":"置换者条件交集成立 · 冲突归属仍待核验"}</strong><span>${nextOpen?"下一章只处理密室如何被制造，不再重复人物筛选。":escapeHtml(Logic.chapterLockReason(state,9))}</span>${nextOpen?'<button class="btn primary" data-action="go-chapter" data-chapter="9">进入现场复原</button>':""}</div>`:""}
-    <section class="puzzle"><div class="puzzle-tag">P10 · 条件交集</div><h2>知道还不够：逐人记录为什么不能完成置换</h2><p class="muted">✓ 已证实 · × 已排除 · ? 证据不足。界面不会预先标出唯一交集；先完成排除，再亲自从六人中选择仍满足全部条件的人。</p><div class="matrix-wrap desktop-exclusion"><table class="matrix exclusion-matrix"><thead><tr><th>人物</th>${fields.map(([,label])=>`<th>${label}</th>`).join("")}<th>当前判断</th></tr></thead><tbody>${people.map(([id,name])=>`<tr data-person-row="${id}"><td>${name}</td>${fields.map(([field])=>`<td>${statusBadge(id,field)}</td>`).join("")}<td>${reasonSelect(id)}${hintButton(id)}</td></tr>${hintPanel(id,name,true)}`).join("")}</tbody></table></div><div class="mobile-exclusion-cards">${mobileCards}</div><section class="candidate-choice"><h3>根据当前交集，谁仍同时满足全部实施条件？</h3><div class="choices compact-height-choices">${candidateOptions}</div><button class="btn" data-action="confirm-primary-candidate">确认候选人</button></section>${candidateConfirmed?`<div class="condition-proof"><h3>现在证明周岚为什么没有被排除：选择分别有来源的四个条件</h3>${fields.map(([id,label])=>`<label><input type="checkbox" name="zhou-condition" value="${id}" ${state.zhouConditions.includes(id)?"checked":""}><span><b>${label}</b><small>${id==="know"?"岗位条件与本人访问必须分开核验":id==="permission"?"只判断受控门与工具权限":id==="blank"?"排班与实际通行共同限定窗口":"原始日志、自然人身份与后续路径缺一不可"}</small></span></label>`).join("")}</div><button class="btn primary" data-action="solve-p10">提交排除链与唯一交集</button>`:'<p class="muted">确认候选人后，系统才会要求你证明该判断。</p>'}<div class="feedback" id="feedback-p10"></div></section>`;
+    <section class="puzzle"><div class="puzzle-tag">P10 · 条件交集</div><h2>知道还不够：先由你逐格判断，再让系统核验</h2><p class="muted">每一格都要写下“已证实／已排除／证据不足”，并为确定判断连接来源。系统状态表只在工作表通过后出现。</p>${worksheetVerified?`<div class="worksheet-verified"><strong>逐格工作表已核验</strong><span>下面显示系统复核结果；修改任一格会撤销该状态。</span></div><div class="matrix-wrap desktop-exclusion"><table class="matrix exclusion-matrix"><thead><tr><th>人物</th>${fields.map(([,label])=>`<th>${label}</th>`).join("")}<th>当前判断</th></tr></thead><tbody>${people.map(([id,name])=>`<tr data-person-row="${id}"><td>${name}</td>${fields.map(([field])=>`<td>${statusBadge(id,field)}</td>`).join("")}<td>${reasonSelect(id)}${hintButton(id)}</td></tr>${hintPanel(id,name,true)}`).join("")}</tbody></table></div><div class="mobile-exclusion-cards">${mobileCards}</div><section class="candidate-choice"><h3>根据当前交集，谁仍同时满足全部实施条件？</h3><div class="choices compact-height-choices">${candidateOptions}</div><button class="btn" data-action="confirm-primary-candidate">确认候选人</button></section>${candidateConfirmed?`<div class="condition-proof"><h3>现在证明周岚为什么没有被排除：选择分别有来源的四个条件</h3>${fields.map(([id,label])=>`<label><input type="checkbox" name="zhou-condition" value="${id}" ${state.zhouConditions.includes(id)?"checked":""}><span><b>${label}</b><small>${id==="know"?"岗位条件与本人访问必须分开核验":id==="permission"?"只判断受控门与工具权限":id==="blank"?"排班与实际通行共同限定窗口":"原始日志、自然人身份与后续路径缺一不可"}</small></span></label>`).join("")}</div><button class="btn primary" data-action="solve-p10">提交排除链与唯一交集</button>`:'<p class="muted">确认候选人后，系统才会要求你证明该判断。</p>'}`:worksheetHtml}<div class="feedback" id="feedback-p10"></div></section>`;
   }
 
   function chapter9() {
@@ -732,8 +748,8 @@
       ${reportSelect("chainMethod","门链形成与离场",["从门缝复位门链","室内挂链后经浴室检修通道离开","一直藏在1102直到破门","无法解释"])}
       ${reportSelect("stager","完成现场置换的人",["许遥","顾雪","梁闻","周岚"])}
       ${reportSelect("fatalActor","与致命撞击直接相关的冲突行为人",["许遥","顾雪","梁闻","周岚","证据不足"])}
-      </div><div class="card-actions"><button class="btn ${baseFactsAdopted?"ghost":"primary"}" data-action="toggle-base-report-adoption" aria-pressed="${baseFactsAdopted}" ${state.ending ? "disabled" : ""}>${baseFactsAdopted?"✓ 其余四项基础事实已采用":"采用其余四项已核验基础事实"}</button><button class="btn primary" data-action="validate-report" ${state.ending ? "disabled" : ""}>${reportPassed ? "重新复核当前报告" : "复核并封存当前报告"}</button></div><div class="feedback ${reportPassed || state.ending ? "good" : reportState === "modified" ? "bad" : ""}" id="feedback-report">${feedback}</div></section>
-      ${reportPassed && resolution === "proving" ? confrontationHtml() : resolution === "awaiting-disclosure" ? `<div class="deduction-banner pending-disclosure"><strong>最终举证已完成 · 等待公开决定</strong><span>即使关闭弹窗、刷新或离开页面，也可以从这里继续；提交时还会再次检查报告快照与每轮举证。</span><button class="btn primary" data-action="continue-disclosure">继续提交报告</button></div>` : resolution === "awaiting-report-review" ? '<div class="deduction-banner warning"><strong>最终举证已保留 · 报告修改后待复核</strong><span>重新复核当前报告后即可恢复公开决定，不必重做举证。</span></div>' : resolution === "awaiting-proof-review" ? '<div class="deduction-banner warning"><strong>新增质询尚待完成</strong><span>已完成的主案举证保持有效；新发现的封存卷宗需单独形成责任链并回应追加质询。</span></div>' : resolution === "closed" ? `<div class="deduction-banner"><strong>本周目已结案 · 结局 ${state.ending}</strong><span>${state.legacyCaseRecord ? "旧版报告与证明已按原规则封存，不会套入新版举证。" : "报告快照、举证、公开决定与结案记录均已冻结保存。"}</span><button class="btn" data-action="view-ending">查看结局</button></div>${finalProofSummary()}` : ""}`;
+      </div><section class="report-argument"><div class="puzzle-tag">你的三条结论</div><h3>把已成立的事实写成论证，并明确证据强度边界</h3><div class="report-grid">${reportSelect("sceneReason","为什么 1402 是第一现场",["1102无对应血迹＋1402伤痕与伤情吻合","手表显示14层","1402存在即可证明"])}${reportSelect("fatalReason","为什么周岚与致命冲突相关",["时间地点复核＋14F通行＋生前冲突接触","她有旧案动机","她后来取卡并搬运"])}${reportSelect("intentBoundary","现有材料能证明到什么程度",["可证明参与冲突与置换，不能仅凭现有材料证明预谋故意","已经证明预谋杀人","只能证明事后搬运"])} </div></section><div class="card-actions"><button class="btn ${baseFactsAdopted?"ghost":"primary"}" data-action="toggle-base-report-adoption" aria-pressed="${baseFactsAdopted}" ${state.ending ? "disabled" : ""}>${baseFactsAdopted?"✓ 其余四项基础事实已采用":"采用其余四项已核验基础事实"}</button><button class="btn primary" data-action="validate-report" ${state.ending ? "disabled" : ""}>${reportPassed ? "重新复核当前报告" : "复核并封存当前报告"}</button></div><div class="feedback ${reportPassed || state.ending ? "good" : reportState === "modified" ? "bad" : ""}" id="feedback-report">${feedback}</div></section>${!reportPassed&&Object.keys(state.legacyProofRecords||{}).length?finalProofSummary():""}
+      ${reportPassed && resolution === "proving" ? confrontationHtml() : resolution === "awaiting-disclosure" ? `<div class="deduction-banner pending-disclosure"><strong>最终举证已完成 · 等待公开决定</strong><span>即使关闭弹窗、刷新或离开页面，也可以从这里继续；提交时还会再次检查报告快照与每轮举证。</span><button class="btn primary" data-action="continue-disclosure">继续提交报告</button></div>` : resolution === "awaiting-report-review" ? `<div class="deduction-banner warning"><strong>最终举证已保留 · 报告修改后待复核</strong><span>重新复核当前报告后即可恢复公开决定，不必重做举证。</span></div>${finalProofSummary()}` : resolution === "awaiting-proof-review" ? '<div class="deduction-banner warning"><strong>新增质询尚待完成</strong><span>已完成的主案举证保持有效；新发现的封存卷宗需单独形成责任链并回应追加质询。</span></div>' : resolution === "closed" ? `<div class="deduction-banner"><strong>本周目已结案 · 结局 ${state.ending}</strong><span>${state.legacyCaseRecord ? "旧版报告与证明已按原规则封存，不会套入新版举证。" : "报告快照、举证、公开决定与结案记录均已冻结保存。"}</span><button class="btn" data-action="view-ending">查看结局</button></div>${finalProofSummary()}` : ""}`;
   }
 
   function confrontationHtml() {
@@ -1029,10 +1045,11 @@
       if (input) { input.value=String(Math.max(Number(input.min),Math.min(Number(input.max),Number(input.value)+delta))); input.dispatchEvent(new Event("input",{bubbles:true})); target.focus({preventScroll:true}); }
     }
     if (action === "lock-p03-measure") {
-      const reading = kind => Math.abs(Number(document.querySelector(`[data-measure-point="${kind}-b"]`).value)-Number(document.querySelector(`[data-measure-point="${kind}-a"]`).value));
-      const photo = reading("photo"), plan = reading("plan");
-      if (Logic.validateDimensionReadings(photo,plan).ok) { addEvidence("e_shelf","e_plan1102"); state.factAnswers.p03Phase = 2; saveState(true); renderChapter(3); }
-      else wrong("feedback-p03","允许单项 ±2 cm，但两次读数仍应形成约 13 cm 的稳定差值。可用滑块旁的 ±1 按钮微调。 ");
+      const points={};
+      ["photo","plan"].forEach(kind=>["a","b"].forEach(point=>points[`${kind}${point.toUpperCase()}`]=Number(document.querySelector(`[data-measure-point="${kind}-${point}"]`).value)));
+      const result=Logic.validateDimensionEndpoints(points);
+      if (result.ok) { addEvidence("e_shelf","e_plan1102"); state.factAnswers.p03Phase = 2; saveState(true); renderChapter(3); }
+      else wrong("feedback-p03",result.wrongPoints.length ? `有 ${result.wrongPoints.length} 个端点没有落在对应边缘；相同差值不能代替正确定位。可用 A/B 的 ±1 按钮微调。` : "两次读数仍未形成约 13 cm 的稳定差值。请复核两端位置。 ");
     }
     if (action === "lock-p03-explanation") {
       const value = chosen("p03-explanation");
@@ -1057,25 +1074,33 @@
       else wrong("feedback-p04","题目要找“最早”明确出现中部独立房间的原始来源，而不是任意一张仍保留房号的后续图。 ");
     }
     if (action === "confirm-p04-second") {
-      if (state.factAnswers.p04Second === "2019") { state.factAnswers.p04Phase = 3; saveState(true); renderChapter(4); }
+      if (state.factAnswers.p04Second === "2019") { state.factAnswers.p04Phase = 3; state.factAnswers.p04OverlayMode="old"; state.factAnswers.p04OverlayViews=["old"]; state.factAnswers.p04OverlayObservations=[]; saveState(true); renderChapter(4); }
       else wrong("feedback-p04","继续按年份寻找第一次不再显示中部房号的版本；2026 已经是后续结果。 ");
     }
     if (action === "set-blueprint-overlay") {
       state.factAnswers.p04OverlayMode=target.dataset.mode;
-      state.factAnswers.p04OverlaySeen=true;
+      state.factAnswers.p04OverlayViews=[...new Set([...(state.factAnswers.p04OverlayViews||[]),target.dataset.mode])];
       saveState(true);
       renderChapterPreserving(".blueprint-overlay");
     }
+    if (action === "observe-blueprint-feature") {
+      if (state.factAnswers.p04OverlayMode !== "blend") return;
+      state.factAnswers.p04OverlayObservations=[...new Set([...(state.factAnswers.p04OverlayObservations||[]),target.dataset.feature])];
+      saveState(true);
+      renderChapterPreserving(`.overlay-hotspot.${target.dataset.feature}`);
+    }
     if (action === "solve-p04") {
-      const changes = checked("p04-change"), expected = ["number","door","wall-kept","pipe"];
-      if (state.factAnswers.p04First === "2012" && state.factAnswers.p04Second === "2019" && changes.length === 4 && expected.every(id => changes.includes(id))) { addEvidence("e_plan2012","e_plan2019"); solve("p04","d_1402"); setFeedback("feedback-p04","房号与正式门位消失，但承重边界和管井仍在：被注销的是编号，不是空间。",true); openModal('<div class="eyebrow">ARCHIVE OVERLAY · 发现</div><h2>1402</h2><div class="witness-scene"><p>旧图上，“1402”三个数字重新出现在屏幕上。</p><p>房间从系统里消失了十四年。</p><blockquote>但墙没有。</blockquote></div><button class="btn primary" data-action="close-modal">记录这个房间</button>'); }
-      else wrong("feedback-p04","需要一份能证明原始空间的早期来源，以及一份首次抹去房号的变更来源。 ");
+      const result=Logic.validateBlueprintComparison(state.factAnswers.p04First,state.factAnswers.p04Second,state.factAnswers.p04OverlayViews,state.factAnswers.p04OverlayObservations,checked("p04-change"));
+      if (result.ok) { addEvidence("e_plan2012","e_plan2019"); solve("p04","d_1402"); setFeedback("feedback-p04","房号与正式门位消失，但承重边界和管井仍在：被注销的是编号，不是空间。",true); openModal('<div class="eyebrow">ARCHIVE OVERLAY · 发现</div><h2>1402</h2><div class="witness-scene"><p>十四年前，1402 还清楚地标注在施工图上。</p><p>七年前，它的编号从物业系统中消失了。</p><blockquote>但墙，一直都在。</blockquote></div><button class="btn primary" data-action="close-modal">记录这个房间</button>'); }
+      else wrong("feedback-p04",result.missingViews.length ? `还需亲自查看 ${result.missingViews.length} 种图层模式；单张图不能代替叠合比较。` : result.missingObservations.length ? `请在叠合图上标记门位、承重边界与管井；当前还缺 ${result.missingObservations.length} 处。` : "勾选内容与叠合图不一致；区分编号、门位和未被拆除的固定结构。 ");
     }
     if (action === "find-diff") {
       const id = target.dataset.diff;
       if (!state.mirrorFound.includes(id)) state.mirrorFound.push(id);
+      state.factAnswers.lastMirrorDiff=id;
       saveState(true); renderChapterPreserving(`[data-action="find-diff"][data-diff="${id}"]`);
     }
+    if (action === "set-mirror-view") { state.factAnswers.mirrorMobileView=target.dataset.view; saveState(true); renderChapterPreserving(".mirror-view-controls"); }
     if (action === "choose-difference-class") {
       state.differenceClasses[target.dataset.diff]=target.dataset.class;
       saveState(true);
@@ -1103,22 +1128,24 @@
     }
     if (action === "save-p05-observations") {
       const result=Logic.validateDifferenceClasses(state.mirrorFound,state.differenceClasses);
-      if (result.ok) { state.factAnswers.p05ObservationsSaved = true; saveState(true); renderChapter(5); }
-      else wrong("feedback-p05",result.wrong.length ? `有 ${result.wrong.length} 项分类超出了当前材料；不能证明形成时间时，应保留“当前材料无法判断”。` : result.missingUncertain ? "至少有一项差异仅凭当前观察无法确定形成时间；请保留证据不足。" : `至少完成六项分类；当前有依据的记录 ${result.correct.length}/6。`);
+      if (result.ok) { state.factAnswers.p05ObservationsSaved = true; state.factAnswers.p05UncertaintyBonus=result.uncertaintyBonus; saveState(true); renderChapter(5); if(result.uncertaintyBonus) toast("审慎观察加成：你保留了材料无法判断的边界"); }
+      else wrong("feedback-p05",result.wrong.length ? `有 ${result.wrong.length} 项分类超出了当前材料；不能证明形成时间时，可保留“当前材料无法判断”。` : `至少完成六项正确分类；当前有依据的记录 ${result.correct.length}/6。`);
     }
     if (action === "resume-p05-observation") { state.factAnswers.p05ObservationsSaved = false; saveState(true); renderChapter(5); }
-    if (action === "set-view-floor") { state.factAnswers.viewFloor = Number(target.dataset.floor); state.factAnswers.viewedFloors = [...new Set([...(state.factAnswers.viewedFloors || []),String(target.dataset.floor)])]; saveState(true); renderChapter(5); }
+    if (action === "record-p06-view") { const floor=String(state.factAnswers.viewFloor||11); state.factAnswers.viewedFloors=[...new Set([...(state.factAnswers.viewedFloors||[]),floor])]; saveState(true); renderChapterPreserving(".view-height-control"); }
     if (action === "solve-p06") {
-      const choice=Number(chosen("p06-height")), viewed=state.factAnswers.viewedFloors || [];
+      const choice=chosen("p06-height"), viewed=state.factAnswers.viewedFloors || [];
       state.factAnswers.p06Choice=choice;
-      if (choice === 14 && viewed.length >= 3 && viewed.includes("14")) { solve("p06",null,["e_window"]); setFeedback("feedback-p06","比较多个高度后，14F 的设备层轮廓与照片俯角重合；11—13F 被遮挡，15F 角度又过陡。",true); }
-      else wrong("feedback-p06",!viewed.includes(String(choice)) ? "先在模拟器中实际查看你选择的高度，再提交判断。" : "继续利用对岸十二层设备平台的轮廓，同时比较遮挡与俯角，而不是只看能否越过女儿墙。 ");
+      const result=Logic.validateSightComparison(viewed,choice);
+      if (result.ok) { solve("p06",null,["e_window"]); setFeedback("feedback-p06","比较多个已保存投影后，14F 的设备层轮廓与照片俯角重合；11—13F 被遮挡，15F 角度又过陡。",true); }
+      else wrong("feedback-p06",result.missingCount ? `还需明确记录 ${result.missingCount} 个高度；滑块经过不会自动计入。` : !viewed.includes(String(choice)) ? "先保存你选择楼层的当前投影，再提交判断。" : "继续利用对岸十二层设备平台的轮廓，同时比较遮挡与俯角。 ");
     }
     if (action === "solve-p07") {
       const result=Logic.validateFactCleanup(state.factMarks);
       if (result.ok) { solve("p07","d_semantics",["e_cardlog"]); renderChapter(6); setFeedback("feedback-p07","八条解释已经统一净化。凭证认证、门扇开合、人员身份和行为方向各自保留证明边界。",true); }
-      else wrong("feedback-p07",`仍有 ${result.wrong.length} 条记录保留了未经支持的词组，或误删了直接记录。逐条比较“记录本身”和解释句。`);
+      else { state.factAnswers.p07Attempts=Number(state.factAnswers.p07Attempts||0)+1; saveState(true); const categories={door:"门控记录",identity:"身份归属",direction:"方向与行为",time:"时间范围"}; const group=result.wrong[0] && categories[result.wrong[0].split("-")[0]]; wrong("feedback-p07",state.factAnswers.p07Attempts===1 ? `仍有 ${result.wrong.length} 条记录边界不准确。先区分“系统直接记录”和“人的解释”。` : `仍有 ${result.wrong.length} 条需要修正；优先检查${group||"门控、身份、方向或时间"}类语句。下方可再查看一层提示。`); }
     }
+    if (action === "show-p07-hint") { const result=Logic.validateFactCleanup(state.factMarks); const id=result.wrong[0]; wrong("feedback-p07",id ? `当前最先出现的缺口在“${id}”记录：只保留设备或原始材料直接写出的内容，不要补入人物、方向或意图。` : "当前标记已满足严格事实边界，可以重新提交。"); }
     if (action === "toggle-fact-mark") {
       const id=target.dataset.factCard, token=target.dataset.token, marks=state.factMarks[id] || [];
       state.factMarks[id]=marks.includes(token) ? marks.filter(value=>value!==token) : [...marks,token];
@@ -1197,6 +1224,11 @@
       const selector=window.matchMedia("(max-width: 700px)").matches ? `[data-person-card="${id}"] [data-action="reveal-matrix-hint"]` : `[data-person-row="${id}"] [data-action="reveal-matrix-hint"]`;
       renderChapterPreserving(selector);
     }
+    if (action === "validate-candidate-worksheet") {
+      const result=Logic.validateCandidateWorksheet(state.candidateJudgments,state.candidateSources,state);
+      if (result.ok) { state.factAnswers.candidateWorksheetVerified=true; saveState(true); renderChapterPreserving(".candidate-worksheet"); setFeedback("feedback-p10","逐格判断及其来源已经核验；系统复核表现已开放。",true); }
+      else wrong("feedback-p10",result.wrongCells.length ? `有 ${result.wrongCells.length} 格判断与现有材料范围不符；证据不足不应被强行改成已排除。` : result.missingSources.length ? `有 ${result.missingSources.length} 个确定判断尚未连接来源。` : `有 ${result.unsupportedSources.length} 个来源不能支持它所在的格子。`);
+    }
     if (action === "confirm-primary-candidate") {
       const candidate=chosen("primary-candidate") || state.primaryCandidate;
       state.primaryCandidate=candidate || "";
@@ -1239,7 +1271,7 @@
         state.legacyReconstruction=false;
         solve("p10r","d_reconstruction",["e_chaintrial"]);
         renderChapter(9);
-        setFeedback("feedback-reconstruction","五个步骤的顺序与逐步材料连接均已闭合；完整复原现在由你构建的时间轴生成。",true);
+        setFeedback("feedback-reconstruction",result.reason,true);
       } else wrong("feedback-reconstruction",result.reason);
     }
     if (action === "select-reconstruction-evidence") {
@@ -1404,6 +1436,18 @@
       state.factAnswers.primaryCandidateConfirmed=false;
       saveState(true);
     }
+    if (event.target.dataset.candidateJudgment) {
+      state.candidateJudgments[event.target.dataset.candidateJudgment]=event.target.value;
+      state.factAnswers.candidateWorksheetVerified=false;
+      state.factAnswers.primaryCandidateConfirmed=false;
+      saveState(true);
+    }
+    if (event.target.dataset.candidateSource) {
+      state.candidateSources[event.target.dataset.candidateSource]=event.target.value;
+      state.factAnswers.candidateWorksheetVerified=false;
+      state.factAnswers.primaryCandidateConfirmed=false;
+      saveState(true);
+    }
     if (event.target.name === "p06-height") { state.factAnswers.p06Choice=Number(event.target.value); saveState(true); }
     if (event.target.dataset.viewHeight !== undefined) { saveState(true); }
     if (event.target.dataset.report) {
@@ -1441,7 +1485,6 @@
     if (event.target.dataset.viewHeight !== undefined) {
       const value=Number(event.target.value), notes={11:"已载入 11F 几何投影；请自行比较两条线。",12:"已载入 12F 几何投影；请自行比较两条线。",13:"已载入 13F 几何投影；请自行比较两条线。",14:"已载入 14F 几何投影；请自行比较两条线。",15:"已载入 15F 几何投影；请自行比较两条线。"};
       state.factAnswers.viewFloor=value;
-      state.factAnswers.viewedFloors=[...new Set([...(state.factAnswers.viewedFloors || []),String(value)])];
       const stage=document.querySelector(".sight-simulator");
       if (stage) {
         stage.style.setProperty("--origin-top",`${44-(value-11)*8}%`);
@@ -1452,9 +1495,9 @@
       const output=document.querySelector("#view-height-output"); if (output) output.textContent=`${value}F`;
       const note=document.querySelector("#sight-note"); if (note) note.textContent=notes[value];
       const compared=event.target.closest(".view-height-control")?.querySelector("small");
-      if (compared) compared.textContent=`已比较：${state.factAnswers.viewedFloors.map(floor=>`${floor}F`).join("、")}`;
+      if (compared) compared.textContent=`已记录：${(state.factAnswers.viewedFloors||[]).length ? state.factAnswers.viewedFloors.map(floor=>`${floor}F`).join("、") : "尚未保存观察"}`;
       const submit=document.querySelector('[data-action="solve-p06"]');
-      if (submit) submit.disabled=state.factAnswers.viewedFloors.length < 3;
+      if (submit) submit.disabled=(state.factAnswers.viewedFloors||[]).length < 3;
       saveState(true);
       return;
     }

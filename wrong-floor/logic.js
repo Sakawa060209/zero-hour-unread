@@ -5,8 +5,8 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const SAVE_VERSION = 10;
-  const REPORT_RULE_VERSION = 10;
+  const SAVE_VERSION = 11;
+  const REPORT_RULE_VERSION = 11;
   const PROOF_RULE_VERSION = 10;
   const CORE_INTERVIEWS = ["guxue", "liangwen", "shenman", "zhoulan"];
   const CHAPTER_REQUIREMENTS = {
@@ -41,6 +41,14 @@
   };
   const ZHOU_CONDITIONS = ["know", "permission", "blank", "card"];
   const CANDIDATE_IDS = ["xuyoa", "guxue", "liangwen", "chengyi", "shenman", "zhoulan"];
+  const CANDIDATE_FIELDS = ["know", "permission", "blank", "card"];
+  const CANDIDATE_SOURCE_BUNDLES = {
+    alibi: { evidence:["e_checkin","e_stream","e_location"], label:"直播＋位置＋签到连续覆盖" },
+    permission: { evidence:["e_permission"], label:"受控权限审计" },
+    knowledge: { evidence:["e_accountmap","e_trainingaccess"], label:"岗位目录＋本人历史图访问" },
+    window: { evidence:["e_shift","e_route"], label:"当班签名＋服务区通行" },
+    card: { evidence:["e_cardlog","e_cardauth","e_route"], label:"取卡日志＋活体认证＋后续路径" }
+  };
 
   const CHAIN_ANSWERS = {
     developer: "lower", supervisor: "approve", design: "sign", contractor: "execute"
@@ -62,12 +70,18 @@
     leave: { value:"exit-route", evidence:["e_route", "e_doorcontact", "e_chain_tests"], label:"21:49 路径＋门磁静默＋替代测试" }
   };
   const RECONSTRUCTION_EVIDENCE = {
-    water: ["e_waterlab", "e_route"],
+    water: ["e_waterlab"],
     card: ["e_cardlog", "e_cardauth"],
-    transfer: ["e_cart", "e_route", "e_access", "e_doorcontact"],
+    transfer: ["e_cart", "e_access"],
     chain: ["e_lock", "e_chain_tests"],
-    leave: ["e_hatch", "e_route", "e_doorcontact", "e_chain_tests"]
+    leave: ["e_hatch", "e_route"]
   };
+  const RECONSTRUCTION_SUPPLEMENTS = {
+    water: ["e_route"], card: ["e_route"], transfer: ["e_route","e_doorcontact"],
+    chain: ["e_hatch"], leave: ["e_doorcontact","e_chain_tests"]
+  };
+  const DIMENSION_ENDPOINTS = { photo:{ a:14, b:97, tolerance:2 }, plan:{ a:9, b:105, tolerance:2 } };
+  const BLUEPRINT_OBSERVATIONS = ["door","wall","shaft"];
   const DIFFERENCE_CLASS_ANSWERS = {
     socket:"fixed", drag:"night", frame:"fixed", nail:"history", pipe:"fixed",
     impact:"night", cup:"movable", curtain:"movable", lamp:"unknown", painting:"unknown"
@@ -95,7 +109,7 @@
       evidence: [], examined: [], solved: [], deductions: [],
       interviews: {}, interviewData: {}, mirrorFound: [], mirrorProof: [], differenceClasses: {},
       factAnswers: {}, factMarks: {}, testimonyAnswers: {}, matrixAnswers: {}, chainAnswers: {}, chainFiles: {},
-      exclusionAnswers: {}, zhouConditions: [], primaryCandidate: "", matrixExpanded: [], matrixHintLevels: {},
+      exclusionAnswers: {}, zhouConditions: [], primaryCandidate: "", candidateJudgments: {}, candidateSources: {}, matrixExpanded: [], matrixHintLevels: {},
       report: {}, reportAdopted: [], reportRevision: 0, verifiedReport: null, caseArchive: null,
       confrontation: {}, confrontationVersions: {}, legacyProofRecords: {}, confrontationStep: 0,
       confrontationDraft: {}, confrontationExpanded: {}, confrontationOnlySelected: false,
@@ -126,11 +140,13 @@
       state[key] = uniqueStrings(state[key]);
     });
     state.pinnedEvidence = state.pinnedEvidence.filter(id => state.evidence.includes(id)).slice(0, 3);
-    ["interviews", "interviewData", "factAnswers", "factMarks", "differenceClasses", "testimonyAnswers", "matrixAnswers", "chainAnswers", "chainFiles", "exclusionAnswers", "matrixHintLevels", "report", "confrontation", "confrontationVersions", "legacyProofRecords", "confrontationDraft", "confrontationExpanded", "reconstructionSources", "reconstructionSupport", "reconstructionEvidence", "currentTheory"].forEach(key => {
+    ["interviews", "interviewData", "factAnswers", "factMarks", "differenceClasses", "testimonyAnswers", "matrixAnswers", "chainAnswers", "chainFiles", "exclusionAnswers", "candidateJudgments", "candidateSources", "matrixHintLevels", "report", "confrontation", "confrontationVersions", "legacyProofRecords", "confrontationDraft", "confrontationExpanded", "reconstructionSources", "reconstructionSupport", "reconstructionEvidence", "currentTheory"].forEach(key => {
       state[key] = safeObject(state[key]);
     });
     Object.keys(state.factMarks).forEach(key => state.factMarks[key] = uniqueStrings(state.factMarks[key]));
     state.factAnswers.viewedFloors = uniqueStrings(state.factAnswers.viewedFloors).filter(value => ["11","12","13","14","15"].includes(value));
+    state.factAnswers.p04OverlayViews = uniqueStrings(state.factAnswers.p04OverlayViews).filter(value => ["old","current","blend"].includes(value));
+    state.factAnswers.p04OverlayObservations = uniqueStrings(state.factAnswers.p04OverlayObservations).filter(value => BLUEPRINT_OBSERVATIONS.includes(value));
     Object.keys(state.matrixHintLevels).forEach(key => state.matrixHintLevels[key] = Math.max(0,Math.min(3,Math.floor(Number(state.matrixHintLevels[key]) || 0))));
     Object.keys(state.reconstructionEvidence).forEach(key => state.reconstructionEvidence[key] = uniqueStrings(state.reconstructionEvidence[key]));
     state.primaryCandidate = CANDIDATE_IDS.includes(state.primaryCandidate) ? state.primaryCandidate : "";
@@ -318,6 +334,12 @@
         });
       }
     }
+    if (sourceVersion < 11 && hasSolved(state,"p10")) {
+      const migratedWorksheet=buildCandidateWorksheetAnswer(state);
+      state.candidateJudgments={ ...migratedWorksheet.judgments };
+      state.candidateSources={ ...migratedWorksheet.sources };
+      state.factAnswers.candidateWorksheetVerified=true;
+    }
     if (hasSolved(state, "p11") && Object.keys(state.chainFiles).length === 0) state.chainFiles = { ...CHAIN_FILE_ANSWERS };
     state.meta = {
       endings: uniqueStrings(state.meta && state.meta.endings),
@@ -432,6 +454,49 @@
     return "unknown";
   }
 
+  function candidateCellKey(person,field) { return `${person}_${field}`; }
+
+  function candidateExpectedBundle(person,field,status) {
+    if (status === "unknown") return "";
+    if (person === "xuyoa" && ["blank","card"].includes(field)) return "alibi";
+    if (field === "permission") return "permission";
+    if (person === "zhoulan" && field === "know") return "knowledge";
+    if (person === "zhoulan" && field === "blank") return "window";
+    if (person === "zhoulan" && field === "card") return "card";
+    return "";
+  }
+
+  function candidateBundleAvailable(state,bundle) {
+    const rule=CANDIDATE_SOURCE_BUNDLES[bundle];
+    if (!rule) return bundle === "";
+    return rule.evidence.every(id => state && state.evidence.includes(id));
+  }
+
+  function buildCandidateWorksheetAnswer(state) {
+    const judgments={}, sources={};
+    CANDIDATE_IDS.forEach(person => CANDIDATE_FIELDS.forEach(field => {
+      const key=candidateCellKey(person,field), status=candidateStatus(state,person,field);
+      judgments[key]=status;
+      sources[key]=candidateExpectedBundle(person,field,status);
+    }));
+    return { judgments, sources };
+  }
+
+  function validateCandidateWorksheet(judgments,sources,state) {
+    const safeJudgments=safeObject(judgments), safeSources=safeObject(sources);
+    const wrongCells=[], missingSources=[], unsupportedSources=[];
+    CANDIDATE_IDS.forEach(person => CANDIDATE_FIELDS.forEach(field => {
+      const key=candidateCellKey(person,field), expected=candidateStatus(state,person,field);
+      if ((safeJudgments[key] || "") !== expected) { wrongCells.push(key); return; }
+      const expectedBundle=candidateExpectedBundle(person,field,expected), selected=safeSources[key] || "";
+      if (expected === "unknown") {
+        if (selected) unsupportedSources.push(key);
+      } else if (!selected) missingSources.push(key);
+      else if (selected !== expectedBundle || !candidateBundleAvailable(state,selected)) unsupportedSources.push(key);
+    }));
+    return { ok:wrongCells.length===0 && missingSources.length===0 && unsupportedSources.length===0, wrongCells, missingSources, unsupportedSources };
+  }
+
   function validateExclusionMatrix(exclusions, conditions, state, candidate = state && state.primaryCandidate) {
     const wrongPeople = Object.keys(EXCLUSION_ANSWERS).filter(id => exclusions[id] !== EXCLUSION_ANSWERS[id]);
     const picked = uniqueStrings(conditions);
@@ -470,6 +535,35 @@
     return { ok, photo:photoValue, plan:planValue, difference };
   }
 
+  function validateDimensionEndpoints(points) {
+    const safe=safeObject(points), wrongPoints=[];
+    for (const [kind,target] of Object.entries(DIMENSION_ENDPOINTS)) {
+      for (const point of ["a","b"]) {
+        const value=Number(safe[`${kind}${point.toUpperCase()}`]);
+        if (!Number.isFinite(value) || Math.abs(value-target[point]) > target.tolerance) wrongPoints.push(`${kind}-${point}`);
+      }
+    }
+    const photo=Math.abs(Number(safe.photoB)-Number(safe.photoA)), plan=Math.abs(Number(safe.planB)-Number(safe.planA));
+    const reading=validateDimensionReadings(photo,plan);
+    return { ...reading, ok:wrongPoints.length===0 && reading.ok, wrongPoints };
+  }
+
+  function validateBlueprintComparison(first,second,views,observations,changes) {
+    const seen=uniqueStrings(views), marked=uniqueStrings(observations), picked=uniqueStrings(changes);
+    const missingViews=["old","current","blend"].filter(id=>!seen.includes(id));
+    const missingObservations=BLUEPRINT_OBSERVATIONS.filter(id=>!marked.includes(id));
+    const expected=["number","door","wall-kept","pipe"];
+    const wrongChanges=picked.filter(id=>!expected.includes(id));
+    const missingChanges=expected.filter(id=>!picked.includes(id));
+    return { ok:first==="2012" && second==="2019" && missingViews.length===0 && missingObservations.length===0 && wrongChanges.length===0 && missingChanges.length===0, missingViews, missingObservations, wrongChanges, missingChanges };
+  }
+
+  function validateSightComparison(records,choice) {
+    const viewed=uniqueStrings(records).filter(value=>["11","12","13","14","15"].includes(value));
+    const selected=String(choice || "");
+    return { ok:viewed.length>=3 && viewed.includes(selected) && selected==="14", viewed, selected, missingCount:Math.max(0,3-viewed.length) };
+  }
+
   function validateDifferenceClasses(found,classes) {
     const discovered=uniqueStrings(found).filter(id => id in DIFFERENCE_CLASS_ANSWERS);
     const safe=safeObject(classes);
@@ -478,7 +572,7 @@
     const correct=classified.filter(id => safe[id] === DIFFERENCE_CLASS_ANSWERS[id]);
     const unknownCorrect=correct.filter(id => DIFFERENCE_CLASS_ANSWERS[id] === "unknown");
     const missingUncertain=unknownCorrect.length === 0;
-    return { ok:correct.length >= 6 && wrong.length === 0 && !missingUncertain, discovered, classified, correct, wrong, unknownCorrect, missingUncertain, missing:discovered.filter(id => !safe[id]) };
+    return { ok:correct.length >= 6 && wrong.length === 0, discovered, classified, correct, wrong, unknownCorrect, uncertaintyBonus:unknownCorrect.length>0, missingUncertain, missing:discovered.filter(id => !safe[id]) };
   }
 
   function validateFactCleanup(marks) {
@@ -510,24 +604,35 @@
     if (position.chain < position.transfer) return { ok:false, issue:"order", reason:"门链若在搬运前形成，尸体便无法再经 1102 正门进入。" };
     const firstWrong = RECONSTRUCTION_ORDER.find((id,index) => arranged[index] !== id);
     if (firstWrong) return { ok:false, issue:"order", reason:"现有时间记录仍发生冲突：放水、取卡、搬运与锁闭离场的先后关系需要重新核对。" };
+    let supplementCount=0;
     for (const step of RECONSTRUCTION_ORDER) {
       const attached=uniqueStrings(safeLinks[step]);
-      const expected=RECONSTRUCTION_EVIDENCE[step];
-      const unrelated=attached.filter(id => !expected.includes(id));
+      const expected=RECONSTRUCTION_EVIDENCE[step], supplements=RECONSTRUCTION_SUPPLEMENTS[step] || [];
+      const relevant=[...expected,...supplements];
+      const unrelated=attached.filter(id => !relevant.includes(id));
       const missing=expected.filter(id => !attached.includes(id));
-      if (unrelated.length) return { ok:false, issue:"unrelated", step, unrelated, reason:"当前步骤连接了只能回答其他问题的材料；先移除无关材料，再检查行为、时间与路径是否分别有来源。" };
+      if (unrelated.length) {
+        const id=unrelated[0], labels={
+          e_watch:"手表固定冲击与生理变化，不能证明搬运、挂链或离场路径。",
+          e_cardlog:"取卡日志只能回答卡片何时取出，不能替代空间或锁闭来源。",
+          e_cart:"轮迹支持使用了搬运工具，不能单独固定取卡者或离场时间。",
+          e_hatch:"检修口痕迹支持存在另一条路线，不能单独证明放水或取卡。"
+        };
+        return { ok:false, issue:"unrelated", step, unrelated, reason:labels[id] || "当前步骤连接了只能回答其他问题的材料；先移除无关材料，再检查行为、时间与路径是否分别有来源。" };
+      }
       if (missing.length) {
       const reasons={
-        water:"渗漏实验支持约 20:46 放水，但还需同时段管井记录说明进入路径。",
+        water:"缺少渗漏实验时，只能知道浴室有水，不能把放水定位到约 20:46。",
         card:"取卡日志固定时间与卡号，仍需活体认证落实是谁操作。",
-        transfer:"搬运车痕迹支持使用了搬运工具，但不能单独支持 21:41 经正门进入。",
+        transfer:"搬运车痕迹支持使用了搬运工具，但还需 A047 认证说明为何能进入 1102。",
         chain:"原始门链状态要求人在室内挂链，仍需替代顺序测试排除门缝复位和前门离场。",
-        leave:"这条材料支持使用了检修口，但不能确定离开时间；还需 21:49 路径记录与替代顺序测试。"
+        leave:"检修口痕迹与服务区路径缺一不可：一份证明可通行，一份固定受监测位置与时间。"
       };
         return { ok:false, issue:"support", step, supported:attached.filter(id => expected.includes(id)), missing, reason:reasons[step] };
       }
+      supplementCount += attached.filter(id => supplements.includes(id)).length;
     }
-    return { ok:true, issue:null, reason:"五个步骤的顺序与逐步材料连接均闭合。" };
+    return { ok:true, issue:null, completeness:supplementCount >= 4 ? "reinforced" : "core", supplementCount, reason:supplementCount >= 4 ? "五个步骤的核心依据已经闭合，补强材料也固定了更多时间与路径边界。" : "五个步骤的核心依据已经闭合；补强材料可以进一步说明时间与路径，但不是重复门槛。" };
   }
 
   const REPORT_ANSWERS = {
@@ -535,7 +640,10 @@
     cufflink: "两周前遗留", sound: "14层管道结构传声",
     transferReason: "伪造1102内晚间死亡", waterStart: "约20:46",
     chainMethod: "室内挂链后经浴室检修通道离开",
-    stager: "周岚", fatalActor: "周岚"
+    stager: "周岚", fatalActor: "周岚",
+    sceneReason: "1102无对应血迹＋1402伤痕与伤情吻合",
+    fatalReason: "时间地点复核＋14F通行＋生前冲突接触",
+    intentBoundary: "可证明参与冲突与置换，不能仅凭现有材料证明预谋故意"
   };
   const REPORT_AUTO_KEYS = ["deathPlace", "deathTime", "cardUser", "cufflink", "sound", "waterStart", "chainMethod"];
 
@@ -549,7 +657,10 @@
     waterStart: { category: "时间顺序", evidence: ["e_waterlab"] },
     chainMethod: { category: "锁闭复原", reconstruction:true, evidence: ["e_lock", "e_hatch", "e_chaintrial", "e_route", "e_doorcontact"] },
     stager: { category: "现场置换者", solved: ["p10"], reconstruction:true, evidence: ["e_cardauth", "e_route", "e_cart", "e_chaintrial"] },
-    fatalActor: { category: "致命冲突行为人", solved:["p05r"], evidence: ["e_body_review", "e_route", "e_struggle"] }
+    fatalActor: { category: "致命冲突行为人", solved:["p05r"], evidence: ["e_body_review", "e_route", "e_struggle"] },
+    sceneReason: { category: "第一现场论证", solved:["p05r"], evidence:["e_body", "e_impact", "e_body_review"] },
+    fatalReason: { category: "致命行为连接", solved:["p05r","p10"], evidence:["e_body_review", "e_route", "e_struggle"] },
+    intentBoundary: { category: "证据强度边界", solved:["p10"], reconstruction:true, evidence:["e_struggle", "e_chaintrial"] }
   };
 
   function reportRequirementSupported(state, key) {
@@ -790,12 +901,12 @@
   }
 
   return {
-    SAVE_VERSION, REPORT_RULE_VERSION, PROOF_RULE_VERSION, CORE_EVIDENCE, MAIN_EVIDENCE, SUPPLEMENTAL_EVIDENCE, OLD_CASE_EVIDENCE, CORE_INTERVIEWS, MATRIX_ANSWERS, MATRIX_AUTO, EXCLUSION_ANSWERS, ZHOU_CONDITIONS, CANDIDATE_IDS,
-    CHAIN_ANSWERS, CHAIN_FILE_ANSWERS, CHAIN_FILE_ORDER, RECONSTRUCTION_ORDER, RECONSTRUCTION_SOURCES, RECONSTRUCTION_SUPPORT, RECONSTRUCTION_EVIDENCE, DIFFERENCE_CLASS_ANSWERS, SCENE_CORE_EXAMINATIONS, FACT_MARK_ANSWERS, EVIDENCE_PROVENANCE,
+    SAVE_VERSION, REPORT_RULE_VERSION, PROOF_RULE_VERSION, CORE_EVIDENCE, MAIN_EVIDENCE, SUPPLEMENTAL_EVIDENCE, OLD_CASE_EVIDENCE, CORE_INTERVIEWS, MATRIX_ANSWERS, MATRIX_AUTO, EXCLUSION_ANSWERS, ZHOU_CONDITIONS, CANDIDATE_IDS, CANDIDATE_FIELDS, CANDIDATE_SOURCE_BUNDLES,
+    CHAIN_ANSWERS, CHAIN_FILE_ANSWERS, CHAIN_FILE_ORDER, RECONSTRUCTION_ORDER, RECONSTRUCTION_SOURCES, RECONSTRUCTION_SUPPORT, RECONSTRUCTION_EVIDENCE, RECONSTRUCTION_SUPPLEMENTS, DIMENSION_ENDPOINTS, BLUEPRINT_OBSERVATIONS, DIFFERENCE_CLASS_ANSWERS, SCENE_CORE_EXAMINATIONS, FACT_MARK_ANSWERS, EVIDENCE_PROVENANCE,
     REPORT_ANSWERS, REPORT_AUTO_KEYS, REPORT_REQUIREMENTS, CONFRONTATION_ROUTES,
     freshState, normalizeState, coreInterviewsComplete, keyInterviewCount, chapterUnlocked, chapterLockReason, highestUnlockedChapter,
-    evidenceProgress, sceneCoreReady, validateEvidenceSet, validateAlibiCoverage, validateMatrix, candidateStatus, validateExclusionMatrix,
-    validateResponsibilityChain, validateResponsibilityPuzzle, validateDimensionReadings, validateDifferenceClasses, validateFactCleanup, validateSceneReconstruction, canonicalReport, prefillReport, validateReport,
+    evidenceProgress, sceneCoreReady, validateEvidenceSet, validateAlibiCoverage, validateMatrix, candidateStatus, candidateCellKey, candidateExpectedBundle, buildCandidateWorksheetAnswer, validateCandidateWorksheet, validateExclusionMatrix,
+    validateResponsibilityChain, validateResponsibilityPuzzle, validateDimensionReadings, validateDimensionEndpoints, validateBlueprintComparison, validateSightComparison, validateDifferenceClasses, validateFactCleanup, validateSceneReconstruction, canonicalReport, prefillReport, validateReport,
     reportStatus, markReportEdited, markReportAdopted, verifyReportSnapshot, isCurrentReportVerified, validateConfrontationAnswer,
     proofTotal, validateStoredProof, storedProofStatus, allCurrentProofsComplete, nextConfrontationStep, canSubmitDisclosure,
     knowledgeComplete, determineEnding, caseResolutionState, reasoningRating, evaluateTheory, recordEnding

@@ -126,11 +126,21 @@ async function solveThroughChapter6(page, { checkSpoilers = false, touch = false
   assert.equal(await page.locator('[data-measure-point^="photo-"]').count(), 2, "photo measurement should expose independent A and B endpoints");
   assert.equal(await page.locator('[data-measure-point^="plan-"]').count(), 2, "plan measurement should expose independent A and B endpoints");
   if (touch) {
+    await setRangeByTouch(page, '[data-measure-point="photo-a"]', 14, '[data-action="adjust-measure"][data-point="photo-a"]');
     await setRangeByTouch(page, '[data-measure-point="photo-b"]', 97, '[data-action="adjust-measure"][data-point="photo-b"]');
+    await setRangeByTouch(page, '[data-measure-point="plan-a"]', 9, '[data-action="adjust-measure"][data-point="plan-a"]');
     await setRangeByTouch(page, '[data-measure-point="plan-b"]', 105, '[data-action="adjust-measure"][data-point="plan-b"]');
   } else {
-    await page.locator('[data-measure-point="photo-b"]').fill("96");
-    await page.locator('[data-measure-point="plan-b"]').fill("104");
+    await page.locator('[data-measure-point="photo-a"]').fill("20");
+    await page.locator('[data-measure-point="photo-b"]').fill("103");
+    await page.locator('[data-measure-point="plan-a"]').fill("14");
+    await page.locator('[data-measure-point="plan-b"]').fill("110");
+    await clickAction(page, "lock-p03-measure");
+    await assertText(page,"相同差值不能代替正确定位");
+    await page.locator('[data-measure-point="photo-a"]').fill("14");
+    await page.locator('[data-measure-point="photo-b"]').fill("97");
+    await page.locator('[data-measure-point="plan-a"]').fill("9");
+    await page.locator('[data-measure-point="plan-b"]').fill("105");
   }
   await clickAction(page, "lock-p03-measure");
   await page.locator('input[name="p03-explanation"][value="furniture"]').check();
@@ -154,12 +164,14 @@ async function solveThroughChapter6(page, { checkSpoilers = false, touch = false
   await page.locator('[data-action="set-blueprint-overlay"][data-mode="current"]').click();
   assert.equal(await page.locator(".blueprint-overlay.mode-current").count(), 1);
   await page.locator('[data-action="set-blueprint-overlay"][data-mode="blend"]').click();
+  for (const feature of ["door","wall","shaft"]) await page.locator(`[data-action="observe-blueprint-feature"][data-feature="${feature}"]`).click();
   for (const id of ["number", "door", "wall-kept", "pipe"]) await page.locator(`input[name="p04-change"][value="${id}"]`).check();
   await clickAction(page, "solve-p04");
-  await assertText(page, "但墙没有");
+  await assertText(page, "但墙，一直都在");
   await clickAction(page, "close-modal");
   let state = await savedState(page);
-  assert.equal(state.factAnswers.p04OverlaySeen, true);
+  assert.deepEqual(state.factAnswers.p04OverlayViews.sort(), ["blend","current","old"]);
+  assert.deepEqual(state.factAnswers.p04OverlayObservations.sort(), ["door","shaft","wall"]);
   assert.equal(state.factAnswers.p04OverlayMode, "blend");
 
   await clickAction(page, "show-map");
@@ -206,6 +218,8 @@ async function solveThroughChapter6(page, { checkSpoilers = false, touch = false
     await setViewHeight(page, floor, touch);
     const note = await page.locator("#sight-note").innerText();
     assert.doesNotMatch(note, /轮廓重合|被挡|遮挡|俯角更陡|14F.*答案/, "P06 must keep its comparison language neutral before submission");
+    if (floor === 11) assert.equal(await page.locator('[data-action="solve-p06"]').isEnabled(), false, "sliding alone must not count as an observation");
+    await clickAction(page,"record-p06-view");
   }
   assert.equal(await page.locator('[data-action="solve-p06"]').isEnabled(), true, "three compared heights should enable P06 submission");
   await page.locator('input[name="p06-height"][value="14"]').check();
@@ -268,6 +282,17 @@ async function setMatrix(page, { conditions = true } = {}) {
       if (!(await input.isChecked())) await input.check();
     }
   }
+}
+
+async function fillCandidateWorksheet(page) {
+  const answer=await page.evaluate(key => {
+    const state=JSON.parse(localStorage.getItem(key));
+    return window.WrongFloorLogic.buildCandidateWorksheetAnswer(state);
+  },SAVE_KEY);
+  for (const [key,value] of Object.entries(answer.judgments)) await page.locator(`[data-candidate-judgment="${key}"]`).selectOption(value);
+  for (const [key,value] of Object.entries(answer.sources)) if (value) await page.locator(`[data-candidate-source="${key}"]`).selectOption(value);
+  await clickAction(page,"validate-candidate-worksheet");
+  await assertText(page,"逐格判断及其来源已经核验");
 }
 
 async function reviewInvestigationPacket(page, packet, evidenceIds, touch = false) {
@@ -365,12 +390,13 @@ async function solveReconstruction(page, { touch = false, exerciseDrag = false }
   await selectAndAttach(page, "e_hatch", ["leave"], touch);
   await selectAndAttach(page, "e_watch", ["transfer"], touch);
   await clickAction(page, "validate-reconstruction");
-  await assertText(page, "只能回答其他问题的材料");
+  await assertText(page, "手表固定冲击与生理变化");
   await page.locator('[data-action="detach-reconstruction-evidence"][data-step="transfer"][data-evidence="e_watch"]').click();
   await clickAction(page, "validate-reconstruction");
   const reconstructionFeedback = await page.locator("#feedback-reconstruction").innerText();
   const reconstructionState = await savedState(page);
-  assert.match(reconstructionFeedback, /完整复原现在由你构建的时间轴生成/, `reconstruction should close after removing the distractor: ${reconstructionFeedback}; links=${JSON.stringify(reconstructionState.reconstructionEvidence)}`);
+  assert.match(reconstructionFeedback, /核心依据已经闭合|补强材料/, `reconstruction should close after removing the distractor: ${reconstructionFeedback}; links=${JSON.stringify(reconstructionState.reconstructionEvidence)}`);
+  assert.equal(await page.locator(".crime-reconstruction-map").count(),1,"completed reconstruction should render a spatial-time map");
   const state = await savedState(page);
   assert.equal(state.solved.includes("p10r"), true);
   assert.equal(state.evidence.includes("e_chaintrial"), true);
@@ -390,6 +416,8 @@ async function prepareThroughChapter9(page, { touch = false, checkSpoilers = fal
   await reviewInvestigationPacket(page, "property", ["e_permission", "e_accountmap", "e_trainingaccess", "e_shift"], touch);
   await reviewInvestigationPacket(page, "operation", ["e_cardauth", "e_route", "e_cart"], touch);
   await page.locator('[data-action="examine"][data-id="conflict-review"]').click();
+  assert.equal(await page.locator(".desktop-exclusion").count(),0,"system status must stay hidden before the player worksheet is verified");
+  await fillCandidateWorksheet(page);
   await setMatrix(page, { conditions: false });
   const hintButton = page.locator('[data-action="reveal-matrix-hint"][data-person="guxue"]:visible');
   await hintButton.click();
@@ -455,9 +483,14 @@ async function solveOldCase(page) {
 }
 
 async function fillReport(page, { exerciseDraft = false } = {}) {
-  assert.equal(await page.locator("[data-report]").count(), 10);
+  assert.equal(await page.locator("[data-report]").count(), 13);
   assert.equal(await page.locator("[data-report]:disabled").count(), 7);
-  const manual = { transferReason: "伪造1102内晚间死亡", stager: "周岚", fatalActor: "周岚" };
+  const manual = {
+    transferReason: "伪造1102内晚间死亡", stager: "周岚", fatalActor: "周岚",
+    sceneReason:"1102无对应血迹＋1402伤痕与伤情吻合",
+    fatalReason:"时间地点复核＋14F通行＋生前冲突接触",
+    intentBoundary:"可证明参与冲突与置换，不能仅凭现有材料证明预谋故意"
+  };
   for (const [key, value] of Object.entries(manual)) await page.locator(`[data-report="${key}"]`).selectOption(value);
   for (const key of ["deathPlace", "cardUser", "chainMethod"]) {
     await page.locator(`[data-action="toggle-report-adoption"][data-report-key="${key}"]`).click();
@@ -568,7 +601,7 @@ async function testLegacyMigrations(browser) {
   assert.ok(legacyPreview.indexOf("离开") < legacyPreview.indexOf("放水"));
   assert.equal(await reconstructionPage.locator('[data-action="move-reconstruction"]:not([disabled])').count() > 0, true);
   let state = await savedState(reconstructionPage);
-  assert.equal(state.version, 10);
+  assert.equal(state.version, 11);
   assert.equal(state.legacyReconstruction, true);
   assert.equal(state.solved.includes("p10r"), false);
 
@@ -614,7 +647,7 @@ async function testLegacyMigrations(browser) {
   await closedPage.reload();
   await clickAction(closedPage, "continue-game");
   await assertText(closedPage, "旧版报告与证明已按原规则封存");
-  assert.equal(await closedPage.locator("[data-report]:disabled").count(), 10);
+  assert.equal(await closedPage.locator("[data-report]:disabled").count(), 13);
   state = await savedState(closedPage);
   assert.equal(state.chapter, 10);
   assert.equal(state.legacyCaseRecord.saveVersion, 8);
@@ -676,7 +709,7 @@ async function testLegacyMigrations(browser) {
   await page.locator('[data-action="choose-disclosure"][data-choice="full"]').click();
   await assertText(page, "正确的问题");
   let state = await savedState(page);
-  assert.equal(state.version, 10);
+  assert.equal(state.version, 11);
   assert.equal(state.ending, "D");
   assert.equal(Object.keys(state.confrontation).length, 3);
   assert.deepEqual(errors, []);
@@ -775,5 +808,5 @@ async function testLegacyMigrations(browser) {
   await cContext.close();
   await mainContext.close();
   await browser.close();
-  process.stdout.write("✓ v3.7 reduced hints, discovery flow, crime timeline, report adoption, endings and migrations\n");
+  process.stdout.write("✓ v3.8 active observations, player worksheet, reconstruction map, report arguments, endings and migrations\n");
 })().catch(error => { console.error(error); process.exit(1); });
