@@ -231,7 +231,7 @@
         <div class="landing-copy">
           <div class="eyebrow">澄江市刑侦支队 · 案件分析终端</div>
           <h1 class="display">错层</h1>
-           <div class="landing-deck">WRONG FLOOR · V3.9 · 2026/10/14</div>
+           <div class="landing-deck">WRONG FLOOR · V4.0 · 2026/10/14</div>
           <p class="landing-quote">“如果所有证据都是真的，为什么结论会是假的？”</p>
           <div class="landing-actions">
             <button class="btn primary" data-action="${hasSave ? "continue-game" : "new-game"}">${hasSave ? "继续调查" : "接受委托"}</button>
@@ -417,6 +417,11 @@
     const phase = Number(state.factAnswers.p03Phase || 1);
     const explanation = state.factAnswers.p03Explanation;
     const hypothesisNames = { furniture:"家具移动", perspective:"摄影透视", room:"房间并非 1102" };
+    const hypothesisReview={
+      furniture:["先检查家具压痕，再用固定墙体与窗框—暖气管关系判断：移动家具能否同时改变两组距离？","地毯压痕只说明书柜曾移动；窗框中线与暖气管仍共同偏离 1102 竣工图，家具移动无法解释固定结构异常。"],
+      perspective:["先核对相机角度与地砖透视，再寻找一组在照片和竣工图中都可定位的固定比例。","地砖透视已按消失点校正；窗框中线与暖气管的比例仍偏离 1102，单纯摄影透视无法同时制造两组固定结构误差。"],
+      room:["直接核对不会随陈设改变的窗框、暖气管与固定墙体，看它们是否属于同一 B2 户型位置。","两组固定结构都偏离 1102 竣工图，却保持同一套内部比例；“房间身份有误”得到继续调查的支持。"]
+    };
     const adjusters = kind => `<span class="measure-adjust" role="group" aria-label="${kind === "photo" ? "现场照片" : "图纸"}端点微调">${[["a",-1],["a",1],["b",-1],["b",1]].map(([point,delta])=>`<button type="button" data-action="adjust-measure" data-point="${kind}-${point}" data-delta="${delta}" ${phase > 1 ? "disabled" : ""}>${point.toUpperCase()} ${delta<0?"−":"+"}1</button>`).join("")}</span>`;
     const endpoints = (kind,a,b,max) => `<div class="endpoint-ruler" data-endpoint-ruler="${kind}"><label><span><b>A</b> 固定墙边缘</span><input type="range" min="0" max="${max}" step="1" value="${a}" data-measure-point="${kind}-a" ${phase > 1 ? "disabled" : ""}></label><label><span><b>B</b> 书柜定位边缘</span><input type="range" min="0" max="${max}" step="1" value="${b}" data-measure-point="${kind}-b" ${phase > 1 ? "disabled" : ""}></label></div>`;
     return `${state.solved.includes("p03") ? '<div class="deduction-banner"><strong>推理成立 · P03 十三厘米</strong><span>测量只建立异常；固定结构复核排除了家具与透视，最终才裁决房间身份。</span></div>' : ""}<div class="measure-stage">
@@ -427,8 +432,8 @@
     <section class="puzzle staged-puzzle"><div class="puzzle-tag">P03 · ${state.solved.includes("p03")?"十三厘米":"双端点测量"} · ${Math.min(phase,4)}/4</div><h2>${phase === 1 ? "第一步：分别定位两端，再记录带容差的读数" : phase === 2 ? "第二步：暂存一个解释假说" : phase === 3 ? "第三步：选择独立固定结构复核" : "第四步：根据复核结果裁决假说"}</h2><div class="measurement-result">现场约 <strong id="result-photo">${photo}</strong> cm · 图纸 <strong id="result-plan">${plan}</strong> cm · 差值约 <strong id="result-diff">${Math.abs(plan-photo)}</strong> cm</div>
       ${phase === 1 ? `<p class="muted">A、B 两端都需落在图中对应边缘，各允许 ±2 cm 的定位误差；只有差值正确、端点错误仍不能通过。</p><button class="btn primary" data-action="lock-p03-measure" ${ready ? "" : "disabled"}>记录尺寸异常</button>` : ""}
       ${phase === 2 ? `<p class="muted">这里不判对错。先留下工作假说，再让下一份固定结构材料决定它能否成立。</p><div class="choices">${[["furniture","A · 家具被移动"],["perspective","B · 摄影透视造成误差"],["room","C · 房间不是 1102"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p03-explanation" value="${v}" ${explanation === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="lock-p03-explanation">暂存假说并继续复核</button>` : ""}
-      ${phase === 3 ? `<p class="muted">当前暂存：${hypothesisNames[explanation] || "未选择"}。选择一项不会随家具移动、又能检验透视误差的来源。</p><div class="choices">${[["curtain","窗帘角度"],["window","窗框中线与暖气管距离"],["table","桌上杯子位置"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p03-fixed" value="${v}"><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="run-p03-fixed">执行固定结构复核</button>` : ""}
-      ${phase >= 4 ? `<div class="document"><h3>固定结构复核结果</h3><p>窗框中线与暖气管的相对位置同样偏离 1102 竣工图。移动家具不能改变两者；单纯透视也应保留两套固定结构的比例关系。</p><p>先前假说：<strong>${hypothesisNames[explanation] || "未记录"}</strong></p></div><div class="choices">${[["furniture","家具移动仍能解释全部异常"],["perspective","摄影透视仍能解释全部异常"],["room","照片中的房间不是 1102"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p03-conclusion" value="${v}"><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="solve-p03">形成空间推论</button>` : ""}<div class="feedback" id="feedback-p03"></div>
+      ${phase === 3 ? `<p class="muted">当前暂存：${hypothesisNames[explanation] || "未选择"}。${hypothesisReview[explanation]?.[0] || "选择能检验当前假说的固定结构来源。"}</p><div class="hypothesis-route"><strong>本轮优先检查</strong><span>${explanation==="furniture"?"家具压痕 → 固定墙体":explanation==="perspective"?"相机角度 → 固定比例":"固定结构 → 户型身份"}</span></div><div class="choices">${[["curtain","窗帘角度"],["window","窗框中线与暖气管距离"],["table","桌上杯子位置"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p03-fixed" value="${v}"><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="run-p03-fixed">执行针对性复核</button>` : ""}
+      ${phase >= 4 ? `<div class="document"><h3>${hypothesisNames[explanation] || "空间"}假说 · 复核结果</h3><p>${hypothesisReview[explanation]?.[1] || "固定结构复核结果已经返回。"}</p><p>先前假说：<strong>${hypothesisNames[explanation] || "未记录"}</strong></p></div><div class="choices">${[["furniture","家具移动仍能解释全部异常"],["perspective","摄影透视仍能解释全部异常"],["room","照片中的房间不是 1102"]].map(([v,t]) => `<label class="choice"><input type="radio" name="p03-conclusion" value="${v}"><span>${t}</span></label>`).join("")}</div><button class="btn primary" data-action="solve-p03">形成空间推论</button>` : ""}<div class="feedback" id="feedback-p03"></div>
     </section>`;
   }
 
@@ -632,9 +637,20 @@
     const worksheetVerified=worksheetStatus==="verified" || worksheetStatus==="legacy";
     const worksheetPhase=state.factAnswers.candidateWorksheetPhase || "judgments";
     const worksheetView=state.factAnswers.candidateWorksheetView || "worksheet";
+    const worksheetMode=state.factAnswers.candidateWorksheetMode || "person";
+    const worksheetPerson=Logic.CANDIDATE_IDS.includes(state.factAnswers.candidateWorksheetPerson) ? state.factAnswers.candidateWorksheetPerson : "zhoulan";
+    const worksheetField=Logic.CANDIDATE_FIELDS.includes(state.factAnswers.candidateWorksheetField) ? state.factAnswers.candidateWorksheetField : "know";
     const affected=new Set(state.factAnswers.candidateWorksheetAffected || []);
     const sourceOptions=[["","— 选择来源 —"],...Object.entries(Logic.CANDIDATE_SOURCE_BUNDLES).map(([id,rule])=>[id,rule.label])];
-    const worksheetHtml=`<div class="candidate-worksheet ${worksheetPhase}" data-worksheet-status="${worksheetStatus}">${people.map(([id,name])=>`<article><h3>${name}</h3>${fields.map(([field,label])=>{const key=Logic.candidateCellKey(id,field), judgment=state.candidateJudgments[key]||"";return `<div class="worksheet-row ${affected.has(key)?"needs-review":""}" data-candidate-cell="${key}"><span>${label}${affected.has(key)?'<em>新材料后待复核</em>':""}</span><select data-candidate-judgment="${key}" aria-label="${name}${label}判断"><option value="">未判断</option>${[["yes","已证实"],["no","已排除"],["unknown","证据不足"]].map(([value,text])=>`<option value="${value}" ${judgment===value?"selected":""}>${text}</option>`).join("")}</select>${worksheetPhase==="sources"&&judgment!=="unknown"?`<select data-candidate-source="${key}" aria-label="${name}${label}来源">${sourceOptions.map(([value,text])=>`<option value="${value}" ${state.candidateSources[key]===value?"selected":""}>${text}</option>`).join("")}</select>`:worksheetPhase==="sources"?'<small>证据不足不连接排除来源</small>':""}${state.candidateWorksheetHistory.some(entry=>entry.cell===key)?`<details><summary>修改记录</summary>${state.candidateWorksheetHistory.filter(entry=>entry.cell===key).slice(-4).map(entry=>`<p>${entry.kind==="source"?"来源":"判断"}：${entry.from||"空"} → ${entry.to||"空"}</p>`).join("")}</details>`:""}</div>`;}).join("")}</article>`).join("")}</div><div class="card-actions">${worksheetPhase==="sources"?'<button class="btn ghost" data-action="set-candidate-phase" data-phase="judgments">返回修改判断</button>':""}<button class="btn primary" data-action="validate-candidate-worksheet">${worksheetPhase==="judgments"?"核验判断并连接来源":"核验判断与来源"}</button></div>`;
+    const worksheetRow=(id,name,field,label)=>{const key=Logic.candidateCellKey(id,field), judgment=state.candidateJudgments[key]||"";return `<div class="worksheet-row ${affected.has(key)?"needs-review":""}" data-candidate-cell="${key}"><span>${worksheetMode==="condition"?`<b>${name}</b> · `:""}${label}${affected.has(key)?'<em>新材料后待复核</em>':""}</span><select data-candidate-judgment="${key}" aria-label="${name}${label}判断"><option value="">未判断</option>${[["yes","已证实"],["no","已排除"],["unknown","证据不足"]].map(([value,text])=>`<option value="${value}" ${judgment===value?"selected":""}>${text}</option>`).join("")}</select>${worksheetPhase==="sources"&&judgment!=="unknown"?`<select data-candidate-source="${key}" aria-label="${name}${label}来源">${sourceOptions.map(([value,text])=>`<option value="${value}" ${state.candidateSources[key]===value?"selected":""}>${text}</option>`).join("")}</select>`:worksheetPhase==="sources"?'<small>证据不足不连接排除来源</small>':""}${state.candidateWorksheetHistory.some(entry=>entry.cell===key)?`<details><summary>修改记录</summary>${state.candidateWorksheetHistory.filter(entry=>entry.cell===key).slice(-4).map(entry=>`<p>${entry.kind==="source"?"来源":"判断"}：${entry.from||"空"} → ${entry.to||"空"}</p>`).join("")}</details>`:""}</div>`;};
+    const worksheetNav=worksheetMode==="person"
+      ? `<div class="worksheet-axis-tabs" role="tablist" aria-label="按人物查看">${people.map(([id,name])=>`<button class="${worksheetPerson===id?"active":""}" data-action="set-candidate-person" data-person="${id}" role="tab" aria-selected="${worksheetPerson===id}">${name}<small>${fields.filter(([field])=>state.candidateJudgments[Logic.candidateCellKey(id,field)]).length}/4</small></button>`).join("")}</div>`
+      : `<div class="worksheet-axis-tabs" role="tablist" aria-label="按条件查看">${fields.map(([id,label])=>`<button class="${worksheetField===id?"active":""}" data-action="set-candidate-field" data-field="${id}" role="tab" aria-selected="${worksheetField===id}">${label}</button>`).join("")}</div>`;
+    const worksheetBody=worksheetMode==="person"
+      ? people.filter(([id])=>id===worksheetPerson).map(([id,name])=>`<article><h3>${name} · 四项条件</h3>${fields.map(([field,label])=>worksheetRow(id,name,field,label)).join("")}</article>`).join("")
+      : `<article><h3>${fields.find(([id])=>id===worksheetField)?.[1]} · 六人横向比较</h3>${people.map(([id,name])=>worksheetRow(id,name,worksheetField,fields.find(([field])=>field===worksheetField)?.[1]||worksheetField)).join("")}</article>`;
+    const discoveryLog=(state.candidateWorksheetDiscoveries||[]).slice(-4).reverse().map(entry=>{const changed=entry.affected.filter(key=>entry.before[key]!==entry.after[key]);const boundary=entry.evidence==="e_copy"?"这改变顾雪的知情条件，但没有证明她具有进入受控区域的权限。":entry.evidence==="e_permission"?"权限名单只回答受控能力，不自动证明实际接触 A047。":"新材料只改变它直接支持的单元，其余条件仍按各自来源判断。";return `<article><strong>新的事实改变了你的判断</strong><p><b>${EVIDENCE[entry.evidence]?.[0]||entry.evidence}</b> 使 ${changed.length||entry.affected.length} 格判断需要复核。</p>${changed.slice(0,3).map(key=>{const [person,field]=key.split("_");const personName=people.find(([id])=>id===person)?.[1]||person;const fieldName=fields.find(([id])=>id===field)?.[1]||field;return `<small>${personName} · ${fieldName}：${marks[entry.before[key]]?.[1]||"未判断"} → ${marks[entry.after[key]]?.[1]||"待核对"}</small>`;}).join("")}<small class="change-boundary">${boundary}</small></article>`;}).join("");
+    const worksheetHtml=`<div class="worksheet-mode-toggle" role="group" aria-label="工作表组织方式"><button class="btn ${worksheetMode==="person"?"primary":"ghost"}" data-action="set-candidate-mode" data-mode="person">逐人物分析</button><button class="btn ${worksheetMode==="condition"?"primary":"ghost"}" data-action="set-candidate-mode" data-mode="condition">逐条件比较</button></div>${worksheetNav}<div class="candidate-worksheet ${worksheetPhase}" data-worksheet-status="${worksheetStatus}">${worksheetBody}</div>${discoveryLog?`<section class="judgment-change-log"><h3>判断变更记录</h3>${discoveryLog}</section>`:""}<div class="card-actions">${worksheetPhase==="sources"?'<button class="btn ghost" data-action="set-candidate-phase" data-phase="judgments">返回修改判断</button>':""}<button class="btn primary" data-action="validate-candidate-worksheet">${worksheetPhase==="judgments"?"核验判断并连接来源":"核验判断与来源"}</button></div>`;
     const systemHtml=`<div class="matrix-wrap desktop-exclusion"><table class="matrix exclusion-matrix"><thead><tr><th>人物</th>${fields.map(([,label])=>`<th>${label}</th>`).join("")}<th>当前判断</th></tr></thead><tbody>${people.map(([id,name])=>`<tr data-person-row="${id}"><td>${name}</td>${fields.map(([field])=>`<td>${statusBadge(id,field)}</td>`).join("")}<td>${reasonSelect(id)}${hintButton(id)}</td></tr>${hintPanel(id,name,true)}`).join("")}</tbody></table></div><div class="mobile-exclusion-cards">${mobileCards}</div>`;
     return `<section class="chapter-task-status" aria-label="第八章任务进度"><article class="${state.solved.includes("p10")?"done":""}"><b>条件交集</b><span>必做 · ${state.solved.includes("p10")?"已完成":"未完成"}</span></article><article class="${state.evidence.includes("e_struggle")?"done":""}"><b>冲突归属</b><span>必做 · ${state.evidence.includes("e_struggle")?"已核验":"未核验"}</span></article></section>
     <section class="free-investigation"><div class="eyebrow">OPEN INVESTIGATION · 行为归属</div><h2>逐份打开原始档案，再判断谁仍具备全部条件</h2><p class="muted">档案包本身不发放结论。只有打开其中的单份记录，它才会进入案件簿。</p><div class="grid">${investigationPacketHtml("property","物业审计包","权限、岗位、本人知情与当班记录分属不同材料，不能用其中一份替代其余三份。",[["e_permission","① 权限名单","谁具备受控门、卡柜与工具权限。"],["e_accountmap","② OPS-04 账号对应","岗位账号对应哪类职务。"],["e_trainingaccess","③ 培训签收与访问审计","谁本人接触过含 1402 的历史图。"],["e_shift","④ 当班表","案发时段由谁签名值守。"]])}${investigationPacketHtml("operation","卡柜与服务区档案包","把取卡账号、自然人身份、连续路线与工具痕迹逐段连接。",[["e_cardauth","① 卡柜活体认证","把 OPS-04 的取卡行为落实到自然人。"],["e_route","② 服务区通行记录","固定受监测位置与时间窗口。"],["e_cart","③ 搬运车架与轮迹复核","只证明工具痕迹，不单独证明载物内容。"]])}${investigationCard("conflict-review","法医 · 冲突接触复核","核对抓痕、指甲接触物与定向血液微滴，区分生前冲突和事后搬运。",["e_struggle"])}${returnZhou}</div></section>
@@ -696,8 +712,8 @@
     for (let step=1;step<=total;step+=1) {
       const key=`q${step}`, ids=proofs[key] || [];
       if (ids.length && Number(versions[key]) === Logic.PROOF_RULE_VERSION) {
-        const proof=Logic.validateConfrontationAnswer(step,ids);
-        rows.push(`<p class="proof-current"><small>第 ${step} 轮 · 当前规则</small><strong>${ids.map(id=>EVIDENCE[id] ? EVIDENCE[id][0] : id).join(" + ")}</strong><span>${proof.ok ? proof.explanation : "记录缺项，需要复核；不能作为当前通过的证明。"}</span></p>`);
+        const proof=Logic.validateConfrontationAnswer(step,ids,state);
+        rows.push(`<p class="proof-current"><small>第 ${step} 轮 · 当前规则</small><strong>${proof.category || ids.map(id=>EVIDENCE[id] ? EVIDENCE[id][0] : id).join(" + ")}</strong><span>${proof.ok ? proof.explanation : "记录缺项，需要复核；不能作为当前通过的证明。"}</span></p>`);
       } else if (legacy[key]) {
         rows.push(`<p class="proof-legacy"><small>第 ${step} 轮 · 旧版规则</small><strong>${legacy[key].evidence.map(id=>EVIDENCE[id] ? EVIDENCE[id][0] : id).join(" + ") || "旧版组合"}</strong><span>${escapeHtml(legacy[key].note)}</span></p>`);
       }
@@ -722,8 +738,8 @@
     for (let step=1;step<=total;step+=1) {
       const key=`q${step}`, ids=proofs[key]||[];
       if (ids.length && Number(versions[key])===Logic.PROOF_RULE_VERSION) {
-        const proof=Logic.validateConfrontationAnswer(step,ids);
-        rows.push(`<p class="proof-current"><small>核心质询 ${step} · 当前规则</small><strong>${ids.map(id=>EVIDENCE[id]?EVIDENCE[id][0]:id).join(" + ")}</strong><span>${proof.ok?proof.explanation:"记录缺项，需要复核。"}</span></p>`);
+        const proof=Logic.validateConfrontationAnswer(step,ids,state);
+        rows.push(`<p class="proof-current"><small>核心质询 ${step} · 当前规则</small><strong>${proof.category || ids.map(id=>EVIDENCE[id]?EVIDENCE[id][0]:id).join(" + ")}</strong><span>${proof.ok?proof.explanation:"记录缺项，需要复核。"}</span></p>`);
       }
     }
     if (!archive && Object.keys(state.legacyProofRecords||{}).length) {
@@ -735,7 +751,8 @@
 
   function disclosureModalHtml() {
     if (!Logic.canSubmitDisclosure(state)) return `<div class="eyebrow">JUDGMENT · 暂停提交</div><h2>公开决定尚不能提交</h2>${finalProofSummary()}<p>当前报告或历史举证已经发生变化，需要先回到终章复核。已完成的现行举证会保留。</p><div class="card-actions"><button class="btn primary" data-action="close-modal">返回终章复核</button></div>`;
-    return `<div class="eyebrow">JUDGMENT · 等待公开决定</div><h2>最后，哪些事实写入公开报告？</h2>${finalProofSummary()}<p>${state.solved.includes("p11") ? "主案与新发现的历史责任链都已成立。" : state.oldCaseDiscovered ? "主案已经成立；遗留资料仍在整理中。" : "主案证据链已经成立。你仍可关闭这里，检查桌边尚未归档的遗留资料。"}</p><div class="card-actions"><button class="btn primary" data-action="choose-disclosure" data-choice="full">提交现有全部调查</button>${state.solved.includes("p11") ? '<button class="btn ghost" data-action="choose-disclosure" data-choice="culprit-only">只报告本案刑事事实</button>' : ""}</div>`;
+    const incomplete=!state.solved.includes("p11");
+    return `<div class="eyebrow">JUDGMENT · 等待公开决定</div><h2>最后，哪些事实写入公开报告？</h2>${finalProofSummary()}<p>${state.solved.includes("p11") ? "主案与新发现的历史责任链都已成立。" : state.oldCaseDiscovered ? "主案已经成立；遗留资料仍在整理中。" : "主案证据链已经成立。桌边仍有未归档的调查方向。"}</p>${incomplete?'<div class="no-return-warning"><strong>当前仍有未完成的调查方向</strong><p>提交会封存本周目，但系统会保留一份结案前检查点。观看结局后可以从检查点创建调查分支，不会覆盖已经取得的结局。</p></div>':""}<div class="card-actions"><button class="btn primary" data-action="choose-disclosure" data-choice="full">确认封存并提交现有调查</button>${state.solved.includes("p11") ? '<button class="btn ghost" data-action="choose-disclosure" data-choice="culprit-only">只报告本案刑事事实</button>' : ""}<button class="btn ghost" data-action="close-modal">暂不结案，继续检查</button></div>`;
   }
 
   function reportArgumentHtml(id,title) {
@@ -788,16 +805,19 @@
     state.confrontationStep=step;
     const transcript = Array.from({length:total},(_,index)=>index+1).map(index => {
       const key=`q${index}`, ids=state.confrontation[key] || [], status=Logic.storedProofStatus(state,key);
-      if (status === "current" && ids.length) { const proof=Logic.validateConfrontationAnswer(index,ids); return `<div class="dialogue-line"><span>第 ${index} 轮闭环 · 当前规则</span><strong>${ids.map(id => EVIDENCE[id] ? EVIDENCE[id][0] : id).join(" + ")}</strong><p>${proof.explanation}</p><blockquote>${responses[index-1]}</blockquote></div>`; }
+      if (status === "current" && ids.length) { const proof=Logic.validateConfrontationAnswer(index,ids,state); return `<div class="dialogue-line"><span>第 ${index} 轮闭环 · 报告因果链</span><strong>${proof.category}</strong><p>${proof.explanation}</p><blockquote>${responses[index-1]}</blockquote></div>`; }
       if (status === "legacy" && state.legacyProofRecords[key]) return `<div class="dialogue-line legacy"><span>第 ${index} 轮 · 旧版规则</span><strong>${state.legacyProofRecords[key].evidence.map(id=>EVIDENCE[id] ? EVIDENCE[id][0] : id).join(" + ") || "旧版组合"}</strong><p>${escapeHtml(state.legacyProofRecords[key].note)}</p></div>`;
       return "";
     }).join("");
-    const orderedEvidence = [...state.pinnedEvidence, ...state.evidence.filter(id => !state.pinnedEvidence.includes(id))];
-    const draftKey = `q${step + 1}`, draft = state.confrontationDraft[draftKey] || [], expanded = state.confrontationExpanded[draftKey] || [];
-    const visibleEvidence=state.confrontationOnlySelected ? orderedEvidence.filter(id=>draft.includes(id)) : orderedEvidence;
-    const evidenceList=visibleEvidence.length ? visibleEvidence.map(id => { const isExpanded=expanded.includes(id), model=Logic.EVIDENCE_PROVENANCE[id]; return `<article class="evidence-choice-card ${evidenceMaterialClass(id)} ${state.pinnedEvidence.includes(id) ? "pinned" : ""}" data-proof-id="${id}"><label class="evidence-choice"><input type="checkbox" name="confrontation-evidence" value="${id}" ${draft.includes(id) ? "checked" : ""}><span class="source">${EVIDENCE[id][1]}${model && model.stage === "derived" ? " · 派生" : ""}</span><strong>${EVIDENCE[id][0]}</strong></label><button type="button" class="evidence-summary-toggle" data-action="toggle-proof-summary" data-evidence="${id}" aria-expanded="${isExpanded}">${isExpanded ? "收起摘要" : "展开摘要"}</button><p class="evidence-choice-summary" ${isExpanded ? "" : "hidden"}>${EVIDENCE[id][2]}</p></article>`; }).join("") : '<div class="proof-empty"><strong>尚无已选材料</strong><p>返回全部材料后选择能直接回答当前质疑的来源。</p><button type="button" class="btn ghost" data-action="toggle-selected-proofs">查看全部材料</button></div>';
+    const draftKey = `q${step + 1}`, draft = state.confrontationDraft[draftKey] || [];
+    const challengeOptions=[
+      [["scene-chain","引用“伤情—现场形态—联合复核”的完整地点链"],["scene-alone","引用“1402 在图纸中存在”这一结论"],["watch-alone","只引用手表 19:16 的冲击记录"]],
+      [["fatal-chain","引用“致命窗口—同窗在场—生前接触”的完整行为链"],["fatal-staging","引用取卡、搬运与挂链复原"],["fatal-motive","引用旧案动机与亲属关系"]],
+      [["oldcase-chain","引用“责任卷宗—死亡名单—人事连接”的边界链"],["oldcase-motive","只引用周岚与周屿的兄妹关系"],["oldcase-alone","把旧案材料作为主案定罪补强"]]
+    ][step] || [];
+    const responseChoices=challengeOptions.map(([value,label])=>`<label class="choice confrontation-response"><input type="radio" name="confrontation-response" value="${value}" ${draft.includes(value)?"checked":""}><span>${label}</span></label>`).join("");
     const legacyNotice=Object.keys(state.legacyProofRecords||{}).length?`<div class="legacy-proof-record"><strong>旧版举证已封存</strong><p>旧题序不会被套入本版判断；当前只需完成下方两项主案质询${state.oldCaseDiscovered?"，新发现材料会单独增加一项":""}。</p></div>`:"";
-    return `<section class="puzzle confrontation" id="current-confrontation"><div class="puzzle-tag">FINAL CONFRONTATION · ${step + 1}/${total}</div><h2>周岚：“${questions[step]}”</h2>${legacyNotice}<div class="confrontation-toolbar" role="region" aria-label="当前举证操作"><span id="proof-selection-count">第 ${step + 1} 轮 · 已选 ${draft.length}/3</span><button type="button" class="btn ghost" data-action="toggle-selected-proofs" aria-pressed="${state.confrontationOnlySelected}">${state.confrontationOnlySelected ? "查看全部材料" : "仅查看已选材料"}</button><button class="btn primary" data-action="validate-confrontation">出示所选材料</button></div>${transcript}<p class="muted">必要证据齐全即可通过；相关材料可以补强时间、身份或路径，无关材料仍需移除。派生材料与其引用来源不会重复计算为独立支持。</p><div class="confrontation-evidence">${evidenceList}</div><div class="feedback" id="feedback-confrontation"></div></section>`;
+    return `<section class="puzzle confrontation" id="current-confrontation"><div class="puzzle-tag">FINAL CONFRONTATION · ${step + 1}/${total}</div><h2>周岚：“${questions[step]}”</h2>${legacyNotice}${transcript}<div class="rebuttal-brief"><strong>不再重复选择证据卡</strong><p>材料已经在结构化报告中完成来源连接。现在请选择能直接排除这项替代解释的报告因果链；错误回应会说明缺失的逻辑连接。</p></div><div class="choices rebuttal-choices">${responseChoices}</div><div class="confrontation-toolbar" role="region" aria-label="当前反驳操作"><span id="proof-selection-count">第 ${step + 1} 轮 · ${draft.length?"已选择回应":"等待回应"}</span><button class="btn ghost" data-action="show-notebook">核对案件簿</button><button class="btn primary" data-action="validate-confrontation">回应质疑</button></div><div class="feedback" id="feedback-confrontation"></div></section>`;
   }
 
   function evidenceMaterialClass(id) {
@@ -928,9 +948,11 @@
     };
     const [label,title,copy] = endings[id];
     const rating=Logic.reasoningRating(state);
-    const methodReview=`<section class="method-review"><h2>推理方法回看</h2><div><b>${state.factAnswers.p05UncertaintyBonus?"✓":"—"} 不确定性</b><span>${state.factAnswers.p05UncertaintyBonus?"你曾把无法定年的差异保留为证据不足，没有强行分类。":"本周目没有留下审慎观察加成；这不改变结局，但会写入方法档案。"}</span></div><div><b>证据净化</b><span>提交修正 ${Number(state.factAnswers.p07Attempts||0)} 次，主动提示 ${Number(state.factAnswers.p07HintUses||0)} 次；提示不计作误判。</span></div><div><b>工作表修订</b><span>${state.candidateWorksheetHistory.length} 次格内修改；新增相关材料会触发复核，而不会静默沿用旧结论。</span></div></section>`;
+    const hypothesis=({furniture:"家具移动",perspective:"摄影透视",room:"房间身份有误"}[state.factAnswers.p03Explanation]||"尚未记录");
+    const changed=(state.candidateWorksheetDiscoveries||[]).flatMap(entry=>entry.affected.filter(key=>entry.before[key]!==entry.after[key]));
+    const methodReview=`<section class="method-review"><h2>你的推理历程</h2><div><b>最初的空间假说</b><span>你先暂存了“${hypothesis}”，随后用固定墙体、窗框与暖气管的关系检验它；修改假说不是失误，而是调查在回应你的问题。</span></div><div><b>${state.factAnswers.p05UncertaintyBonus?"✓":"—"} 保留不确定性</b><span>${state.factAnswers.p05UncertaintyBonus?"你把无法定年的差异保留为证据不足，没有强行分类。":"本周目没有留下审慎观察记录；这不改变结局。"}</span></div><div><b>证据改变判断</b><span>${changed.length?`新增材料曾使 ${new Set(changed).size} 个判断发生变化；你重新核验后才让下游结论恢复有效。`:"本周目没有出现由新增材料触发的工作表改判。"}</span></div><div><b>证明边界</b><span>${state.reportArguments.intent&&state.reportArguments.intent.boundary==="no-premeditation"?"你最终保留了“不能仅凭现有材料证明预谋故意”的边界。":"你的结案档案记录了当前证据能够到达的位置。"}</span></div></section>`;
     const critique = id === "B" ? `<section class="theory-autopsy"><h2>报告内部自洽度不足</h2><div><b>× 连续在场</b><span>19:40—22:20 直播、位置与会场记录封闭了许遥的往返窗口。</span></div><div><b>× 地点前提</b><span>1402 的撞击、血迹与搬运痕迹不支持 1102 是死亡第一现场。</span></div><div><b>× 门卡解释</b><span>21:41 的 A047 日志只证明凭证认证通过；门磁也不记录通过者身份。</span></div></section>` : "";
-    app.innerHTML = `<section class="ending"><div class="ending-letter">${label}</div><h1 class="${id === "D" ? "title-shift" : ""}">${title}</h1><p class="ending-copy">${copy}</p>${critique}${methodReview}<div class="case-rating"><span>研判档案评级</span><strong>${rating}</strong><small>推理修正 ${state.mistakes} 次 · 评级不改变结局</small></div><div class="epilogue-grid">${epilogues[id].map(([name,text]) => `<article><strong>${name}</strong><p>${text}</p></article>`).join("")}</div><p class="muted">已收集 ${state.evidence.length} 条材料 · 关键人物查证 ${Logic.CORE_INTERVIEWS.filter(x => Number(state.interviews[x] || 0) >= 3).length}/4 · 结局档案 ${state.meta.endings.join(" / ")}</p><div class="ending-actions"><button class="btn primary" data-action="review-case">返回案件总览</button><button class="btn ghost" data-action="confirm-new">开始新周目</button></div></section>`;
+    app.innerHTML = `<section class="ending"><div class="ending-letter">${label}</div><h1 class="${id === "D" ? "title-shift" : ""}">${title}</h1><p class="ending-copy">${copy}</p>${critique}${methodReview}<div class="case-rating"><span>研判档案评级</span><strong>${rating}</strong><small>推理修正 ${state.mistakes} 次 · 评级不改变结局</small></div><div class="epilogue-grid">${epilogues[id].map(([name,text]) => `<article><strong>${name}</strong><p>${text}</p></article>`).join("")}</div><p class="muted">已收集 ${state.evidence.length} 条材料 · 关键人物查证 ${Logic.CORE_INTERVIEWS.filter(x => Number(state.interviews[x] || 0) >= 3).length}/4 · 结局档案 ${state.meta.endings.join(" / ")}</p><div class="ending-actions"><button class="btn primary" data-action="review-case">返回案件总览</button>${state.preDisclosureCheckpoint?'<button class="btn" data-action="restore-checkpoint">从结案前检查点继续</button>':""}<button class="btn ghost" data-action="confirm-new">开始新周目</button></div></section>`;
   }
 
   function setFeedback(id, message, ok) {
@@ -1037,6 +1059,14 @@
     if (action === "show-prologue") openModal(`<div class="eyebrow">CASE BRIEF</div><h1>临江壹号死亡案</h1><p class="lead">2026 年 9 月 17 日 22:47，建筑设计师林知秋被发现死在从内部反锁的 1102。</p><div class="document"><p><strong>21:41</strong> 林知秋名下的 A047 凭证通过 1102 锁具认证；这尚不等于本人进入。</p><p><strong>19:40—22:20</strong> 头号嫌疑人许遥在十四公里外公开演讲。</p><p><strong>询问规则</strong> 初查尚未发现一句可直接证伪的纯假证词。真话是否完整，仍需独立来源检验。</p><p><strong>问题</strong> 证据证明许遥是凶手，时间证明他不可能是凶手。</p></div><div class="card-actions"><button class="btn primary" data-action="close-modal">开始思考</button></div>`);
     if (action === "confirm-new") openModal(`<h2>重新开始案件？</h2><p class="muted">当前周目会清空，但已解锁的结局档案会保留。</p><div class="card-actions"><button class="btn danger-btn" data-action="reset-run">确认重新开案</button><button class="btn" data-action="close-modal">取消</button></div>`);
     if (action === "reset-run") { closeModal(); resetRun(); }
+    if (action === "restore-checkpoint") {
+      const restored=Logic.restoreDisclosureCheckpoint(state);
+      if (!restored) { toast("没有可恢复的结案前检查点"); return; }
+      state=restored;
+      saveState(true);
+      renderChapter(10);
+      openModal('<div class="eyebrow">CASE BRANCH · 调查分支</div><h2>已从结案前检查点继续</h2><p>刚才取得的结局仍保留在结局档案中。本分支可以继续处理未归档材料，再形成不同的公开决定。</p><button class="btn primary" data-action="close-modal">继续调查</button>');
+    }
 
     if (action === "examine") {
       const id = target.dataset.id;
@@ -1125,7 +1155,7 @@
     }
     if (action === "solve-p04") {
       const result=Logic.validateBlueprintComparison(state.factAnswers.p04First,state.factAnswers.p04Second,state.factAnswers.p04OverlayViews,state.factAnswers.p04OverlayObservations,checked("p04-change"));
-      if (result.ok) { addEvidence("e_plan2012","e_plan2019"); solve("p04","d_1402"); setFeedback("feedback-p04","房号与正式门位消失，但承重边界和管井仍在：被注销的是编号，不是空间。",true); openModal('<div class="eyebrow">ARCHIVE OVERLAY · 发现</div><h2>1402</h2><div class="witness-scene"><p>十四年前，1402 还清楚地标注在施工图上。</p><p>七年前，它的编号从物业系统中消失了。</p><blockquote>但墙，一直都在。</blockquote></div><button class="btn primary" data-action="close-modal">记录这个房间</button>'); }
+      if (result.ok) { addEvidence("e_plan2012","e_plan2019"); solve("p04","d_1402"); setFeedback("feedback-p04","房号与正式门位消失，但承重边界和管井仍在：被注销的是编号，不是空间。",true); openModal('<div class="eyebrow">ARCHIVE OVERLAY · 发现</div><div class="room-reveal-cinematic" aria-label="2012 与 2019 图纸叠合后恢复 1402"><span>1401</span><strong><i>编号恢复</i>1402<small>墙体仍在 · 门位被抹去</small></strong><span>1403</span></div><h2>一个从记录中消失的房间</h2><div class="witness-scene"><p>2012 年，它在施工图上有墙、有门、有编号。</p><p>2019 年，编号和门位被抹去，承重边界与管井却没有任何拆除记录。</p><blockquote>被注销的是记录，不是空间。</blockquote></div><button class="btn primary" data-action="close-modal">把 1402 写回地图</button>'); }
       else wrong("feedback-p04",result.missingViews.length ? `还需亲自查看 ${result.missingViews.length} 种图层模式；单张图不能代替叠合比较。` : result.missingObservations.length ? `请在叠合图上标记门位、承重边界与管井；当前还缺 ${result.missingObservations.length} 处。` : "勾选内容与叠合图不一致；区分编号、门位和未被拆除的固定结构。 ");
     }
     if (action === "find-diff") {
@@ -1286,6 +1316,18 @@
     if (action === "set-worksheet-view") {
       state.factAnswers.candidateWorksheetView=target.dataset.view === "system" ? "system" : "worksheet";
       saveState(true); renderChapterPreserving(".worksheet-view-toggle");
+    }
+    if (action === "set-candidate-mode") {
+      state.factAnswers.candidateWorksheetMode=target.dataset.mode === "condition" ? "condition" : "person";
+      saveState(true); renderChapterPreserving(".worksheet-mode-toggle");
+    }
+    if (action === "set-candidate-person") {
+      state.factAnswers.candidateWorksheetPerson=Logic.CANDIDATE_IDS.includes(target.dataset.person) ? target.dataset.person : "zhoulan";
+      saveState(true); renderChapterPreserving(".worksheet-axis-tabs");
+    }
+    if (action === "set-candidate-field") {
+      state.factAnswers.candidateWorksheetField=Logic.CANDIDATE_FIELDS.includes(target.dataset.field) ? target.dataset.field : "know";
+      saveState(true); renderChapterPreserving(".worksheet-axis-tabs");
     }
     if (action === "validate-candidate-worksheet") {
       if ((state.factAnswers.candidateWorksheetPhase||"judgments") === "judgments") {
@@ -1462,8 +1504,8 @@
       requestAnimationFrame(()=>{ const button=document.querySelector('#current-confrontation [data-action="toggle-selected-proofs"]'); button?.scrollIntoView({block:"center"}); button?.focus({preventScroll:true}); });
     }
     if (action === "validate-confrontation") {
-      const evidence = checked("confrontation-evidence"), step = Logic.nextConfrontationStep(state) + 1;
-      const result = Logic.validateConfrontationAnswer(step,evidence), total = Logic.proofTotal(state);
+      const response = chosen("confrontation-response"), evidence=response?[response]:[], step = Logic.nextConfrontationStep(state) + 1;
+      const result = Logic.validateConfrontationAnswer(step,evidence,state), total = Logic.proofTotal(state);
       if (result.ok) {
         state.confrontation[`q${step}`] = evidence;
         state.confrontationVersions[`q${step}`] = Logic.PROOF_RULE_VERSION;
@@ -1478,7 +1520,7 @@
       } else {
         wrong("feedback-confrontation",result.reason || "这组材料不能直接回答当前质疑。 ");
         const feedback=document.querySelector("#feedback-confrontation");
-        if (feedback) feedback.innerHTML=`<span>${escapeHtml(result.reason || "这组材料不能直接回答当前质疑。")}</span><div><button class="text-button" data-action="show-notebook">打开案件簿核对现有材料</button></div>`;
+        if (feedback) feedback.innerHTML=`<span>${escapeHtml(result.reason || "这段论证不能直接回答当前质疑。")}</span><div><button class="text-button" data-action="show-notebook">打开案件簿核对因果连接</button></div>`;
       }
     }
     if (action === "continue-disclosure") {
@@ -1515,15 +1557,19 @@
       saveState(true);
     }
     if (event.target.dataset.candidateJudgment) {
+      const downstreamWasReady=state.solved.includes("p10") || Logic.isCurrentReportVerified(state) || state.solved.includes("p12");
       Logic.recordCandidateWorksheetEdit(state,event.target.dataset.candidateJudgment,"judgment",event.target.value);
       if (event.target.value==="unknown") Logic.recordCandidateWorksheetEdit(state,event.target.dataset.candidateJudgment,"source","");
       state.factAnswers.primaryCandidateConfirmed=false;
       saveState(true);
+      if (downstreamWasReady) { toast("工作表已修改；条件交集与报告已转为待复核"); const feedback=document.querySelector("#feedback-p10"); if (feedback) { feedback.className="feedback bad"; feedback.textContent="这项修改使下游条件交集和报告快照失效；现场复原与已完成质询会保留，重新核验后无需重做。"; } }
     }
     if (event.target.dataset.candidateSource) {
+      const downstreamWasReady=state.solved.includes("p10") || Logic.isCurrentReportVerified(state) || state.solved.includes("p12");
       Logic.recordCandidateWorksheetEdit(state,event.target.dataset.candidateSource,"source",event.target.value);
       state.factAnswers.primaryCandidateConfirmed=false;
       saveState(true);
+      if (downstreamWasReady) toast("来源连接已修改；条件交集与报告已转为待复核");
     }
     if (event.target.name === "p06-height") { state.factAnswers.p06Choice=Number(event.target.value); saveState(true); }
     if (event.target.name === "p06-reason") { state.factAnswers.p06Reason=event.target.value; saveState(true); }
@@ -1549,20 +1595,13 @@
       saveState(true);
     }
     if (event.target.dataset.reconstructionSupport) { state.reconstructionSupport[event.target.dataset.reconstructionSupport]=event.target.value; saveState(true); }
-    if (event.target.name === "confrontation-evidence") {
+    if (event.target.name === "confrontation-response") {
       const key=`q${state.confrontationStep + 1}`;
-      let values=checked("confrontation-evidence");
-      if (values.length > 3) { event.target.checked=false; toast("每轮最多组合三条材料"); values=checked("confrontation-evidence"); }
+      const values=[event.target.value];
       state.confrontationDraft[key]=values;
       saveState(true);
       const count=document.querySelector("#proof-selection-count");
-      if (count) count.textContent=`第 ${state.confrontationStep + 1} 轮 · 已选 ${values.length}/3`;
-      if (state.confrontationOnlySelected && !event.target.checked) {
-        setTimeout(() => {
-          renderChapterPreserving("#current-confrontation");
-          requestAnimationFrame(()=>document.querySelector('#current-confrontation [data-action="toggle-selected-proofs"]')?.focus({preventScroll:true}));
-        },30);
-      }
+      if (count) count.textContent=`第 ${state.confrontationStep + 1} 轮 · 已选择回应`;
     }
   });
 

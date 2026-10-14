@@ -1265,3 +1265,33 @@ summary:focus-visible,
   .overlay-hotspot.wall{left:34%}.overlay-hotspot.door{left:34%}.overlay-hotspot.shaft{right:4%}
   .mirror-focus{display:grid;gap:4px}.worksheet-row{grid-template-columns:1fr}.worksheet-row>span{grid-column:auto}
 }
+
+/* v4.0 · 推理分支、纵向复原与报告反驳 */
+.worksheet-mode-toggle{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 8px}
+.worksheet-axis-tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:8px 0 14px}
+.worksheet-axis-tabs button{display:grid;gap:2px;place-items:center;min-height:48px;padding:7px;color:var(--muted);border:1px solid var(--line);background:#fff;cursor:pointer}
+.worksheet-axis-tabs button.active{color:#fff;border-color:var(--blue);background:var(--blue)}
+.worksheet-axis-tabs small{font-size:.58rem}.judgment-change-log{display:grid;gap:8px;margin:16px 0;padding:16px;border:1px solid #bf9c57;border-top:4px solid #a38025;background:#fffaf0}
+.judgment-change-log h3{margin:0 0 4px;font-family:var(--serif)}.judgment-change-log article{display:grid;gap:4px;padding:10px;border:1px solid #d8c9a2;background:#fff}
+.judgment-change-log p{margin:0;color:var(--muted)}.judgment-change-log small{display:block;color:#705e31}
+.hypothesis-route{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:12px 0;padding:12px 14px;border-left:4px solid var(--blue);background:var(--blue-soft)}
+.room-reveal-cinematic{position:relative;display:grid;grid-template-columns:1fr 1.1fr 1fr;min-height:150px;margin:4px 0 24px;overflow:hidden;border:2px solid #6d999e;background:linear-gradient(rgba(37,101,122,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(37,101,122,.07) 1px,transparent 1px),#f2fbfc;background-size:18px 18px}
+.room-reveal-cinematic>span,.room-reveal-cinematic>strong{display:grid;place-items:center;border-right:1px solid #86abb1;color:#567079;letter-spacing:.16em}
+.room-reveal-cinematic>strong{position:relative;color:var(--accent-strong);background:var(--accent-soft);font:800 clamp(2rem,8vw,4.6rem) var(--serif);animation:roomReturn .7s ease both}
+.room-reveal-cinematic>strong::before{content:"";position:absolute;inset:8px;border:2px dashed var(--accent-strong)}.room-reveal-cinematic i,.room-reveal-cinematic small{position:absolute;font:800 .62rem var(--sans);letter-spacing:.08em}.room-reveal-cinematic i{top:14px}.room-reveal-cinematic small{bottom:14px}.room-reveal-cinematic>span:last-child{border-right:0}
+@keyframes roomReturn{from{opacity:.08;transform:scale(.92);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+.crime-reconstruction-map{grid-template-columns:minmax(0,760px);justify-content:center;gap:0;background:linear-gradient(180deg,#eef7f8,#fff 48%,#f4f8ee)}
+.crime-reconstruction-map .map-floor{width:100%;min-height:0}.crime-reconstruction-map .floor-14{border-bottom:4px solid var(--blue)}.crime-reconstruction-map .floor-11{border-top:4px solid var(--accent-dim)}
+.crime-reconstruction-map .map-route{position:relative;min-height:116px;place-content:center;padding:26px 14px}
+.crime-reconstruction-map .map-route::before{content:"第一次往返 · 20:43—20:50 经管井进入 1102 放水后返回服务区";display:block;margin-bottom:10px;padding:7px 10px;color:#6c5927;border:1px dashed #aa8d45;background:#fff9e8;font-size:.7rem}
+.crime-reconstruction-map .map-route::after{content:"↓";position:absolute;left:50%;bottom:1px;color:var(--accent-strong);font-size:1.8rem;transform:translateX(-50%)}
+.rebuttal-brief{margin:18px 0;padding:14px 16px;border-left:4px solid var(--blue);background:var(--blue-soft)}.rebuttal-brief p{margin:5px 0 0;color:var(--muted)}
+.rebuttal-choices{grid-template-columns:1fr}.confrontation-response{min-height:62px}.no-return-warning{margin:18px 0;padding:14px 16px;border:1px solid #b35d50;background:var(--danger-soft)}.no-return-warning p{margin-bottom:0}
+
+@media (max-width:700px){
+  .worksheet-axis-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}.crime-reconstruction-map .map-route{min-height:132px}
+}
+@media (max-width:420px){
+  .worksheet-mode-toggle{display:grid;grid-template-columns:1fr 1fr}.worksheet-axis-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.room-reveal-cinematic{grid-template-columns:.75fr 1.5fr .75fr}.room-reveal-cinematic>strong{font-size:2.2rem}.room-reveal-cinematic small{font-size:.5rem}
+}
+@media (prefers-reduced-motion:reduce){.room-reveal-cinematic>strong{animation:none}}

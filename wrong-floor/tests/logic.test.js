@@ -9,10 +9,15 @@ function test(name, fn) {
 }
 
 const MAIN_PROOFS = {
+  q1: ["scene-chain"],
+  q2: ["fatal-chain"]
+};
+const OLD_CASE_PROOF = ["oldcase-chain"];
+const LEGACY_MAIN_PROOFS = {
   q1: ["e_impact", "e_body_review"],
   q2: ["e_body_review", "e_route", "e_struggle"]
 };
-const OLD_CASE_PROOF = ["e_oldfile", "e_casualty", "e_hr"];
+const LEGACY_OLD_CASE_PROOF = ["e_oldfile", "e_casualty", "e_hr"];
 const V8_PROOFS = {
   q1: ["e_impact", "e_body_review"],
   q2: ["e_floor", "e_cart"],
@@ -38,10 +43,11 @@ function reportReadyState(options = {}) {
   );
   if (options.oldCase) {
     state.solved.push("p11");
-    state.evidence.push(...OLD_CASE_PROOF);
+    state.evidence.push(...LEGACY_OLD_CASE_PROOF);
   }
   state.evidence = [...new Set(state.evidence)];
   state.report = { ...Logic.REPORT_ANSWERS };
+  state.reportArguments = Object.fromEntries(Object.entries(Logic.REPORT_ARGUMENT_RULES).map(([id,rule])=>[id,{...rule.answers}]));
   state.reportAdopted = [...Logic.REPORT_AUTO_KEYS];
   return state;
 }
@@ -64,10 +70,10 @@ function completeReconstructionState() {
   return { state, links };
 }
 
-test("v3.9 constants and fresh state use the ten-chapter schema", () => {
-  assert.equal(Logic.SAVE_VERSION, 12);
-  assert.equal(Logic.REPORT_RULE_VERSION, 12);
-  assert.equal(Logic.PROOF_RULE_VERSION, 10);
+test("v4.0 constants and fresh state use the ten-chapter schema", () => {
+  assert.equal(Logic.SAVE_VERSION, 13);
+  assert.equal(Logic.REPORT_RULE_VERSION, 13);
+  assert.equal(Logic.PROOF_RULE_VERSION, 11);
   const state = Logic.freshState();
   assert.equal(Logic.chapterUnlocked(state, 1), true);
   assert.equal(Logic.chapterUnlocked(state, 2), false);
@@ -249,6 +255,30 @@ test("candidate worksheet keeps edits, signs its evidence set and becomes stale 
   assert.equal(state.candidateWorksheetHistory.at(-1).cell,"zhoulan_know");
 });
 
+test("editing a verified candidate cell invalidates every dependent closure but preserves reconstruction and proof work", () => {
+  const state=reportReadyState();
+  state.solved.push("p02");
+  state.evidence.push("e_checkin","e_stream","e_location","e_permission","e_accountmap","e_trainingaccess","e_shift");
+  state.evidence=[...new Set(state.evidence)];
+  const answer=Logic.buildCandidateWorksheetAnswer(state);
+  state.candidateJudgments={...answer.judgments};
+  state.candidateSources={...answer.sources};
+  assert.equal(Logic.verifyCandidateWorksheet(state).ok,true);
+  assert.equal(Logic.verifyReportSnapshot(state).ok,true);
+  addCurrentProof(state,1,MAIN_PROOFS.q1);
+  addCurrentProof(state,2,MAIN_PROOFS.q2);
+  state.solved.push("p12");
+  assert.equal(Logic.canSubmitDisclosure(state),true);
+  assert.equal(Logic.recordCandidateWorksheetEdit(state,"guxue_know","judgment","yes"),true);
+  assert.equal(state.solved.includes("p10"),false);
+  assert.equal(state.solved.includes("report"),false);
+  assert.equal(state.solved.includes("p12"),false);
+  assert.equal(state.solved.includes("p10r"),true,"scene reconstruction should not be erased");
+  assert.equal(state.confrontation.q1[0],"scene-chain","completed rebuttals should remain available");
+  assert.equal(state.verifiedReport,null);
+  assert.equal(Logic.canSubmitDisclosure(state),false);
+});
+
 test("legacy candidate progress is marked as migrated instead of current player interaction", () => {
   const migrated=Logic.normalizeState({version:10,solved:["p10"],evidence:["e_permission"]});
   assert.equal(Logic.candidateWorksheetStatus(migrated),"legacy");
@@ -370,6 +400,7 @@ test("report edits and adoption changes invalidate a verified snapshot until exp
 test("structured report arguments only write the canonical conclusion when all four parts agree", () => {
   const state=reportReadyState();
   state.report.sceneReason="";
+  state.reportArguments.scene={};
   const rule=Logic.REPORT_ARGUMENT_RULES.scene;
   for (const [part,value] of Object.entries(rule.answers)) Logic.markReportArgumentEdited(state,"scene",part,value);
   assert.equal(state.report.sceneReason,Logic.REPORT_ANSWERS.sceneReason);
@@ -389,17 +420,17 @@ test("the 21:41 derived door event is required for transfer and remains one depe
   assert.match(result.reason,/正门事件复核/);
 });
 
-test("final confrontation is compressed to two main questions and one old-case question", () => {
-  const place = Logic.validateConfrontationAnswer(1, MAIN_PROOFS.q1);
-  const strengthened = Logic.validateConfrontationAnswer(1, [...MAIN_PROOFS.q1, "e_watch"]);
+test("final confrontation reuses completed report chains instead of repeating evidence selection", () => {
+  const state=reportReadyState({oldCase:true});
+  const place = Logic.validateConfrontationAnswer(1, MAIN_PROOFS.q1,state);
+  const weakPlace = Logic.validateConfrontationAnswer(1, ["watch-alone"],state);
   assert.equal(place.ok, true);
-  assert.equal(strengthened.ok, true);
-  assert.match(strengthened.explanation, /相关补强.*手表/);
-  assert.match(strengthened.explanation, /不重复计算/);
-  const fatal = Logic.validateConfrontationAnswer(2, MAIN_PROOFS.q2);
+  assert.equal(weakPlace.ok, false);
+  assert.match(weakPlace.reason, /尚未把伤势/);
+  const fatal = Logic.validateConfrontationAnswer(2, MAIN_PROOFS.q2,state);
   assert.equal(fatal.ok, true);
   assert.equal(fatal.category, "致命冲突行为人");
-  assert.equal(Logic.validateConfrontationAnswer(3, OLD_CASE_PROOF).ok, true);
+  assert.equal(Logic.validateConfrontationAnswer(3, OLD_CASE_PROOF,state).ok, true);
   assert.equal(Logic.validateConfrontationAnswer(4, []).ok, false);
 });
 
@@ -428,7 +459,8 @@ test("stored Q1-Q3 proofs require current versions, owned evidence and at most t
   delete noVersion.confrontationVersions.q2;
   assert.equal(Logic.validateStoredProof(noVersion, 2).status, "legacy");
   const missingOwned = { ...state, evidence: state.evidence.filter(id => id !== "e_struggle") };
-  assert.equal(Logic.validateStoredProof(missingOwned, 2).status, "review-required");
+  assert.equal(Logic.validateStoredProof(missingOwned, 2).status, "current","the rebuttal remains a report citation; the report itself becomes invalid");
+  assert.equal(Logic.isCurrentReportVerified(missingOwned),false);
   assert.equal(Logic.validateConfrontationAnswer(1, ["e_impact", "e_body_review", "e_body", "e_watch"]).issue, "limit");
 });
 
@@ -460,7 +492,7 @@ test("adding P11 after two completed rounds requires the third question before C
   const state = disclosureReadyState();
   assert.equal(Logic.canSubmitDisclosure(state), true);
   state.solved.push("p11");
-  state.evidence.push(...OLD_CASE_PROOF);
+  state.evidence.push(...LEGACY_OLD_CASE_PROOF);
   assert.equal(Logic.proofTotal(state), 3);
   assert.equal(Logic.allCurrentProofsComplete(state), false);
   assert.equal(Logic.canSubmitDisclosure(state), false);
@@ -491,6 +523,11 @@ test("public disclosure is guarded by current report and proof snapshots", () =>
   closed.report.stager = "许遥";
   assert.equal(closed.caseArchive.report.stager, "周岚");
   assert.equal(Logic.markReportAdopted(closed, "deathPlace", false), false);
+  const branch=Logic.restoreDisclosureCheckpoint(closed);
+  assert.equal(branch.ending,null);
+  assert.equal(branch.screen,"chapter-10");
+  assert.equal(branch.meta.endings.includes("A"),true);
+  assert.equal(Logic.canSubmitDisclosure(branch),true);
 });
 
 test("case resolution distinguishes report review, proof review, disclosure and closed", () => {
@@ -547,22 +584,24 @@ test("sealed-record discovery stays hidden in fresh saves and migrates from real
   assert.equal(Logic.evidenceProgress(explicit).oldCaseDiscovered, true);
 });
 
-test("v3.6 progress migrates candidate, uncertainty classes, responsibility order and compatible snapshots", () => {
+test("v3.9 progress migrates worksheet, report and proof snapshots to v4.0", () => {
   const raw = disclosureReadyState({ oldCase:true });
-  raw.version = 9;
-  raw.primaryCandidate = "";
-  raw.differenceClasses = { lamp:"history", painting:"history" };
-  raw.responsibilityOrder = ["file-c","file-a","file-d","file-b"];
-  raw.verifiedReport.ruleVersion = 9;
-  Object.keys(raw.confrontationVersions).forEach(key => raw.confrontationVersions[key] = 9);
+  raw.version = 12;
+  raw.primaryCandidate = "zhoulan";
+  raw.differenceClasses = { lamp:"unknown", painting:"unknown" };
+  raw.responsibilityOrder = [...Logic.CHAIN_FILE_ORDER];
+  raw.verifiedReport.ruleVersion = 12;
+  raw.confrontation = { q1:[...LEGACY_MAIN_PROOFS.q1], q2:[...LEGACY_MAIN_PROOFS.q2], q3:[...LEGACY_OLD_CASE_PROOF] };
+  Object.keys(raw.confrontationVersions).forEach(key => raw.confrontationVersions[key] = 10);
   const migrated = Logic.normalizeState(raw);
-  assert.equal(migrated.version, 12);
+  assert.equal(migrated.version, 13);
   assert.equal(migrated.primaryCandidate, "zhoulan");
   assert.equal(migrated.differenceClasses.lamp, "unknown");
   assert.equal(migrated.differenceClasses.painting, "unknown");
   assert.deepEqual(migrated.responsibilityOrder, Logic.CHAIN_FILE_ORDER);
-  assert.equal(migrated.verifiedReport.ruleVersion, 12);
-  assert.ok(Object.values(migrated.confrontationVersions).every(version => version === 10));
+  assert.equal(migrated.verifiedReport.ruleVersion, 13);
+  assert.ok(Object.values(migrated.confrontationVersions).every(version => version === 11));
+  assert.deepEqual(migrated.confrontation,{q1:["scene-chain"],q2:["fatal-chain"],q3:["oldcase-chain"]});
   assert.equal(Logic.isCurrentReportVerified(migrated), true);
   assert.equal(Logic.allCurrentProofsComplete(migrated), true);
   assert.deepEqual(Logic.normalizeState(migrated), migrated);
@@ -579,13 +618,13 @@ test("v8 in-progress final saves move to chapter ten and archive every old proof
     reportAdopted: [],
     verifiedReport: { answers: { ...Logic.REPORT_ANSWERS }, revision: 0, ruleVersion: 8 },
     solved: [...base.solved, "report", "p12"],
-    confrontation: { ...V8_PROOFS, q6: [...OLD_CASE_PROOF] },
+    confrontation: { ...V8_PROOFS, q6: [...LEGACY_OLD_CASE_PROOF] },
     confrontationVersions: Object.fromEntries([1, 2, 3, 4, 5, 6].map(step => [`q${step}`, 8])),
     confrontationStep: 6,
     reconstructionEvidence: {}
   };
   const migrated = Logic.normalizeState(raw);
-  assert.equal(migrated.version, 12);
+  assert.equal(migrated.version, 13);
   assert.equal(migrated.chapter, 10);
   assert.equal(migrated.screen, "chapter-10");
   assert.equal(migrated.notebookReturn.chapter, 10);
@@ -594,7 +633,7 @@ test("v8 in-progress final saves move to chapter ten and archive every old proof
   assert.equal(migrated.solved.includes("p12"), false);
   for (let step = 1; step <= 6; step += 1) assert.deepEqual(migrated.legacyProofRecords[`v8-q${step}`].evidence, raw.confrontation[`q${step}`]);
   assert.deepEqual(migrated.reportAdopted, Logic.REPORT_AUTO_KEYS);
-  assert.equal(migrated.verifiedReport.ruleVersion, 12);
+  assert.equal(migrated.verifiedReport.ruleVersion, 13);
   assert.equal(Logic.isCurrentReportVerified(migrated), true);
   for (const step of Logic.RECONSTRUCTION_ORDER) assert.deepEqual(migrated.reconstructionEvidence[step], Logic.RECONSTRUCTION_EVIDENCE[step]);
   assert.deepEqual(Logic.normalizeState(migrated), migrated);
@@ -605,20 +644,20 @@ test("v8 proof keys cannot masquerade as the semantically different v3.6 questio
   const migrated = Logic.normalizeState({
     ...base,
     version: 8,
-    confrontation: { q2: ["e_floor", "e_cart"], q4: [...MAIN_PROOFS.q2] },
+    confrontation: { q2: ["e_floor", "e_cart"], q4: [...LEGACY_MAIN_PROOFS.q2] },
     confrontationVersions: { q2: 8, q4: 8 },
     confrontationStep: 4
   });
   assert.deepEqual(migrated.confrontation, {});
   assert.equal(Logic.validateStoredProof(migrated, 2).ok, false);
   assert.deepEqual(migrated.legacyProofRecords["v8-q2"].evidence, ["e_floor", "e_cart"]);
-  assert.deepEqual(migrated.legacyProofRecords["v8-q4"].evidence, MAIN_PROOFS.q2);
+  assert.deepEqual(migrated.legacyProofRecords["v8-q4"].evidence, LEGACY_MAIN_PROOFS.q2);
 });
 
 test("v8 closed A, C and D cases keep immutable archives and old proof order", () => {
   for (const ending of ["A", "C", "D"]) {
     const base = reportReadyState({ oldCase: ending !== "A" });
-    const oldConfrontation = { ...V8_PROOFS, ...(ending !== "A" ? { q6: [...OLD_CASE_PROOF] } : {}) };
+    const oldConfrontation = { ...V8_PROOFS, ...(ending !== "A" ? { q6: [...LEGACY_OLD_CASE_PROOF] } : {}) };
     const archive = {
       saveVersion: 8,
       report: { ...Logic.REPORT_ANSWERS },

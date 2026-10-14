@@ -5,9 +5,9 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const SAVE_VERSION = 12;
-  const REPORT_RULE_VERSION = 12;
-  const PROOF_RULE_VERSION = 10;
+  const SAVE_VERSION = 13;
+  const REPORT_RULE_VERSION = 13;
+  const PROOF_RULE_VERSION = 11;
   const CORE_INTERVIEWS = ["guxue", "liangwen", "shenman", "zhoulan"];
   const CHAPTER_REQUIREMENTS = {
     2: ["p01"], 3: ["p02"], 4: ["p03"], 5: ["p04"],
@@ -115,13 +115,13 @@
       evidence: [], examined: [], solved: [], deductions: [],
       interviews: {}, interviewData: {}, mirrorFound: [], mirrorProof: [], differenceClasses: {},
       factAnswers: {}, factMarks: {}, testimonyAnswers: {}, matrixAnswers: {}, chainAnswers: {}, chainFiles: {},
-      exclusionAnswers: {}, zhouConditions: [], primaryCandidate: "", candidateJudgments: {}, candidateSources: {}, candidateWorksheetHistory: [], matrixExpanded: [], matrixHintLevels: {},
+      exclusionAnswers: {}, zhouConditions: [], primaryCandidate: "", candidateJudgments: {}, candidateSources: {}, candidateWorksheetHistory: [], candidateWorksheetDiscoveries: [], matrixExpanded: [], matrixHintLevels: {},
       report: {}, reportArguments: {}, reportAdopted: [], reportRevision: 0, verifiedReport: null, caseArchive: null,
       confrontation: {}, confrontationVersions: {}, legacyProofRecords: {}, confrontationStep: 0,
       confrontationDraft: {}, confrontationExpanded: {}, confrontationOnlySelected: false,
       reconstructionOrder: ["transfer", "water", "leave", "card", "chain"], reconstructionSources: {}, reconstructionSupport: {}, reconstructionEvidence: {},
       responsibilityOrder: ["file-c", "file-a", "file-d", "file-b"], oldCaseDiscovered: false,
-      notebookReturn: null, legacyCaseRecord: null, legacyReconstruction: false,
+      notebookReturn: null, legacyCaseRecord: null, legacyReconstruction: false, preDisclosureCheckpoint: null,
       pinnedEvidence: [], currentTheory: {}, interludeSeen: false, hints: [], mistakes: 0, ending: null,
       meta: { endings: [], bestEvidence: 0 }, updatedAt: null
     };
@@ -155,6 +155,10 @@
       kind:entry && entry.kind === "source" ? "source" : "judgment", from:typeof (entry && entry.from) === "string" ? entry.from : "",
       to:typeof (entry && entry.to) === "string" ? entry.to : ""
     })).filter(entry => entry.cell) : [];
+    state.candidateWorksheetDiscoveries = Array.isArray(state.candidateWorksheetDiscoveries) ? state.candidateWorksheetDiscoveries.slice(-40).map(entry => ({
+      at:Math.max(0,Number(entry && entry.at) || 0), evidence:typeof (entry && entry.evidence) === "string" ? entry.evidence : "",
+      affected:uniqueStrings(entry && entry.affected), before:safeObject(entry && entry.before), after:safeObject(entry && entry.after)
+    })).filter(entry => entry.evidence && entry.affected.length) : [];
     state.factAnswers.candidateWorksheetSnapshot = safeObject(state.factAnswers.candidateWorksheetSnapshot);
     state.factAnswers.candidateWorksheetAffected = uniqueStrings(state.factAnswers.candidateWorksheetAffected);
     state.factAnswers.viewedFloors = uniqueStrings(state.factAnswers.viewedFloors).filter(value => ["11","12","13","14","15"].includes(value));
@@ -201,6 +205,9 @@
     } : null;
     state.legacyCaseRecord = state.legacyCaseRecord && typeof state.legacyCaseRecord === "object" && !Array.isArray(state.legacyCaseRecord) ? state.legacyCaseRecord : null;
     state.legacyReconstruction = Boolean(state.legacyReconstruction);
+    state.preDisclosureCheckpoint = state.preDisclosureCheckpoint && typeof state.preDisclosureCheckpoint === "object" && !Array.isArray(state.preDisclosureCheckpoint)
+      ? { ...state.preDisclosureCheckpoint, preDisclosureCheckpoint:null, caseArchive:null, ending:null }
+      : null;
     state.confrontationOnlySelected = Boolean(state.confrontationOnlySelected);
     state.interludeSeen = Boolean(state.interludeSeen);
     if (sourceVersion < 4 && !hasSolved(state, "p10") && validateMatrix(state.matrixAnswers).ok) {
@@ -377,6 +384,38 @@
         if (state.report[rule.reportKey] === REPORT_ANSWERS[rule.reportKey] && !state.reportArguments[id]) {
           state.reportArguments[id]={ ...rule.answers };
         }
+      }
+      if (!state.ending && state.verifiedReport && reportsEqual(state.verifiedReport.answers,state.report) && validateReport(state.report,state).ok) {
+        state.verifiedReport.ruleVersion=REPORT_RULE_VERSION;
+      }
+    }
+    if (sourceVersion < 13) {
+      state.factAnswers.candidateWorksheetMode=["person","condition"].includes(state.factAnswers.candidateWorksheetMode) ? state.factAnswers.candidateWorksheetMode : "person";
+      state.factAnswers.candidateWorksheetPerson=CANDIDATE_IDS.includes(state.factAnswers.candidateWorksheetPerson) ? state.factAnswers.candidateWorksheetPerson : "zhoulan";
+      if (!state.ending) {
+        const translated={};
+        for (let step=1;step<=3;step+=1) {
+          const key=`q${step}`, picks=uniqueStrings(state.confrontation[key]);
+          if (!picks.length) continue;
+          const oldResult=validateConfrontationAnswer(step,picks);
+          const challenge=CONFRONTATION_CHALLENGES[key];
+          const prerequisite=!challenge.reportArgument || reportArgumentComplete(state,challenge.reportArgument);
+          const solvedReady=!challenge.solved || hasSolved(state,challenge.solved);
+          if (oldResult.ok && prerequisite && solvedReady) {
+            translated[key]=[challenge.correct];
+            state.confrontationVersions[key]=PROOF_RULE_VERSION;
+          } else {
+            state.legacyProofRecords[`v${Math.max(1,sourceVersion)}-${key}`]={
+              ruleVersion:Math.max(1,Number(state.confrontationVersions[key]) || sourceVersion), evidence:picks,
+              note:"按 v3.9 选证规则完成；v4.0 改为引用报告因果链，本记录只读保留。"
+            };
+            delete state.confrontationVersions[key];
+          }
+        }
+        state.confrontation=translated;
+        state.confrontationDraft={};
+        state.confrontationExpanded={};
+        state.confrontationOnlySelected=false;
       }
       if (!state.ending && state.verifiedReport && reportsEqual(state.verifiedReport.answers,state.report) && validateReport(state.report,state).ok) {
         state.verifiedReport.ruleVersion=REPORT_RULE_VERSION;
@@ -593,19 +632,37 @@
     return { ...result, status:"verified" };
   }
 
+  function invalidateCandidateDependents(state, reason="candidate-worksheet") {
+    if (!state || state.ending) return false;
+    const hadDependentProgress=hasSolved(state,"p10") || hasSolved(state,"report") || hasSolved(state,"p12") || Boolean(state.verifiedReport);
+    state.factAnswers.primaryCandidateConfirmed=false;
+    state.solved=state.solved.filter(id => !["p10","report","p12"].includes(id));
+    if (state.verifiedReport) state.verifiedReport=null;
+    if (hadDependentProgress) state.factAnswers.reportInvalidationReason=reason;
+    return hadDependentProgress;
+  }
+
   function invalidateCandidateWorksheetIfNeeded(state) {
     if (!state || !state.factAnswers || !state.factAnswers.candidateWorksheetSignature) return [];
     if (state.factAnswers.candidateWorksheetSignature === candidateEvidenceSignature(state)) return [];
+    const previousSignature=String(state.factAnswers.candidateWorksheetSignature || "").split("|").filter(Boolean);
+    const currentSignature=String(candidateEvidenceSignature(state)).split("|").filter(Boolean);
+    const newlyAdded=currentSignature.filter(id=>!previousSignature.includes(id));
+    const before={...safeObject(state.factAnswers.candidateWorksheetSnapshot)};
     const affected=candidateWorksheetAffectedCells(state);
     state.factAnswers.candidateWorksheetVerified=false;
     state.factAnswers.candidateWorksheetAffected=affected;
-    state.factAnswers.primaryCandidateConfirmed=false;
-    state.solved=state.solved.filter(id => id !== "p10");
+    const after=buildCandidateWorksheetAnswer(state).judgments;
+    newlyAdded.forEach(evidence=>state.candidateWorksheetDiscoveries.push({
+      at:Date.now(), evidence, affected:[...affected], before:{...before}, after:{...after}
+    }));
+    state.candidateWorksheetDiscoveries=state.candidateWorksheetDiscoveries.slice(-40);
+    invalidateCandidateDependents(state,"new-candidate-evidence");
     return affected;
   }
 
   function recordCandidateWorksheetEdit(state,cell,kind,value) {
-    if (!state || !cell || !["judgment","source"].includes(kind)) return false;
+    if (!state || state.ending || !cell || !["judgment","source"].includes(kind)) return false;
     const target=kind === "judgment" ? state.candidateJudgments : state.candidateSources;
     const previous=typeof target[cell] === "string" ? target[cell] : "";
     if (previous === value) return false;
@@ -614,6 +671,7 @@
     state.candidateWorksheetHistory=state.candidateWorksheetHistory.slice(-120);
     state.factAnswers.candidateWorksheetVerified=false;
     state.factAnswers.candidateWorksheetAffected=[...new Set([...(state.factAnswers.candidateWorksheetAffected || []),cell])];
+    invalidateCandidateDependents(state,"candidate-worksheet-edit");
     return true;
   }
 
@@ -902,10 +960,38 @@
     ] }
   };
 
-  function validateConfrontationAnswer(step, evidenceIds) {
+  const CONFRONTATION_CHALLENGES = {
+    q1: {
+      category:"地点连接", correct:"scene-chain", reportArgument:"scene",
+      explanation:"尸表初检只固定伤势，1402 撞击痕固定现场形态；联合复核明确引用两者并完成对应。这里依靠的是已经写入报告的地点因果链，而不是再次把同一批材料当成新证据。"
+    },
+    q2: {
+      category:"致命冲突行为人", correct:"fatal-chain", reportArgument:"fatal",
+      explanation:"致命事件的时间地点、周岚在同一窗口的受控区通行，以及生前冲突接触三段连接共同排除了“只在事后搬运”的替代解释；旧案动机仍不等同于主观故意。"
+    },
+    q3: {
+      category:"旧案联系", correct:"oldcase-chain", solved:"p11",
+      explanation:"原始卷宗回答责任链，死亡名单与人事档案回答私人联系。它们说明公开范围为何会改变，却不被拿来补强主案定罪。"
+    }
+  };
+
+  function reportArgumentComplete(state,id) {
+    const rule=REPORT_ARGUMENT_RULES[id], current=safeObject(state && state.reportArguments && state.reportArguments[id]);
+    return Boolean(rule && Object.keys(rule.answers).every(key=>current[key]===rule.answers[key]));
+  }
+
+  function validateConfrontationAnswer(step, evidenceIds, state) {
     const rule = CONFRONTATION_ROUTES[`q${step}`];
     if (!rule) return { ok: false, reason: "不存在这一轮举证。" };
     const picks = uniqueStrings(evidenceIds);
+    const challenge=CONFRONTATION_CHALLENGES[`q${step}`];
+    if (challenge && picks.some(id=>id.endsWith("-chain") || id.endsWith("-alone") || id.endsWith("-motive") || id.endsWith("-staging"))) {
+      if (picks.length !== 1) return { ok:false, category:challenge.category, issue:"limit", reason:"每轮只回应一个因果连接；选择最能直接排除当前替代解释的报告段落。" };
+      if (picks[0] !== challenge.correct) return { ok:false, category:challenge.category, issue:"weak-connection", supported:[], missingParts:[challenge.category], reason:step===1 ? "这项回应只说明房间存在或设备出现冲击，尚未把伤势与 1402 的现场形态连接起来。" : step===2 ? "这项回应仍可由事后搬运解释；需要同时回答致命窗口、同窗在场与生前接触。" : "动机或亲属关系不能替代旧案责任链及两份人员记录的交叉连接。" };
+      if (challenge.reportArgument && state && !reportArgumentComplete(state,challenge.reportArgument)) return { ok:false, category:challenge.category, issue:"report-link", reason:"你引用的报告段落在当前草稿中尚未闭合；先回到结构化论证完成来源、复核与证明边界。" };
+      if (challenge.solved && state && !hasSolved(state,challenge.solved)) return { ok:false, category:challenge.category, issue:"missing", reason:"封存卷宗尚未形成责任链；亲属关系本身不能回答这轮质疑。" };
+      return { ok:true, category:challenge.category, routeId:challenge.correct, supplements:[], supported:[challenge.category], missingParts:[], dependencyNotes:[], explanation:challenge.explanation };
+    }
     if (picks.length > 3) return { ok:false, category:rule.category, issue:"limit", supported:[], missingParts:[], reason:"每轮最多提交三条材料；先保留能直接回答当前质疑的来源。" };
     const irrelevant = picks.filter(id => !rule.relevant.includes(id));
     const supported = (rule.components || []).filter(component => component.evidence.some(id => picks.includes(id))).map(component => component.supported);
@@ -937,8 +1023,10 @@
     const key=`q${step}`, picks=state && state.confrontation && state.confrontation[key];
     if (!picks || !picks.length) return { ok:false, status:state && state.legacyProofRecords && state.legacyProofRecords[key] ? "legacy" : "missing" };
     if (Number(state.confrontationVersions && state.confrontationVersions[key]) !== PROOF_RULE_VERSION) return { ok:false, status:"legacy" };
-    if (picks.length > 3 || picks.some(id => !state.evidence.includes(id))) return { ok:false, status:"review-required" };
-    const result=validateConfrontationAnswer(step,picks);
+    const challenge=CONFRONTATION_CHALLENGES[key];
+    const challengeAnswer=challenge && picks.length===1 && picks[0]===challenge.correct;
+    if (!challengeAnswer && (picks.length > 3 || picks.some(id => !state.evidence.includes(id)))) return { ok:false, status:"review-required" };
+    const result=validateConfrontationAnswer(step,picks,state);
     return { ...result, status:result.ok ? "current" : "review-required" };
   }
 
@@ -1018,6 +1106,10 @@
 
   function recordEnding(state, id) {
     if (id !== "B" && (!id || !canSubmitDisclosure(state))) return normalizeState(state);
+    const checkpoint = id === "B" ? null : JSON.parse(JSON.stringify({
+      ...state, ending:null, caseArchive:null, preDisclosureCheckpoint:null,
+      screen:"chapter-10", chapter:10
+    }));
     const next = normalizeState(state);
     next.ending = id;
     if (!next.meta.endings.includes(id)) next.meta.endings.push(id);
@@ -1036,18 +1128,32 @@
       ending:id,
       note:"结案时的报告与举证快照。"
     };
+    next.preDisclosureCheckpoint=checkpoint;
     return next;
+  }
+
+  function restoreDisclosureCheckpoint(state) {
+    if (!state || !state.ending || !state.preDisclosureCheckpoint) return null;
+    const restored=normalizeState({ ...state.preDisclosureCheckpoint, preDisclosureCheckpoint:null, ending:null, caseArchive:null });
+    restored.meta={
+      endings:uniqueStrings(state.meta && state.meta.endings),
+      bestEvidence:Math.max(Number(restored.meta.bestEvidence)||0,Number(state.meta && state.meta.bestEvidence)||0)
+    };
+    restored.factAnswers.restoredFromEnding=state.ending;
+    restored.screen="chapter-10";
+    restored.chapter=10;
+    return restored;
   }
 
   return {
     SAVE_VERSION, REPORT_RULE_VERSION, PROOF_RULE_VERSION, CORE_EVIDENCE, MAIN_EVIDENCE, SUPPLEMENTAL_EVIDENCE, OLD_CASE_EVIDENCE, CORE_INTERVIEWS, MATRIX_ANSWERS, MATRIX_AUTO, EXCLUSION_ANSWERS, ZHOU_CONDITIONS, CANDIDATE_IDS, CANDIDATE_FIELDS, CANDIDATE_SOURCE_BUNDLES,
     CHAIN_ANSWERS, CHAIN_FILE_ANSWERS, CHAIN_FILE_ORDER, RECONSTRUCTION_ORDER, RECONSTRUCTION_SOURCES, RECONSTRUCTION_SUPPORT, RECONSTRUCTION_EVIDENCE, RECONSTRUCTION_SUPPLEMENTS, DIMENSION_ENDPOINTS, BLUEPRINT_OBSERVATIONS, DIFFERENCE_CLASS_ANSWERS, SCENE_CORE_EXAMINATIONS, FACT_MARK_ANSWERS, FACT_HINT_CATEGORIES, EVIDENCE_PROVENANCE,
-    REPORT_ANSWERS, REPORT_AUTO_KEYS, REPORT_REQUIREMENTS, REPORT_ARGUMENT_RULES, CONFRONTATION_ROUTES,
+    REPORT_ANSWERS, REPORT_AUTO_KEYS, REPORT_REQUIREMENTS, REPORT_ARGUMENT_RULES, CONFRONTATION_ROUTES, CONFRONTATION_CHALLENGES,
     freshState, normalizeState, coreInterviewsComplete, keyInterviewCount, chapterUnlocked, chapterLockReason, highestUnlockedChapter,
-    evidenceProgress, sceneCoreReady, validateEvidenceSet, validateAlibiCoverage, validateMatrix, candidateStatus, candidateCellKey, candidateExpectedBundle, buildCandidateWorksheetAnswer, validateCandidateJudgments, validateCandidateWorksheet, candidateEvidenceSignature, candidateWorksheetAffectedCells, candidateWorksheetStatus, verifyCandidateWorksheet, invalidateCandidateWorksheetIfNeeded, recordCandidateWorksheetEdit, validateExclusionMatrix,
+    evidenceProgress, sceneCoreReady, validateEvidenceSet, validateAlibiCoverage, validateMatrix, candidateStatus, candidateCellKey, candidateExpectedBundle, buildCandidateWorksheetAnswer, validateCandidateJudgments, validateCandidateWorksheet, candidateEvidenceSignature, candidateWorksheetAffectedCells, candidateWorksheetStatus, verifyCandidateWorksheet, invalidateCandidateWorksheetIfNeeded, invalidateCandidateDependents, recordCandidateWorksheetEdit, validateExclusionMatrix,
     validateResponsibilityChain, validateResponsibilityPuzzle, validateDimensionReadings, validateDimensionEndpoints, validateBlueprintComparison, validateSightComparison, validateDifferenceClasses, validateFactCleanup, validateSceneReconstruction, canonicalReport, prefillReport, validateReport,
     reportStatus, markReportEdited, markReportArgumentEdited, markReportAdopted, verifyReportSnapshot, isCurrentReportVerified, validateConfrontationAnswer,
     proofTotal, validateStoredProof, storedProofStatus, allCurrentProofsComplete, nextConfrontationStep, canSubmitDisclosure,
-    knowledgeComplete, determineEnding, caseResolutionState, reasoningRating, evaluateTheory, recordEnding
+    knowledgeComplete, determineEnding, caseResolutionState, reasoningRating, evaluateTheory, recordEnding, restoreDisclosureCheckpoint
   };
 });
