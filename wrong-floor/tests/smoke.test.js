@@ -14,7 +14,7 @@ const FACT_MARKS = {
 };
 const RECONSTRUCTION_LINKS = {
   water: ["e_waterlab", "e_route"], card: ["e_cardlog", "e_cardauth"],
-  transfer: ["e_cart", "e_route", "e_access", "e_doorcontact"], chain: ["e_lock", "e_chain_tests"],
+  transfer: ["e_cart", "e_route", "e_frontdoor_event"], chain: ["e_lock", "e_chain_tests"],
   leave: ["e_hatch", "e_route", "e_doorcontact", "e_chain_tests"]
 };
 
@@ -125,6 +125,7 @@ async function solveThroughChapter6(page, { checkSpoilers = false, touch = false
   assert.equal(await page.locator(".target-notch").count(), 0, "P03 must not draw exact answer notches");
   assert.equal(await page.locator('[data-measure-point^="photo-"]').count(), 2, "photo measurement should expose independent A and B endpoints");
   assert.equal(await page.locator('[data-measure-point^="plan-"]').count(), 2, "plan measurement should expose independent A and B endpoints");
+  assert.equal(await page.locator(".measurement-overlay .guide-a").count(),2,"both visual sources should show image-bound A guides");
   if (touch) {
     await setRangeByTouch(page, '[data-measure-point="photo-a"]', 14, '[data-action="adjust-measure"][data-point="photo-a"]');
     await setRangeByTouch(page, '[data-measure-point="photo-b"]', 97, '[data-action="adjust-measure"][data-point="photo-b"]');
@@ -216,17 +217,30 @@ async function solveThroughChapter6(page, { checkSpoilers = false, touch = false
   await assertText(page, "联合复核完成");
   for (const floor of [11, 13, 14]) {
     await setViewHeight(page, floor, touch);
+    assert.match(await page.locator('[data-action="record-p06-view"]').innerText(),new RegExp(`记录当前 ${floor}F`));
+    assert.match(await page.locator('[data-action="record-p06-view"]').getAttribute("aria-label"),new RegExp(`${floor}F`));
     const note = await page.locator("#sight-note").innerText();
     assert.doesNotMatch(note, /轮廓重合|被挡|遮挡|俯角更陡|14F.*答案/, "P06 must keep its comparison language neutral before submission");
     if (floor === 11) assert.equal(await page.locator('[data-action="solve-p06"]').isEnabled(), false, "sliding alone must not count as an observation");
     await clickAction(page,"record-p06-view");
+    assert.match(await page.locator('[data-action="record-p06-view"]').innerText(),new RegExp(`${floor}F 投影已保存`));
   }
   assert.equal(await page.locator('[data-action="solve-p06"]').isEnabled(), true, "three compared heights should enable P06 submission");
   await page.locator('input[name="p06-height"][value="14"]').check();
+  await page.locator('input[name="p06-reason"][value="platform-angle"]').check();
   await clickAction(page, "solve-p06");
   await assertText(page, "轮廓与照片俯角重合");
 
   await goChapter(page, 6);
+  await clickAction(page,"solve-p07");
+  await clickAction(page,"solve-p07");
+  const mistakesBeforeHint=(await savedState(page)).mistakes;
+  assert.equal(await page.locator('[data-action="show-p07-hint"]').count(),1,"two failed submissions should reveal a non-penalizing hint action");
+  await clickAction(page,"show-p07-hint");
+  let hintState=await savedState(page);
+  assert.equal(hintState.mistakes,mistakesBeforeHint,"opening a hint must not count as another wrong answer");
+  assert.equal(hintState.factAnswers.p07HintUses,1);
+  await assertText(page,"凭证与身份");
   for (const [fact, tokens] of Object.entries(FACT_MARKS)) {
     for (const token of tokens) await activate(page.locator(`[data-action="toggle-fact-mark"][data-fact-card="${fact}"][data-token="${token}"]`), touch);
   }
@@ -290,9 +304,11 @@ async function fillCandidateWorksheet(page) {
     return window.WrongFloorLogic.buildCandidateWorksheetAnswer(state);
   },SAVE_KEY);
   for (const [key,value] of Object.entries(answer.judgments)) await page.locator(`[data-candidate-judgment="${key}"]`).selectOption(value);
+  await clickAction(page,"validate-candidate-worksheet");
+  await assertText(page,"现在只为确定判断连接来源");
   for (const [key,value] of Object.entries(answer.sources)) if (value) await page.locator(`[data-candidate-source="${key}"]`).selectOption(value);
   await clickAction(page,"validate-candidate-worksheet");
-  await assertText(page,"逐格判断及其来源已经核验");
+  await assertText(page,"系统结果已开放");
 }
 
 async function reviewInvestigationPacket(page, packet, evidenceIds, touch = false) {
@@ -383,8 +399,8 @@ async function solveReconstruction(page, { touch = false, exerciseDrag = false }
   await selectAndAttach(page, "e_cardlog", ["card"], touch);
   await selectAndAttach(page, "e_cardauth", ["card"], touch);
   await selectAndAttach(page, "e_cart", ["transfer"], touch);
-  await selectAndAttach(page, "e_access", ["transfer"], touch);
-  await selectAndAttach(page, "e_doorcontact", ["transfer", "leave"], touch);
+  await selectAndAttach(page, "e_frontdoor_event", ["transfer"], touch);
+  await selectAndAttach(page, "e_doorcontact", ["leave"], touch);
   await selectAndAttach(page, "e_lock", ["chain"], touch);
   await selectAndAttach(page, "e_chain_tests", ["chain", "leave"], touch);
   await selectAndAttach(page, "e_hatch", ["leave"], touch);
@@ -413,11 +429,25 @@ async function prepareThroughChapter9(page, { touch = false, checkSpoilers = fal
   await goChapter(page, 8);
   await clickAction(page, "continue-interlude");
   assert.equal(await page.locator(".intersection-label").count(), 0, "P10 must not mark Zhou Lan as the answer before the player's candidate choice");
+  await fillCandidateWorksheet(page);
+  assert.equal((await savedState(page)).factAnswers.candidateWorksheetVerified,true,"an evidence-incomplete worksheet may be valid for its current evidence state");
   await reviewInvestigationPacket(page, "property", ["e_permission", "e_accountmap", "e_trainingaccess", "e_shift"], touch);
   await reviewInvestigationPacket(page, "operation", ["e_cardauth", "e_route", "e_cart"], touch);
+  let staleWorksheet=await savedState(page);
+  assert.equal(staleWorksheet.factAnswers.candidateWorksheetVerified,false,"new relevant evidence must invalidate the earlier worksheet");
+  assert.ok(staleWorksheet.factAnswers.candidateWorksheetAffected.length>0);
   await page.locator('[data-action="examine"][data-id="conflict-review"]').click();
   assert.equal(await page.locator(".desktop-exclusion").count(),0,"system status must stay hidden before the player worksheet is verified");
+  await page.locator('[data-action="set-candidate-phase"][data-phase="judgments"]').click();
   await fillCandidateWorksheet(page);
+  await page.locator('[data-action="set-worksheet-view"][data-view="worksheet"]').click();
+  await page.locator('[data-candidate-judgment="guxue_card"]').selectOption("no");
+  let worksheetState=await savedState(page);
+  assert.equal(worksheetState.factAnswers.candidateWorksheetVerified,false,"editing a verified cell must invalidate the worksheet");
+  assert.equal(worksheetState.candidateWorksheetHistory.at(-1).cell,"guxue_card");
+  await page.locator('[data-candidate-judgment="guxue_card"]').selectOption("unknown");
+  await clickAction(page,"validate-candidate-worksheet");
+  await assertText(page,"系统结果已开放");
   await setMatrix(page, { conditions: false });
   const hintButton = page.locator('[data-action="reveal-matrix-hint"][data-person="guxue"]:visible');
   await hintButton.click();
@@ -453,6 +483,8 @@ async function prepareThroughChapter9(page, { touch = false, checkSpoilers = fal
   await page.locator('[data-action="go-chapter"][data-chapter="9"]').click();
   await page.locator('[data-action="examine"][data-id="water-reenactment"]').click();
   await page.locator('[data-action="examine"][data-id="chain-reconstruction"]').click();
+  await clickAction(page,"run-frontdoor-review");
+  await clickAction(page,"close-modal");
   await solveReconstruction(page, { touch, exerciseDrag });
   await assertText(page, "终章已开放");
 }
@@ -483,15 +515,20 @@ async function solveOldCase(page) {
 }
 
 async function fillReport(page, { exerciseDraft = false } = {}) {
-  assert.equal(await page.locator("[data-report]").count(), 13);
+  assert.equal(await page.locator("[data-report]").count(), 10);
   assert.equal(await page.locator("[data-report]:disabled").count(), 7);
   const manual = {
-    transferReason: "伪造1102内晚间死亡", stager: "周岚", fatalActor: "周岚",
-    sceneReason:"1102无对应血迹＋1402伤痕与伤情吻合",
-    fatalReason:"时间地点复核＋14F通行＋生前冲突接触",
-    intentBoundary:"可证明参与冲突与置换，不能仅凭现有材料证明预谋故意"
+    transferReason: "伪造1102内晚间死亡", stager: "周岚", fatalActor: "周岚"
   };
   for (const [key, value] of Object.entries(manual)) await page.locator(`[data-report="${key}"]`).selectOption(value);
+  const argumentsById={
+    scene:{conclusion:"hidden-scene",primary:"e_impact",review:"e_body_review",boundary:"discovery-not-death"},
+    fatal:{conclusion:"zhou-conflict",primary:"e_struggle",review:"e_body_review-route",boundary:"motive-not-proof"},
+    intent:{conclusion:"conflict-and-staging",primary:"e_struggle",review:"e_chaintrial",boundary:"no-premeditation"}
+  };
+  for (const [id,parts] of Object.entries(argumentsById)) for (const [part,value] of Object.entries(parts)) {
+    await page.locator(`[data-report-argument="${id}"][data-argument-part="${part}"]`).selectOption(value);
+  }
   for (const key of ["deathPlace", "cardUser", "chainMethod"]) {
     await page.locator(`[data-action="toggle-report-adoption"][data-report-key="${key}"]`).click();
   }
@@ -601,7 +638,7 @@ async function testLegacyMigrations(browser) {
   assert.ok(legacyPreview.indexOf("离开") < legacyPreview.indexOf("放水"));
   assert.equal(await reconstructionPage.locator('[data-action="move-reconstruction"]:not([disabled])').count() > 0, true);
   let state = await savedState(reconstructionPage);
-  assert.equal(state.version, 11);
+  assert.equal(state.version, 12);
   assert.equal(state.legacyReconstruction, true);
   assert.equal(state.solved.includes("p10r"), false);
 
@@ -647,7 +684,8 @@ async function testLegacyMigrations(browser) {
   await closedPage.reload();
   await clickAction(closedPage, "continue-game");
   await assertText(closedPage, "旧版报告与证明已按原规则封存");
-  assert.equal(await closedPage.locator("[data-report]:disabled").count(), 13);
+  assert.equal(await closedPage.locator("[data-report]:disabled").count(), 10);
+  assert.equal(await closedPage.locator("[data-report-argument]:disabled").count(), 12);
   state = await savedState(closedPage);
   assert.equal(state.chapter, 10);
   assert.equal(state.legacyCaseRecord.saveVersion, 8);
@@ -709,7 +747,7 @@ async function testLegacyMigrations(browser) {
   await page.locator('[data-action="choose-disclosure"][data-choice="full"]').click();
   await assertText(page, "正确的问题");
   let state = await savedState(page);
-  assert.equal(state.version, 11);
+  assert.equal(state.version, 12);
   assert.equal(state.ending, "D");
   assert.equal(Object.keys(state.confrontation).length, 3);
   assert.deepEqual(errors, []);
@@ -808,5 +846,5 @@ async function testLegacyMigrations(browser) {
   await cContext.close();
   await mainContext.close();
   await browser.close();
-  process.stdout.write("✓ v3.8 active observations, player worksheet, reconstruction map, report arguments, endings and migrations\n");
+  process.stdout.write("✓ v3.9 evidence signatures, staged worksheet, reconstruction semantics, structured arguments, endings and migrations\n");
 })().catch(error => { console.error(error); process.exit(1); });
