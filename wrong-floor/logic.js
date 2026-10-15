@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const SAVE_VERSION = 13;
+  const SAVE_VERSION = 14;
   const REPORT_RULE_VERSION = 13;
   const PROOF_RULE_VERSION = 11;
   const CORE_INTERVIEWS = ["guxue", "liangwen", "shenman", "zhoulan"];
@@ -123,6 +123,7 @@
       responsibilityOrder: ["file-c", "file-a", "file-d", "file-b"], oldCaseDiscovered: false,
       notebookReturn: null, legacyCaseRecord: null, legacyReconstruction: false, preDisclosureCheckpoint: null,
       pinnedEvidence: [], currentTheory: {}, interludeSeen: false, hints: [], mistakes: 0, ending: null,
+      guidanceMode: "standard", activityLog: [],
       meta: { endings: [], bestEvidence: 0 }, updatedAt: null
     };
   }
@@ -208,6 +209,13 @@
     state.preDisclosureCheckpoint = state.preDisclosureCheckpoint && typeof state.preDisclosureCheckpoint === "object" && !Array.isArray(state.preDisclosureCheckpoint)
       ? { ...state.preDisclosureCheckpoint, preDisclosureCheckpoint:null, caseArchive:null, ending:null }
       : null;
+    state.guidanceMode = state.guidanceMode === "minimal" ? "minimal" : "standard";
+    state.activityLog = Array.isArray(state.activityLog) ? state.activityLog.slice(-8).map(entry => ({
+      kind:entry && ["evidence","deduction","unlock"].includes(entry.kind) ? entry.kind : "unlock",
+      text:typeof (entry && entry.text) === "string" ? entry.text.slice(0,160) : "",
+      chapter:Math.max(1,Math.min(10,Number(entry && entry.chapter) || state.chapter || 1)),
+      at:Math.max(0,Number(entry && entry.at) || 0)
+    })).filter(entry => entry.text) : [];
     state.confrontationOnlySelected = Boolean(state.confrontationOnlySelected);
     state.interludeSeen = Boolean(state.interludeSeen);
     if (sourceVersion < 4 && !hasSolved(state, "p10") && validateMatrix(state.matrixAnswers).ok) {
@@ -630,6 +638,71 @@
     state.factAnswers.candidateWorksheetOrigin="player-v39";
     state.factAnswers.candidateWorksheetMigrated=false;
     return { ...result, status:"verified" };
+  }
+
+  function investigationGuide(state, preferredChapter) {
+    const highest = highestUnlockedChapter(state);
+    const requested = Math.max(1,Math.min(10,Number(preferredChapter) || highest));
+    const chapter = chapterUnlocked(state,requested) ? requested : highest;
+    const solved = id => hasSolved(state,id);
+    const has = id => state.evidence.includes(id);
+    const result = (key,current,total) => ({ chapter,key,current:Math.max(0,current),total:Math.max(1,total) });
+    if (chapter === 1) {
+      const examined = new Set(state.examined);
+      const body = examined.has("body") || (examined.has("body-injury") && examined.has("living-carpet"));
+      const core = Number(examined.has("door")) + Number(body) + Number(examined.has("bath"));
+      if (!sceneCoreReady(state)) return result("scene-core",core,3);
+      if (!solved("p01")) return result("scene-claim",1,2);
+    }
+    if (chapter === 2) {
+      const sources=["e_checkin","e_stream","e_location"].filter(has).length;
+      if (sources < 3) return result("alibi-sources",sources,3);
+      if (!solved("p02")) return result("alibi-coverage",1,2);
+    }
+    if (chapter === 3 && !solved("p03")) return result(`dimension-${Math.max(1,Math.min(4,Number(state.factAnswers.p03Phase)||1))}`,Math.max(0,(Number(state.factAnswers.p03Phase)||1)-1),4);
+    if (chapter === 4 && !solved("p04")) return result(`blueprint-${Math.max(1,Math.min(3,Number(state.factAnswers.p04Phase)||1))}`,Math.max(0,(Number(state.factAnswers.p04Phase)||1)-1),3);
+    if (chapter === 5) {
+      if (!solved("p05")) return result(state.factAnswers.p05ObservationsSaved ? "mirror-proof" : "mirror-observe",state.factAnswers.p05ObservationsSaved?1:0,5);
+      if (!has("e_watch")) return result("device-return",2,5);
+      if (!solved("p05r")) return result("body-review",3,5);
+      if (!solved("p06")) return result("sight-compare",4,5);
+    }
+    if (chapter === 6) {
+      if (!solved("p07")) return result("fact-cleanup",0,2);
+      if (!solved("p08")) return result("pipe-route",1,2);
+    }
+    if (chapter === 7) {
+      const interviews=keyInterviewCount(state);
+      if (interviews < 2) return result("key-interviews",interviews,2);
+      if (!solved("p09")) return result("cuff-time",1,2);
+    }
+    if (chapter === 8) {
+      if (!state.interludeSeen) return result("interlude",0,6);
+      const property=["e_permission","e_accountmap","e_trainingaccess","e_shift"].filter(has).length;
+      if (property < 4) return result("property-packet",property,4);
+      const operation=["e_cardauth","e_route","e_cart"].filter(has).length;
+      if (operation < 3) return result("operation-packet",operation,3);
+      if (!has("e_struggle")) return result("conflict-review",3,6);
+      const worksheetStatus=candidateWorksheetStatus(state);
+      if (!["verified","legacy"].includes(worksheetStatus)) return result("candidate-worksheet",4,6);
+      if (!state.factAnswers.primaryCandidateConfirmed) return result("candidate-confirm",5,6);
+      if (!solved("p10")) return result("candidate-proof",5,6);
+    }
+    if (chapter === 9) {
+      if (!has("e_waterlab")) return result("water-reenactment",0,4);
+      if (!has("e_frontdoor_event")) return result("frontdoor-review",1,4);
+      if (!["e_hatch","e_chain_tests"].every(has)) return result("chain-route",2,4);
+      if (!solved("p10r") && !state.legacyReconstruction) return result("scene-reconstruction",3,4);
+    }
+    if (chapter === 10) {
+      const resolution=caseResolutionState(state);
+      if (resolution === "closed") return result("case-closed",3,3);
+      if (["drafting","awaiting-report-review"].includes(resolution) || !isCurrentReportVerified(state)) return result("final-report",0,3);
+      if (["proving","awaiting-proof-review"].includes(resolution)) return result("final-proof",1,3);
+      if (resolution === "awaiting-disclosure") return result("final-disclosure",2,3);
+    }
+    if (chapter < 10 && chapterUnlocked(state,chapter+1)) return result("chapter-complete",1,1);
+    return result(chapter === 10 ? "case-closed" : "chapter-complete",1,1);
   }
 
   function invalidateCandidateDependents(state, reason="candidate-worksheet") {
@@ -1150,7 +1223,7 @@
     CHAIN_ANSWERS, CHAIN_FILE_ANSWERS, CHAIN_FILE_ORDER, RECONSTRUCTION_ORDER, RECONSTRUCTION_SOURCES, RECONSTRUCTION_SUPPORT, RECONSTRUCTION_EVIDENCE, RECONSTRUCTION_SUPPLEMENTS, DIMENSION_ENDPOINTS, BLUEPRINT_OBSERVATIONS, DIFFERENCE_CLASS_ANSWERS, SCENE_CORE_EXAMINATIONS, FACT_MARK_ANSWERS, FACT_HINT_CATEGORIES, EVIDENCE_PROVENANCE,
     REPORT_ANSWERS, REPORT_AUTO_KEYS, REPORT_REQUIREMENTS, REPORT_ARGUMENT_RULES, CONFRONTATION_ROUTES, CONFRONTATION_CHALLENGES,
     freshState, normalizeState, coreInterviewsComplete, keyInterviewCount, chapterUnlocked, chapterLockReason, highestUnlockedChapter,
-    evidenceProgress, sceneCoreReady, validateEvidenceSet, validateAlibiCoverage, validateMatrix, candidateStatus, candidateCellKey, candidateExpectedBundle, buildCandidateWorksheetAnswer, validateCandidateJudgments, validateCandidateWorksheet, candidateEvidenceSignature, candidateWorksheetAffectedCells, candidateWorksheetStatus, verifyCandidateWorksheet, invalidateCandidateWorksheetIfNeeded, invalidateCandidateDependents, recordCandidateWorksheetEdit, validateExclusionMatrix,
+    evidenceProgress, investigationGuide, sceneCoreReady, validateEvidenceSet, validateAlibiCoverage, validateMatrix, candidateStatus, candidateCellKey, candidateExpectedBundle, buildCandidateWorksheetAnswer, validateCandidateJudgments, validateCandidateWorksheet, candidateEvidenceSignature, candidateWorksheetAffectedCells, candidateWorksheetStatus, verifyCandidateWorksheet, invalidateCandidateWorksheetIfNeeded, invalidateCandidateDependents, recordCandidateWorksheetEdit, validateExclusionMatrix,
     validateResponsibilityChain, validateResponsibilityPuzzle, validateDimensionReadings, validateDimensionEndpoints, validateBlueprintComparison, validateSightComparison, validateDifferenceClasses, validateFactCleanup, validateSceneReconstruction, canonicalReport, prefillReport, validateReport,
     reportStatus, markReportEdited, markReportArgumentEdited, markReportAdopted, verifyReportSnapshot, isCurrentReportVerified, validateConfrontationAnswer,
     proofTotal, validateStoredProof, storedProofStatus, allCurrentProofsComplete, nextConfrontationStep, canSubmitDisclosure,

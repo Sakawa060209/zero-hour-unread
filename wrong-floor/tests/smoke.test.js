@@ -77,6 +77,7 @@ async function solveChapter1(page, touch = false) {
   await page.locator('input[name="p01"][value="death"]').check();
   await clickAction(page, "solve-p01");
   await assertText(page, "死亡地点目前只有默认前提");
+  assert.equal(await page.locator("#feedback-p01 .feedback-next").count(),1,"successful reasoning should hand off to the next action");
   for (const id of ["access", "shelf", "window-view"]) await activate(zone(id), touch);
   assert.equal(await page.locator(".scene-zone.is-examined").count(), 7, "optional zones should remain revisitable after P01");
   state = await savedState(page);
@@ -99,6 +100,16 @@ async function solveChapter2(page, touch = false) {
 async function solveThroughChapter6(page, { checkSpoilers = false, touch = false } = {}) {
   await page.goto(baseURL);
   await clickAction(page, "new-game");
+  await assertText(page, "勘查三类核心现场");
+  assert.equal(await page.locator(".guide-task-list li.active").count(),1,"standard guidance should expose exactly one current task");
+  await page.locator('[data-action="toggle-guidance-mode"]').click();
+  assert.equal((await savedState(page)).guidanceMode,"minimal");
+  assert.equal(await page.locator(".investigation-compass").count(),0,"minimal guidance should hide the navigation layer");
+  await page.locator('[data-action="toggle-guidance-mode"]').click();
+  assert.equal((await savedState(page)).guidanceMode,"standard");
+  await page.locator('[data-action="solve-p01"]').waitFor({state:"visible"});
+  await page.waitForFunction(() => Boolean(document.querySelector('[data-action="solve-p01"] + .control-reason')));
+  assert.match(await page.locator('[data-action="solve-p01"] + .control-reason').innerText(),/暂不可用/);
   if (checkSpoilers) {
     await clickAction(page, "show-timeline");
     const initialTimeline = await page.locator("#app").innerText();
@@ -625,13 +636,12 @@ async function testLegacyMigrations(browser) {
   }, SAVE_KEY);
   await reconstructionPage.reload();
   await clickAction(reconstructionPage, "continue-game");
-  await reconstructionPage.locator('[data-action="go-chapter"][data-chapter="9"]').click();
   await assertText(reconstructionPage, "旧版复原结论已保留");
   const legacyPreview = await reconstructionPage.locator(".reconstruction-preview").innerText();
   assert.ok(legacyPreview.indexOf("离开") < legacyPreview.indexOf("放水"));
   assert.equal(await reconstructionPage.locator('[data-action="move-reconstruction"]:not([disabled])').count() > 0, true);
   let state = await savedState(reconstructionPage);
-  assert.equal(state.version, 13);
+  assert.equal(state.version, 14);
   assert.equal(state.legacyReconstruction, true);
   assert.equal(state.solved.includes("p10r"), false);
 
@@ -740,7 +750,7 @@ async function testLegacyMigrations(browser) {
   await page.locator('[data-action="choose-disclosure"][data-choice="full"]').click();
   await assertText(page, "正确的问题");
   let state = await savedState(page);
-  assert.equal(state.version, 13);
+  assert.equal(state.version, 14);
   assert.equal(state.ending, "D");
   assert.equal(Object.keys(state.confrontation).length, 3);
   assert.deepEqual(errors, []);
@@ -816,6 +826,7 @@ async function testLegacyMigrations(browser) {
   const mobileErrors = [];
   mobilePage.on("pageerror", error => mobileErrors.push(error.message));
   await prepareThroughChapter9(mobilePage, { touch: true });
+  assert.equal(await mobilePage.locator(".mobile-next-action").evaluate(node=>getComputedStyle(node).display),"grid","mobile should keep the current task reachable without scrolling to the chapter top");
   let overflow = await mobilePage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert.ok(overflow <= 1, `chapter 9 mobile overflow: ${overflow}px`);
   await goChapter(mobilePage, 8);
@@ -860,5 +871,5 @@ async function testLegacyMigrations(browser) {
   await cContext.close();
   await mainContext.close();
   await browser.close();
-  process.stdout.write("✓ v4.0 dependency invalidation, comparison worksheet, report rebuttals, checkpoints, endings and migrations\n");
+  process.stdout.write("✓ v4.1 guided flow, dependency invalidation, report rebuttals, checkpoints, endings and migrations\n");
 })().catch(error => { console.error(error); process.exit(1); });

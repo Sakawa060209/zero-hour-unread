@@ -70,8 +70,8 @@ function completeReconstructionState() {
   return { state, links };
 }
 
-test("v4.0 constants and fresh state use the ten-chapter schema", () => {
-  assert.equal(Logic.SAVE_VERSION, 13);
+test("v4.1 constants and fresh state use the ten-chapter schema", () => {
+  assert.equal(Logic.SAVE_VERSION, 14);
   assert.equal(Logic.REPORT_RULE_VERSION, 13);
   assert.equal(Logic.PROOF_RULE_VERSION, 11);
   const state = Logic.freshState();
@@ -82,6 +82,8 @@ test("v4.0 constants and fresh state use the ten-chapter schema", () => {
   assert.deepEqual(state.reconstructionEvidence, {});
   assert.equal(state.primaryCandidate, "");
   assert.equal(state.oldCaseDiscovered, false);
+  assert.equal(state.guidanceMode, "standard");
+  assert.deepEqual(state.activityLog, []);
   assert.deepEqual(state.responsibilityOrder, ["file-c", "file-a", "file-d", "file-b"]);
 });
 
@@ -253,6 +255,31 @@ test("candidate worksheet keeps edits, signs its evidence set and becomes stale 
   assert.equal(state.candidateJudgments.zhoulan_know,"unknown","the player's old judgment is preserved for review");
   assert.equal(Logic.recordCandidateWorksheetEdit(state,"zhoulan_know","judgment","yes"),true);
   assert.equal(state.candidateWorksheetHistory.at(-1).cell,"zhoulan_know");
+});
+
+test("investigation guidance follows actual gates without revealing later answers", () => {
+  const state=Logic.freshState();
+  assert.deepEqual(Logic.investigationGuide(state,1),{chapter:1,key:"scene-core",current:0,total:3});
+  state.examined.push("door","body-injury","living-carpet","bath");
+  assert.equal(Logic.investigationGuide(state,1).key,"scene-claim");
+  state.solved.push("p01");
+  assert.equal(Logic.investigationGuide(state,1).key,"chapter-complete");
+
+  state.solved.push("p02","p03","p04","p05");
+  state.chapter=5;
+  assert.equal(Logic.investigationGuide(state,5).key,"device-return","the watch must still require an explicit action");
+  state.evidence.push("e_watch");
+  assert.equal(Logic.investigationGuide(state,5).key,"body-review");
+  state.solved.push("p05r");
+  assert.equal(Logic.investigationGuide(state,5).key,"sight-compare");
+});
+
+test("guidance normalization keeps a safe default and bounded activity history", () => {
+  const malformed=Logic.normalizeState({version:13,guidanceMode:"unknown",activityLog:[null,{kind:"evidence",text:"新材料",chapter:99,at:3},...Array.from({length:10},(_,index)=>({kind:"bad",text:`更新${index}`,chapter:1}))]});
+  assert.equal(malformed.version,14);
+  assert.equal(malformed.guidanceMode,"standard");
+  assert.equal(malformed.activityLog.length,8);
+  assert.ok(malformed.activityLog.every(entry=>entry.chapter>=1&&entry.chapter<=10));
 });
 
 test("editing a verified candidate cell invalidates every dependent closure but preserves reconstruction and proof work", () => {
@@ -584,7 +611,7 @@ test("sealed-record discovery stays hidden in fresh saves and migrates from real
   assert.equal(Logic.evidenceProgress(explicit).oldCaseDiscovered, true);
 });
 
-test("v3.9 progress migrates worksheet, report and proof snapshots to v4.0", () => {
+test("v3.9 progress migrates worksheet, report and proof snapshots to v4.1", () => {
   const raw = disclosureReadyState({ oldCase:true });
   raw.version = 12;
   raw.primaryCandidate = "zhoulan";
@@ -594,7 +621,7 @@ test("v3.9 progress migrates worksheet, report and proof snapshots to v4.0", () 
   raw.confrontation = { q1:[...LEGACY_MAIN_PROOFS.q1], q2:[...LEGACY_MAIN_PROOFS.q2], q3:[...LEGACY_OLD_CASE_PROOF] };
   Object.keys(raw.confrontationVersions).forEach(key => raw.confrontationVersions[key] = 10);
   const migrated = Logic.normalizeState(raw);
-  assert.equal(migrated.version, 13);
+  assert.equal(migrated.version, 14);
   assert.equal(migrated.primaryCandidate, "zhoulan");
   assert.equal(migrated.differenceClasses.lamp, "unknown");
   assert.equal(migrated.differenceClasses.painting, "unknown");
@@ -624,7 +651,7 @@ test("v8 in-progress final saves move to chapter ten and archive every old proof
     reconstructionEvidence: {}
   };
   const migrated = Logic.normalizeState(raw);
-  assert.equal(migrated.version, 13);
+  assert.equal(migrated.version, 14);
   assert.equal(migrated.chapter, 10);
   assert.equal(migrated.screen, "chapter-10");
   assert.equal(migrated.notebookReturn.chapter, 10);

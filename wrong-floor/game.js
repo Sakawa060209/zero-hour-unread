@@ -190,10 +190,12 @@
 
   function addEvidence(...ids) {
     let added = 0;
+    const addedIds = [];
     ids.forEach(id => {
-      if (EVIDENCE[id] && !state.evidence.includes(id)) { state.evidence.push(id); added += 1; }
+      if (EVIDENCE[id] && !state.evidence.includes(id)) { state.evidence.push(id); added += 1; addedIds.push(id); }
     });
     if (added) {
+      recordActivity("evidence", `新材料：${addedIds.slice(0,2).map(id=>EVIDENCE[id][0]).join("、")}${addedIds.length>2?`等 ${added} 份`:""}`);
       const affected=Logic.invalidateCandidateWorksheetIfNeeded(state);
       if (affected.length) toast(`新增 ${added} 条材料；候选工作表有 ${affected.length} 格需要复核`);
       else toast(`新增 ${added} 条案件材料`);
@@ -205,12 +207,19 @@
   }
 
   function solve(id, deduction, evidence) {
-    if (!state.solved.includes(id)) state.solved.push(id);
+    const newlySolved=!state.solved.includes(id);
+    if (newlySolved) state.solved.push(id);
     if (deduction) addDeduction(deduction);
     if (evidence) addEvidence(...evidence);
+    if (newlySolved) recordActivity("deduction", `阶段完成：${id.toUpperCase()}`);
     const highest = Logic.highestUnlockedChapter(state);
     state.chapter = Math.max(state.chapter, highest);
     saveState(true);
+    refreshGuidance();
+  }
+
+  function recordActivity(kind,text) {
+    state.activityLog=[...(state.activityLog||[]),{kind,text,chapter:state.chapter,at:Date.now()}].slice(-8);
   }
 
   function updateHeader() {
@@ -222,22 +231,151 @@
 
   function toChinese(num) { return ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"][num] || num; }
 
+  const GUIDE_ORDER = {
+    1:["scene-core","scene-claim"],
+    2:["alibi-sources","alibi-coverage"],
+    3:["dimension-1","dimension-2","dimension-3","dimension-4"],
+    4:["blueprint-1","blueprint-2","blueprint-3"],
+    5:["mirror-observe","mirror-proof","device-return","body-review","sight-compare"],
+    6:["fact-cleanup","pipe-route"],
+    7:["key-interviews","cuff-time"],
+    8:["interlude","property-packet","operation-packet","conflict-review","candidate-worksheet","candidate-confirm","candidate-proof"],
+    9:["water-reenactment","frontdoor-review","chain-route","scene-reconstruction"],
+    10:["final-report","final-proof","final-disclosure"]
+  };
+
+  const GUIDE_COPY = {
+    "scene-core":{title:"勘查三类核心现场",why:"先确认锁闭状态、伤情与尸体周围痕迹、浴室异常。",cta:"前往现场勘查",target:".scene-board",hints:["目标：取得能检验‘密室’前提的原始观察。","位置：玄关、客厅与浴室的热点都可直接调查。","边界：发现尸体的房间，不自动等于死亡发生的房间。"]},
+    "scene-claim":{title:"判断哪项结论仍缺独立来源",why:"核心现场已经勘查，可以区分直接记录与默认前提。",cta:"前往 P01",target:"#p01",hints:["目标：选择当前证据强度最低的一项。","位置：比较锁具、门体、尸体与死亡地点的材料来源。","边界：‘被发现于此’和‘死于此’不是同一命题。"]},
+    "alibi-sources":{title:"核验三种连续在场来源",why:"瞬间照片不能封闭往返窗口，需要独立且重叠的记录。",cta:"查看来源卡",target:".grid",hints:["目标：取得覆盖关键时段的连续记录。","位置：公开影像、运营商位置与会场签到。","边界：来源必须彼此独立，相关照片不能代替连续覆盖。"]},
+    "alibi-coverage":{title:"检查 19:31—22:31 的覆盖缺口",why:"材料已经齐备，现在判断是否存在足够的往返窗口。",cta:"前往覆盖判断",target:"[data-action='solve-p02']",hints:["目标：选择能共同覆盖时段的材料。","位置：回看三条带持续时间的记录。","边界：同一来源的重复截图不增加独立性。"]},
+    "dimension-1":{title:"分别定位照片与图纸的两个端点",why:"先测量，再解释；相同差值不能替代正确定位。",cta:"前往双端点测量",target:".staged-puzzle",hints:["目标：让 A、B 落在各自可辨认的固定边缘。","位置：现场照片与 1102 图纸各有两条标尺。","边界：允许小幅测量误差，但端点对象必须一致。"]},
+    "dimension-2":{title:"暂存一个空间解释",why:"此处记录假说，不会提前判对错。",cta:"继续解释",target:".staged-puzzle",hints:["目标：写下你对尺寸差异的暂时解释。","位置：P03 第二步的三个假说。","边界：下一份固定结构材料才负责裁决。"]},
+    "dimension-3":{title:"选择独立固定结构进行复核",why:"移动家具不能裁决房间身份，需要不会移动的参照。",cta:"继续复核",target:".staged-puzzle",hints:["目标：寻找照片和图纸都能定位的固定结构。","位置：窗框、暖气管与墙体关系。","边界：可移动物不能充当独立复核点。"]},
+    "dimension-4":{title:"根据固定结构裁决原假说",why:"新材料已经取得，现在让结论服从复核结果。",cta:"提交空间结论",target:".staged-puzzle",hints:["目标：判断差异来自物件、透视还是房间身份。","位置：对照刚完成的固定结构复核。","边界：不要因为最初选过某个假说就坚持它。"]},
+    "blueprint-1":{title:"找出最早出现独立房间的原始图",why:"先建立空间曾经存在的时间起点。",cta:"比对建筑档案",target:".staged-puzzle",hints:["目标：按年份寻找最早的明确记录。","位置：五版建筑图的中部空间。","边界：后来的图仍显示房号，不等于它是最早来源。"]},
+    "blueprint-2":{title:"找出最早删除房号的版本",why:"需要确定记录变化发生在哪两版之间。",cta:"继续比对",target:".staged-puzzle",hints:["目标：找到第一次不再显示房号的版本。","位置：继续按年份比较中部区域。","边界：最新电子地图只是结果，不一定是首次变化。"]},
+    "blueprint-3":{title:"叠合旧图与现图并标记结构变化",why:"区分被删除的是编号、门位还是实体空间。",cta:"进入叠合复核",target:".blueprint-overlay",hints:["目标：查看旧版、现版和叠合三个视图。","位置：标记门位、墙体与管井。","边界：记录消失不能直接推出建筑被拆除。"]},
+    "mirror-observe":{title:"记录并分类双房差异",why:"先保存原始观察，再从中挑选案件证据。",cta:"前往双房观察",target:".mirror-stage",hints:["目标：记录至少六项可见差异。","位置：切换单房与叠合视图，点击右侧可调查对象。","边界：不确定的年代可以保留为‘当前无法判断’。"]},
+    "mirror-proof":{title:"从当晚异常中连接撞击与搬运痕迹",why:"观察已经保存，现在形成第一现场推论。",cta:"前往证据钉选",target:"[name='p05-proof']",hints:["目标：分别找到支持撞击与搬运的现场痕迹。","位置：只从你已经保存的观察中选择。","边界：固定装修差异只能证明房间不同，不能证明当晚行为。"]},
+    "device-return":{title:"打开死者设备技术回传",why:"设备记录不会随现场推论自动生成，需要主动纳入案件簿。",cta:"查看设备记录",target:"[data-action='open-device-record']",hints:["目标：取得设备记录的原始时间锚点。","位置：第一现场推论下方的技术回传。","边界：设备冲击记录不单独等于死亡判断。"]},
+    "body-review":{title:"提交伤情、设备与现场联合复核",why:"三份原始材料齐备后，才能形成精确的派生判断。",cta:"前往联合复核",target:".body-review",hints:["目标：把初检、设备和撞击痕放进同一轮复核。","位置：P05-R 联合复核区。","边界：派生复核引用原始来源，不会制造额外独立来源。"]},
+    "sight-compare":{title:"保存三组投影并判断拍摄高度",why:"只拖动滑块不算观察，需要保存可比较的投影。",cta:"前往视线模拟",target:".sight-simulator",hints:["目标：记录至少三层的投影。","位置：滑块下方的‘记录当前投影’按钮。","边界：楼层数字接近不够，轮廓与俯角要同时解释。"]},
+    "fact-cleanup":{title:"净化八条记录中的越界解释",why:"先把认证、开门、身份和行为方向拆开。",cta:"前往证据净化",target:"[data-fact-cleanup]",hints:["目标：划去原始记录没有支持的词组。","位置：八张待净化解释卡。","边界：没有记录到某事，不等于已经证明它没有发生。"]},
+    "pipe-route":{title:"选择能解释声音传播的结构路径",why:"证人听见声音是真的，来源楼层仍需结构材料校正。",cta:"前往水管线路",target:"[name='p08']",hints:["目标：让声音位置和建筑结构同时成立。","位置：比较走廊、电梯井、共用立管与外墙。","边界：证人的感知事实和她对来源的判断应分开。"]},
+    "key-interviews":{title:"完成两名关键人物的查证闭环",why:"每人都要经历询问、外查与回审；询问本身不自动产生证据。",cta:"前往人物询问",target:"[data-action='interview']:not([disabled])",hints:["目标：至少完成两名标记为‘关键’的人物。","位置：先选择能检验原话边界的话题；出现调查方向后到调查板外查。","边界：真话可能省略限定，也可能把来源判断当成事实。"]},
+    "cuff-time":{title:"核验袖扣的遗留时间",why:"实物真实不等于当晚留下，需要独立时间锚点。",cta:"前往袖扣时间",target:"[name='p09']",hints:["目标：选择一条物理年代信息和一条带日期记录。","位置：P09 的四份候选材料。","边界：动机或当晚直播不能给袖扣本身定年。"]},
+    "interlude":{title:"继续进入行为归属调查",why:"下一阶段将把知情、权限、窗口和实际行为拆开。",cta:"继续调查",target:"[data-action='continue-interlude']",hints:["目标：进入物业与行为记录核验。","位置：章节开场的继续按钮。","边界：知道隐蔽空间不等于具备完成置换的全部条件。"]},
+    "property-packet":{title:"逐份阅读物业审计包",why:"权限、岗位、本人访问和当班记录不能互相替代。",cta:"打开物业审计包",target:"[data-investigation-packet='property']",hints:["目标：阅读包内全部四份原始记录。","位置：物业审计包，展开后逐份打开。","边界：岗位具备接触条件，不自动证明本人实际知情。"]},
+    "operation-packet":{title:"逐份阅读卡柜与服务区档案包",why:"把账号、自然人身份、路径和工具痕迹分段固定。",cta:"打开行动档案包",target:"[data-investigation-packet='operation']",hints:["目标：阅读包内三份原始记录。","位置：卡柜与服务区档案包。","边界：工具痕迹能证明使用工具，不单独证明载物内容。"]},
+    "conflict-review":{title:"开展生前冲突接触复核",why:"需要区分参与致命冲突和事后处置。",cta:"前往法医复核",target:"[data-action='examine'][data-id='conflict-review']",hints:["目标：取得能区分生前接触与事后搬运的材料。","位置：行为归属调查中的法医卡。","边界：动机和后续搬运都不能替代冲突时的行为连接。"]},
+    "candidate-worksheet":{title:"完成候选人证据状态工作表",why:"先逐格判断已证实、已排除或证据不足，再连接来源。",cta:"前往条件工作表",target:".candidate-worksheet",hints:["目标：完成 24 格研判并为确定判断连接来源。","位置：可按人物或按条件切换查看。","边界：权限、知情、时间窗口和卡片行为必须分别判断。"]},
+    "candidate-confirm":{title:"确认仍满足全部条件的候选人",why:"系统核验结果已开放，现在检查四项条件的交集。",cta:"前往候选确认",target:".candidate-choice",hints:["目标：选择没有被任何一项独立来源排除的人。","位置：工作表下方的候选确认区。","边界：证据不足不能被当作已证实。"]},
+    "candidate-proof":{title:"为候选人的四项条件分别举证",why:"确认人选后，仍需解释为什么每一项都成立。",cta:"前往条件举证",target:".condition-proof",hints:["目标：覆盖知情、权限、窗口和行为链。","位置：候选确认下方的四项条件。","边界：一张权限记录不能同时证明实际通行和取卡身份。"]},
+    "water-reenactment":{title:"复现浴室渗漏",why:"先验证延迟发现如何被安排，再进入完整复原。",cta:"前往渗漏实验",target:"[data-action='examine'][data-id='water-reenactment']",hints:["目标：取得放水开始时间的实验估算。","位置：现场复演区的浴室卡。","边界：实验给出估算，不是直接录像。"]},
+    "frontdoor-review":{title:"合并认证与门磁记录",why:"两条同系统记录共同说明认证后是否发生开门。",cta:"前往正门事件复核",target:"[data-action='run-frontdoor-review']",hints:["目标：形成 21:41 正门事件的派生复核。","位置：现场复演区中间卡片。","边界：开门事件仍不单独证明人员、方向或载物。"]},
+    "chain-route":{title:"调查检修口并完成门链替代测试",why:"需要验证哪条离场路径能保留室内门链。",cta:"前往锁闭离场测试",target:"[data-action='examine'][data-id='chain-reconstruction']",hints:["目标：取得另一出口痕迹和替代顺序实验。","位置：现场复演区的检修口卡。","边界：发现出口只能证明可行性，精确离场仍需路径记录。"]},
+    "scene-reconstruction":{title:"排列五步并连接核心与补强材料",why:"材料齐备后，检查顺序、时间与路径是否同时兼容。",cta:"前往犯罪时间轴",target:".scene-reconstruction",hints:["目标：排列放水、取卡、搬运、挂链、离开。","位置：时间轴左侧排步骤，右侧材料池选择并连接。","边界：顺序正确但来源不足，仍不能生成精确复原。"]},
+    "final-report":{title:"复核并封存当前案件报告",why:"确认关键边界和三条结构化论证，当前报告才可进入质询。",cta:"前往案件报告",target:".report-grid",hints:["目标：确认报告结论与已取得来源一致。","位置：先确认三项关键边界，再检查结构化论证。","边界：修改已通过报告会暂停公开提交，但已完成举证会保留。"]},
+    "final-proof":{title:"回应当前核心质询",why:"选择能直接排除替代解释的完整因果链。",cta:"前往最终质询",target:"#current-confrontation",hints:["目标：回答当前质疑，而不是重复堆叠材料。","位置：报告下方的最终质询。","边界：地点、行为人和动机属于不同证明问题。"]},
+    "final-disclosure":{title:"决定报告的公开范围",why:"报告与举证都已完成，可以继续提交公开决定。",cta:"继续提交报告",target:".pending-disclosure",hints:["目标：选择本周目要封存并公开的调查范围。","位置：终章底部的公开决定入口。","边界：未完成的可选调查会保留在结案前检查点。"]}
+  };
+
+  function guideCopyFor(guide) {
+    if (guide.key === "chapter-complete") {
+      const next=Math.min(10,guide.chapter+1);
+      return {title:`本章关键工作已完成`,why:next===10?"终章已经开放，可以汇总报告并回应质询。":`第${toChinese(next)}章已经开放。`,cta:next===10?"进入终章":`进入第${toChinese(next)}章`,target:"",nextChapter:next,hints:[]};
+    }
+    if (guide.key === "case-closed") return {title:"本周目已经结案",why:"报告、举证与公开决定已冻结保存。",cta:"查看结局",target:"",action:"view-ending",hints:[]};
+    return GUIDE_COPY[guide.key] || {title:"继续当前调查",why:"完成本章尚未闭合的关键工作。",cta:"前往当前任务",target:"#chapter-body",hints:[]};
+  }
+
+  function guideTaskListHtml(guide) {
+    const order=GUIDE_ORDER[guide.chapter]||[];
+    const currentIndex=order.indexOf(guide.key);
+    return `<ol class="guide-task-list">${order.map((key,index)=>{const copy=GUIDE_COPY[key];const status=guide.key==="chapter-complete"||guide.key==="case-closed"||index<currentIndex?"done":index===currentIndex?"active":"locked";return `<li class="${status}"><span aria-hidden="true">${status==="done"?"✓":status==="active"?"●":"○"}</span><div><strong>${escapeHtml(copy.title)}</strong><small>${status==="done"?"已完成":status==="active"?"现在进行":"完成前一项后开放"}</small></div>${status==="active"?`<button class="text-button" data-action="guide-jump" data-guide-chapter="${guide.chapter}" data-guide-target="${escapeHtml(copy.target)}">前往</button>`:""}</li>`;}).join("")}${guide.chapter===10&&state.oldCaseDiscovered?`<li class="optional"><span aria-hidden="true">◇</span><div><strong>封存卷宗责任链</strong><small>${state.solved.includes("p11")?"可选 · 已完成":"可选 · 调查中"}</small></div></li>`:""}</ol>`;
+  }
+
+  function guideHintsHtml(copy) {
+    if (!copy.hints || !copy.hints.length) return "";
+    return `<details class="guide-hints"><summary>我卡住了 · 查看不剧透提示</summary><div><p><b>第一层</b>${escapeHtml(copy.hints[0])}</p><details><summary>继续查看第二层</summary><p>${escapeHtml(copy.hints[1]||"")}</p><details><summary>继续查看证明边界</summary><p>${escapeHtml(copy.hints[2]||"")}</p></details></details></div></details>`;
+  }
+
+  function investigationCompassHtml(chapter,home=false) {
+    const guide=Logic.investigationGuide(state,chapter);
+    const copy=guideCopyFor(guide);
+    const buttonAction=copy.action||"guide-jump";
+    const progress=guide.total>1?`${Math.min(guide.current,guide.total)}/${guide.total}`:"";
+    const target=copy.target||"";
+    if (!home && state.guidanceMode==="minimal") return `<div class="guidance-shell minimal" data-guidance-root><button class="text-button" data-action="toggle-guidance-mode">开启标准任务引导</button></div>`;
+    return `<div class="guidance-shell" data-guidance-root><aside class="investigation-compass ${home?"home-compass":""}" data-guide-chapter="${guide.chapter}" aria-label="当前调查任务"><div class="compass-main"><div><small>NOW · 当前调查${progress?` · ${progress}`:""}</small><h2>${escapeHtml(copy.title)}</h2><p>${escapeHtml(copy.why)}</p></div><button class="btn primary" data-action="${buttonAction}" data-guide-chapter="${copy.nextChapter||guide.chapter}" data-guide-target="${escapeHtml(target)}">${escapeHtml(copy.cta)}</button></div>${!home&&state.guidanceMode==="standard"?`<button class="guide-density-toggle text-button" data-action="toggle-guidance-mode">切换为极简引导</button><details class="guide-checklist" open><summary>本章任务清单</summary>${guideTaskListHtml(guide)}</details>${guideHintsHtml(copy)}`:""}${home&&state.activityLog.length?`<details class="recent-activity"><summary>最近的调查变化</summary>${state.activityLog.slice(-3).reverse().map(entry=>`<p><span>${entry.kind==="evidence"?"材料":"进度"}</span>${escapeHtml(entry.text)}</p>`).join("")}</details>`:""}</aside>${!home&&state.guidanceMode==="standard"?`<div class="mobile-next-action"><span><small>当前任务</small><b>${escapeHtml(copy.title)}</b></span><button class="btn primary" data-action="${buttonAction}" data-guide-chapter="${copy.nextChapter||guide.chapter}" data-guide-target="${escapeHtml(target)}">前往</button></div>`:""}</div>`;
+  }
+
+  function refreshGuidance() {
+    const root=document.querySelector("[data-guidance-root]");
+    const match=/^chapter-(\d+)$/.exec(String(state.screen||""));
+    if (!root || !match) return;
+    root.outerHTML=investigationCompassHtml(Number(match[1]));
+    requestAnimationFrame(annotateDisabledControls);
+  }
+
+  function jumpToGuideTarget(chapter,selector) {
+    const focusTarget=()=>{
+      let node=null;
+      try { node=selector?document.querySelector(selector):document.querySelector("#chapter-body"); } catch (_) { node=null; }
+      if (!node) return;
+      node.scrollIntoView({behavior:"smooth",block:"center"});
+      const focusable=node.matches("button,input,select,textarea,[tabindex]")?node:node.querySelector("button:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]");
+      focusable?.focus({preventScroll:true});
+    };
+    const match=/^chapter-(\d+)$/.exec(String(state.screen||""));
+    if (!match||Number(match[1])!==chapter) { renderChapter(chapter); requestAnimationFrame(()=>requestAnimationFrame(focusTarget)); }
+    else focusTarget();
+  }
+
+  function annotateDisabledControls() {
+    document.querySelectorAll("#chapter-body button.btn:disabled, #chapter-body .card button:disabled").forEach(button=>{
+      if (button.dataset.disabledAnnotated||/已完成|已通过|已写入|重新查看|复查/.test(button.textContent)) return;
+      const feedback=button.closest(".puzzle")?.querySelector(".feedback");
+      let reason=feedback&&feedback.textContent.trim();
+      if (!reason) {
+        const text=button.textContent;
+        if (/联合复核/.test(text)) reason="先取得尸表初检、设备记录与现场撞击痕。";
+        else if (/合并两条记录/.test(text)) reason="先取得认证日志与门磁开合记录。";
+        else if (/记录尺寸异常/.test(text)) reason="先查看并测量现场照片与 1102 图纸。";
+        else if (/形成责任链/.test(text)) reason="先调查原始验收卷。";
+        else reason="先完成本区域的前置调查；上方当前任务会指出缺少的工作。";
+      }
+      if (!reason) return;
+      button.dataset.disabledAnnotated="true";
+      button.setAttribute("aria-description",reason);
+      button.title=reason;
+      const note=document.createElement("small");
+      note.className="control-reason";
+      note.textContent=`暂不可用：${reason}`;
+      button.insertAdjacentElement("afterend",note);
+    });
+  }
+
   function renderLanding() {
     topbar.hidden = true;
     const hasSave = state.started;
     const endings = state.meta.endings.map(id => `结局 ${id}`).join(" · ") || "尚无结案记录";
+    const resumeGuide=hasSave?Logic.investigationGuide(state):null;
+    const resumeCopy=resumeGuide?guideCopyFor(resumeGuide):null;
     app.innerHTML = `
       <section class="landing">
         <div class="landing-copy">
           <div class="eyebrow">澄江市刑侦支队 · 案件分析终端</div>
           <h1 class="display">错层</h1>
-           <div class="landing-deck">WRONG FLOOR · V4.0 · 2026/10/14</div>
+           <div class="landing-deck">WRONG FLOOR · V4.1 · 2026/10/15</div>
           <p class="landing-quote">“如果所有证据都是真的，为什么结论会是假的？”</p>
           <div class="landing-actions">
             <button class="btn primary" data-action="${hasSave ? "continue-game" : "new-game"}">${hasSave ? "继续调查" : "接受委托"}</button>
             ${hasSave ? '<button class="btn ghost" data-action="confirm-new">重新开案</button>' : ""}
             <button class="btn ghost" data-action="show-prologue">案件简报</button>
           </div>
+          ${hasSave?`<p class="resume-summary"><span>存档下一步</span><strong>${escapeHtml(resumeCopy.title)}</strong></p>`:""}
           <p class="muted" style="margin-top:24px;font-size:.76rem">自动存档 · 无音频要求 · 支持移动端 · ${endings}</p>
         </div>
         <div class="landing-visual" aria-label="临江壹号建筑剖面示意">
@@ -259,7 +397,10 @@
     if (state.screen === "timeline") { renderTimeline(); return; }
     if (state.screen === "map") { renderMap(); return; }
     if (/^ending-[ABCD]$/.test(String(state.screen || "")) && state.ending) { renderEnding(state.ending); return; }
-    renderHome();
+    const guide=Logic.investigationGuide(state);
+    renderChapter(guide.chapter);
+    const copy=guideCopyFor(guide);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>jumpToGuideTarget(guide.chapter,copy.target||"")));
   }
 
   function renderHome() {
@@ -271,6 +412,8 @@
       <div class="eyebrow">CASE OVERVIEW · CJ-0917</div>
       <h1 class="display" style="font-size:clamp(2.8rem,8vw,6rem)">临江壹号死亡案</h1>
       <p class="lead">林知秋被发现死于反锁的 1102。许遥拥有无法推翻的不在场证明。你的任务不是替警方补全一个故事，而是确认故事的每个前提。</p>
+      ${investigationCompassHtml(highest,true)}
+      <div class="guidance-mode-switch" role="group" aria-label="任务引导强度"><span>任务引导</span><button class="btn ${state.guidanceMode==="standard"?"primary":"ghost"}" data-action="set-guidance-mode" data-mode="standard" aria-pressed="${state.guidanceMode==="standard"}">标准</button><button class="btn ${state.guidanceMode==="minimal"?"primary":"ghost"}" data-action="set-guidance-mode" data-mode="minimal" aria-pressed="${state.guidanceMode==="minimal"}">极简</button></div>
       <div class="rule"></div>
       <div class="grid">
         ${CHAPTERS.slice(1).map((chapter, index) => {
@@ -316,11 +459,13 @@
          <div><div class="chapter-no">${no === 10 ? "FINAL REPORT" : `CHAPTER ${String(no).padStart(2,"0")}`}</div><h1 class="chapter-title">${escapeHtml(chapter.title)}</h1><p class="chapter-brief">${escapeHtml(chapter.subtitle)}</p></div>
         <div><div class="objective"><strong>当前目标</strong>${escapeHtml(chapter.objective)}</div>${state.pinnedEvidence.length ? `<div class="chapter-pins"><span>已钉选</span>${state.pinnedEvidence.map(id => `<button data-action="show-notebook">${EVIDENCE[id][0]}</button>`).join("")}</div>` : ""}</div>
       </header>
+      ${investigationCompassHtml(no)}
       <div id="chapter-body">${chapterRenderer(no)}</div>
     </section>`;
     updateHeader();
     saveState(true);
     app.focus({ preventScroll: true });
+    requestAnimationFrame(annotateDisabledControls);
   }
 
   function renderChapterPreserving(selector) {
@@ -958,7 +1103,27 @@
   function setFeedback(id, message, ok) {
     const node = document.querySelector(`#${id}`);
     if (!node) return;
-    node.textContent = message;
+    node.textContent = "";
+    const copy=document.createElement("span");
+    copy.textContent=message;
+    node.appendChild(copy);
+    if (ok) {
+      const match=/^chapter-(\d+)$/.exec(String(state.screen||""));
+      if (match) {
+        const guide=Logic.investigationGuide(state,Number(match[1]));
+        const next=guideCopyFor(guide);
+        if (next && guide.key!=="case-closed") {
+          const button=document.createElement("button");
+          button.type="button";
+          button.className="text-button feedback-next";
+          button.dataset.action=next.action||"guide-jump";
+          button.dataset.guideChapter=String(next.nextChapter||guide.chapter);
+          button.dataset.guideTarget=next.target||"";
+          button.textContent=`下一步：${next.cta}`;
+          node.appendChild(button);
+        }
+      }
+    }
     node.className = `feedback ${ok ? "good" : "bad"}`;
   }
 
@@ -985,6 +1150,18 @@
   function handleAction(action, target) {
     if (action === "new-game") { state.started = true; saveState(true); renderChapter(1); }
     if (action === "continue-game") resumeGame();
+    if (action === "guide-jump") jumpToGuideTarget(Number(target.dataset.guideChapter)||state.chapter,target.dataset.guideTarget||"");
+    if (action === "toggle-guidance-mode") {
+      state.guidanceMode=state.guidanceMode==="standard"?"minimal":"standard";
+      saveState(true);
+      const match=/^chapter-(\d+)$/.exec(String(state.screen||""));
+      if (match) renderChapter(Number(match[1])); else renderHome();
+    }
+    if (action === "set-guidance-mode") {
+      state.guidanceMode=target.dataset.mode==="minimal"?"minimal":"standard";
+      saveState(true);
+      renderHome();
+    }
     if (action === "show-home" || action === "review-case") { state.notebookReturn=null; saveState(true); renderHome(); }
     if (action === "show-map") renderMap();
     if (action === "show-notebook") {
